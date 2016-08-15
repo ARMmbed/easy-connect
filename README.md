@@ -13,11 +13,6 @@ Add the following to your ``mbed_app.json`` file:
             "help": "options are ETHERNET,WIFI,MESH_LOWPAN_ND,MESH_THREAD",
             "value": "ETHERNET"
         }
-    },
-    "target_overrides": {
-        "*": {
-            "target.features_add": ["IPV6", "IPV4"]
-        }
     }
 }
 ```
