@@ -10,28 +10,44 @@ Add the following to your ``mbed_app.json`` file:
 {
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,MESH_LOWPAN_ND,MESH_THREAD",
             "value": "ETHERNET"
+        }
+    },
+    "target_overrides": {
+        "*": {
+            "target.features_add": ["IPv4", "IPv6"]
         }
     }
 }
 ```
 
-If you choose `WIFI`, you'll also need to add the WiFi SSID and password:
+You can omit `IPv4` or `IPv6` feature if you don't use it (e.g. no need to load IPv6 when using ethernet).
+
+If you choose `WIFI_ESP8266`, you'll also need to add the WiFi SSID and password:
 
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI,MESH_LOWPAN_ND,MESH_THREAD",
-            "value": "WIFI"
+            "help": "options are ETHERNET,WIFI_ESP8266,MESH_LOWPAN_ND,MESH_THREAD",
+            "value": "WIFI_ESP8266"
         },
-        "wifi-ssid": {
-            "help": "WiFi SSID",
+        "esp8266-tx": {
+            "help": "Pin used as TX (connects to ESP8266 RX)",
+            "value": "PTD3"
+        },
+        "esp8266-rx": {
+            "help": "Pin used as RX (connects to ESP8266 TX)",
+            "value": "PTD2"
+        },
+        "esp8266-ssid": {
             "value": "\"SSID\""
         },
-        "wifi-password": {
-            "help": "WiFi Password",
+        "esp8266-password": {
             "value": "\"Password\""
+        },
+        "esp8266-debug": {
+            "value": true
         }
     }
 ```
@@ -56,4 +72,4 @@ int main(int, char**) {
 
 ## Extra defines
 
-If you'd like to use Easy Connect with mbed Client then you're in luck. Easy Connect automatically defines the `MBED_SERVER_ADDRESS` macro depending on your connectivity method (either IPv4 or IPv6 address). Use this address to connect to the right instance of mbed Cloud.
+If you'd like to use Easy Connect with mbed Client then you're in luck. Easy Connect automatically defines the `MBED_SERVER_ADDRESS` macro depending on your connectivity method (either IPv4 or IPv6 address). Use this address to connect to the right instance of mbed Device Connector.
