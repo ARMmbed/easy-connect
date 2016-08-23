@@ -6,13 +6,19 @@
 Serial output(USBTX, USBRX);
 
 #define ETHERNET        1
-#define WIFI            2
+#define WIFI_ESP8266    2
 #define MESH_LOWPAN_ND  3
 #define MESH_THREAD     4
 
-#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI
+#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
-ESP8266Interface esp(D1, D0);
+
+#ifdef MBED_CONF_APP_ESP8266_DEBUG
+ESP8266Interface esp(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX, MBED_CONF_APP_ESP8266_DEBUG);
+#else
+ESP8266Interface esp(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX);
+#endif
+
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
 #include "EthernetInterface.h"
 EthernetInterface eth;
@@ -39,12 +45,12 @@ ThreadInterface mesh;
 NetworkInterface* easy_connect(bool log_messages = false) {
     NetworkInterface* network_interface = 0;
     int connect_success = -1;
-#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI
+#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
     if (log_messages) {
-        output.printf("[EasyConnect] Using WiFi \r\n");
+        output.printf("[EasyConnect] Using WiFi (ESP8266) \r\n");
         output.printf("[EasyConnect] Connecting to WiFi..\r\n");
     }
-    connect_success = esp.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD);
+    connect_success = esp.connect(MBED_CONF_APP_ESP8266_SSID, MBED_CONF_APP_ESP8266_PASSWORD);
     network_interface = &esp;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
     if (log_messages) {
