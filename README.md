@@ -16,13 +16,13 @@ Add the following to your ``mbed_app.json`` file:
     },
     "target_overrides": {
         "*": {
-            "target.features_add": ["IPv4", "IPv6"]
+            "target.features_add": ["IPV4", "IPV6"]
         }
     }
 }
 ```
 
-You can omit `IPv4` or `IPv6` feature if you don't use it (e.g. no need to load IPv6 when using ethernet).
+You can omit `IPV4` or `IPV6` feature if you don't use it (e.g. no need to load IPv6 when using IPv4 ethernet connection).
 
 If you choose `WIFI_ESP8266`, you'll also need to add the WiFi SSID and password:
 
