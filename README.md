@@ -16,13 +16,13 @@ Add the following to your ``mbed_app.json`` file:
     },
     "target_overrides": {
         "*": {
-            "target.features_add": ["IPV4", "IPV6"]
+            "target.features_add": ["NANOSTACK", "LOWPAN_ROUTER", "COMMON_PAL"],
+            "mbed-mesh-api.6lowpan-nd-channel-page": 0,
+            "mbed-mesh-api.6lowpan-nd-channel": 12
         }
     }
 }
 ```
-
-You can omit `IPV4` or `IPV6` feature if you don't use it (e.g. no need to load IPv6 when using IPv4 ethernet connection).
 
 If you choose `WIFI_ESP8266`, you'll also need to add the WiFi SSID and password:
 
@@ -48,6 +48,21 @@ If you choose `WIFI_ESP8266`, you'll also need to add the WiFi SSID and password
         },
         "esp8266-debug": {
             "value": true
+        }
+    }
+```
+
+If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you will need to specify your radio module:
+
+```json
+    "config": {
+        "network-interface":{
+            "help": "options are ETHERNET,WIFI_ESP8266,MESH_LOWPAN_ND,MESH_THREAD",
+            "value": "MESH_LOWPAN_ND"
+        },
+        "mesh_radio_type": {
+        	"help": "options are ATMEL, MCR20",
+        	"value": "ATMEL"
         }
     }
 ```
