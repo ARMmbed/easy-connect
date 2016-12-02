@@ -30,9 +30,18 @@ LoWPANNDInterface mesh;
 #define MESH
 #include "NanostackInterface.h"
 ThreadInterface mesh;
-#else
-#error "No connectivity method chosen. Please add 'config.network-interfaces.value' to your mbed_app.json (see README.md for more information)."
 #endif
+
+#if defined(MESH)
+#if MBED_CONF_APP_MESH_RADIO_TYPE == ATMEL
+#include "NanostackRfPhyAtmel.h"
+NanostackRfPhyAtmel rf_phy(ATMEL_SPI_MOSI, ATMEL_SPI_MISO, ATMEL_SPI_SCLK, ATMEL_SPI_CS,
+                           ATMEL_SPI_RST, ATMEL_SPI_SLP, ATMEL_SPI_IRQ, ATMEL_I2C_SDA, ATMEL_I2C_SCL);
+#elif MBED_CONF_APP_MESH_RADIO_TYPE == MCR20
+#include "NanostackRfPhyMcr20a.h"
+NanostackRfPhyMcr20a rf_phy(MCR20A_SPI_MOSI, MCR20A_SPI_MISO, MCR20A_SPI_SCLK, MCR20A_SPI_CS, MCR20A_SPI_RST, MCR20A_SPI_IRQ);
+#endif //MBED_CONF_APP_RADIO_TYPE
+#endif //MESH
 
 #ifndef MESH
 // This is address to mbed Device Connector
