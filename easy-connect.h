@@ -30,6 +30,8 @@ LoWPANNDInterface mesh;
 #define MESH
 #include "NanostackInterface.h"
 ThreadInterface mesh;
+#else
+#error "No connectivity method chosen. Please add 'config.network-interfaces.value' to your mbed_app.json (see README.md for more information)."
 #endif
 
 #if defined(MESH)
