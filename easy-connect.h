@@ -9,6 +9,7 @@ Serial output(USBTX, USBRX);
 #define WIFI_ESP8266    2
 #define MESH_LOWPAN_ND  3
 #define MESH_THREAD     4
+#define WIFI_ODIN       5
 
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
@@ -19,6 +20,9 @@ ESP8266Interface esp(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX, MBED_CO
 ESP8266Interface esp(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX);
 #endif
 
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
+#include "OdinWiFiInterface.h"
+OdinWiFiInterface wifi;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
 #include "EthernetInterface.h"
 EthernetInterface eth;
@@ -53,6 +57,14 @@ NanostackRfPhyMcr20a rf_phy(MCR20A_SPI_MOSI, MCR20A_SPI_MISO, MCR20A_SPI_SCLK, M
 #define MBED_SERVER_ADDRESS "coaps://[2607:f0d0:2601:52::20]:5684"
 #endif
 
+#ifdef MBED_CONF_APP_ESP8266_SSID
+#define MBED_CONF_APP_WIFI_SSID MBED_CONF_APP_ESP8266_SSID
+#endif
+
+#ifdef MBED_CONF_APP_ESP8266_PASSWORD
+#define MBED_CONF_APP_WIFI_PASSWORD MBED_CONF_APP_ESP8266_PASSWORD
+#endif
+
 NetworkInterface* easy_connect(bool log_messages = false) {
     NetworkInterface* network_interface = 0;
     int connect_success = -1;
@@ -61,8 +73,15 @@ NetworkInterface* easy_connect(bool log_messages = false) {
         output.printf("[EasyConnect] Using WiFi (ESP8266) \r\n");
         output.printf("[EasyConnect] Connecting to WiFi..\r\n");
     }
-    connect_success = esp.connect(MBED_CONF_APP_ESP8266_SSID, MBED_CONF_APP_ESP8266_PASSWORD);
+    connect_success = esp.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD);
     network_interface = &esp;
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
+    if (log_messages) {
+        output.printf("[EasyConnect] Using WiFi (ODIN) \r\n");
+        output.printf("[EasyConnect] Connecting to WiFi..\r\n");
+    }
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD);
+    network_interface = &wifi;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
     if (log_messages) {
         output.printf("[EasyConnect] Using Ethernet\r\n");
