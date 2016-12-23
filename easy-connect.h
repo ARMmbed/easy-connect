@@ -80,7 +80,7 @@ NetworkInterface* easy_connect(bool log_messages = false) {
         output.printf("[EasyConnect] Using WiFi (ODIN) \r\n");
         output.printf("[EasyConnect] Connecting to WiFi..\r\n");
     }
-    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD);
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
     network_interface = &wifi;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
     if (log_messages) {
