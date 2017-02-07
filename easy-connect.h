@@ -53,6 +53,15 @@ NanostackRfPhyMcr20a rf_phy(MCR20A_SPI_MOSI, MCR20A_SPI_MISO, MCR20A_SPI_SCLK, M
 #define MBED_SERVER_ADDRESS "coaps://[2607:f0d0:2601:52::20]:5684"
 #endif
 
+#ifdef MBED_CONF_APP_ESP8266_SSID
+#define MBED_CONF_APP_WIFI_SSID MBED_CONF_APP_ESP8266_SSID
+#endif
+
+#ifdef MBED_CONF_APP_ESP8266_PASSWORD
+#define MBED_CONF_APP_WIFI_PASSWORD MBED_CONF_APP_ESP8266_PASSWORD
+#endif
+
+
 NetworkInterface* easy_connect(bool log_messages = false) {
     NetworkInterface* network_interface = 0;
     int connect_success = -1;
@@ -61,7 +70,7 @@ NetworkInterface* easy_connect(bool log_messages = false) {
         output.printf("[EasyConnect] Using WiFi (ESP8266) \r\n");
         output.printf("[EasyConnect] Connecting to WiFi..\r\n");
     }
-    connect_success = esp.connect(MBED_CONF_APP_ESP8266_SSID, MBED_CONF_APP_ESP8266_PASSWORD);
+    connect_success = esp.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD);
     network_interface = &esp;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
     if (log_messages) {
