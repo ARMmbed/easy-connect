@@ -91,8 +91,8 @@ If you want to avoid using `\r\n` in your printouts and just use normal C-style 
 ```json
        "target_overrides": {
         "*": {
-            "platform.stdio-baud-rate":115200,
-            "platform.stdio-convert-newlines":true
+            "platform.stdio-baud-rate": 115200,
+            "platform.stdio-convert-newlines": true
         }
     }
 ```
