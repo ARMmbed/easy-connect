@@ -10,7 +10,7 @@ Add the following to your ``mbed_app.json`` file:
 {
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,MESH_LOWPAN_ND,MESH_THREAD",
             "value": "ETHERNET"
         }
     },
@@ -24,12 +24,12 @@ Add the following to your ``mbed_app.json`` file:
 }
 ```
 
-If you choose `WIFI_ESP8266`, you'll also need to add the WiFi SSID and password:
+If you choose `WIFI_ESP8266` or `WIFI_ODIN`, you'll also need to add the WiFi SSID and password:
 
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,MESH_LOWPAN_ND,MESH_THREAD",
             "value": "WIFI_ESP8266"
         },
         "esp8266-tx": {
@@ -40,14 +40,14 @@ If you choose `WIFI_ESP8266`, you'll also need to add the WiFi SSID and password
             "help": "Pin used as RX (connects to ESP8266 TX)",
             "value": "PTD2"
         },
-        "esp8266-ssid": {
-            "value": "\"SSID\""
-        },
-        "esp8266-password": {
-            "value": "\"Password\""
-        },
         "esp8266-debug": {
             "value": true
+        },
+        "wifi-ssid": {
+            "value": "\"SSID\""
+        },
+        "wifi-password": {
+            "value": "\"Password\""
         }
     }
 ```
@@ -57,7 +57,7 @@ If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you will need to specify your radio
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,MESH_LOWPAN_ND,MESH_THREAD",
             "value": "MESH_LOWPAN_ND"
         },
         "mesh_radio_type": {
@@ -83,6 +83,18 @@ int main(int, char**) {
 
     // Rest of your program
 }
+```
+## CR/LF in serial output
+
+If you want to avoid using `\r\n` in your printouts and just use normal C-style `\n` instead, please specify these to your `mbed_app.json`
+
+```json
+       "target_overrides": {
+        "*": {
+            "platform.stdio-baud-rate":115200,
+            "platform.stdio-convert-newlines":true
+        }
+    }
 ```
 
 ## Extra defines
