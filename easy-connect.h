@@ -3,22 +3,24 @@
 
 #include "mbed.h"
 
-Serial output(USBTX, USBRX);
-
 #define ETHERNET        1
 #define WIFI_ESP8266    2
 #define MESH_LOWPAN_ND  3
 #define MESH_THREAD     4
+#define WIFI_ODIN       5
 
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
 
 #ifdef MBED_CONF_APP_ESP8266_DEBUG
-ESP8266Interface esp(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX, MBED_CONF_APP_ESP8266_DEBUG);
+ESP8266Interface wifi(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX, MBED_CONF_APP_ESP8266_DEBUG);
 #else
-ESP8266Interface esp(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX);
+ESP8266Interface wifi(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX);
 #endif
 
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
+#include "OdinWiFiInterface.h"
+OdinWiFiInterface wifi;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
 #include "EthernetInterface.h"
 EthernetInterface eth;
@@ -67,43 +69,61 @@ NetworkInterface* easy_connect(bool log_messages = false) {
     int connect_success = -1;
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
     if (log_messages) {
-        output.printf("[EasyConnect] Using WiFi (ESP8266) \r\n");
-        output.printf("[EasyConnect] Connecting to WiFi..\r\n");
+        printf("[EasyConnect] Using WiFi (ESP8266) \n");
+        printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
-    connect_success = esp.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD);
-    network_interface = &esp;
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    network_interface = &wifi;
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
+    if (log_messages) {
+        printf("[EasyConnect] Using WiFi (ODIN) \n");
+        printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
+    }
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    network_interface = &wifi;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
     if (log_messages) {
-        output.printf("[EasyConnect] Using Ethernet\r\n");
+        printf("[EasyConnect] Using Ethernet\n");
     }
     connect_success = eth.connect();
     network_interface = &eth;
 #endif
 #ifdef MESH
     if (log_messages) {
-        output.printf("[EasyConnect] Using Mesh\r\n");
-        output.printf("[EasyConnect] Connecting to Mesh..\r\n");
+        printf("[EasyConnect] Using Mesh\n");
+        printf("[EasyConnect] Connecting to Mesh..\n");
     }
+    mesh.initialize(&rf_phy);
     connect_success = mesh.connect();
     network_interface = &mesh;
 #endif
     if(connect_success == 0) {
         if (log_messages) {
-            output.printf("[EasyConnect] Connected to Network successfully\r\n");
+            printf("[EasyConnect] Connected to Network successfully\n");
         }
     } else {
         if (log_messages) {
-            output.printf("[EasyConnect] Connection to Network Failed %d!\r\n", connect_success);
+            printf("[EasyConnect] Connection to Network Failed %d!\n", connect_success);
+        }
+        return NULL;
+    }
+    const char *ip_addr  = network_interface->get_ip_address();
+    const char *mac_addr = network_interface->get_mac_address();
+    if (ip_addr == NULL) {
+        if (log_messages) {
+            printf("[EasyConnect] ERROR - No IP address\n");
+        }
+        return NULL;
+    }
+    if (mac_addr == NULL) {
+        if (log_messages) {
+            printf("[EasyConnect] ERROR - No MAC address\n");
         }
         return NULL;
     }
     if (log_messages) {
-        const char *ip_addr = network_interface->get_ip_address();
-        if (ip_addr) {
-            output.printf("[EasyConnect] IP address %s\r\n", ip_addr);
-        } else {
-            output.printf("[EasyConnect] No IP address\r\n");
-        }
+        printf("[EasyConnect] IP address %s\n", ip_addr);
+        printf("[EasyConnect] MAC address %s\n", mac_addr);
     }
     return network_interface;
 }
