@@ -61,7 +61,7 @@ If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you will need to specify your radio
             "value": "MESH_LOWPAN_ND"
         },
         "mesh_radio_type": {
-        	"help": "options are ATMEL, MCR20",
+        	"help": "options are ATMEL, MCR20, SPIRIT1",
         	"value": "ATMEL"
         }
     }
