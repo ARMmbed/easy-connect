@@ -71,7 +71,13 @@ NanostackRfPhySpirit1 rf_phy(SPIRIT1_SPI_MOSI, SPIRIT1_SPI_MISO, SPIRIT1_SPI_SCL
 NetworkInterface* easy_connect(bool log_messages = false) {
     NetworkInterface* network_interface = 0;
     int connect_success = -1;
-#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
+    /// This should be removed once mbedOS supports proper dual-stack
+#if defined (MESH) || (MBED_CONF_LWIP_IPV6_ENABLED==true)
+    printf("[EasyConnect] IPv6 mode\n");
+#else
+    printf("[EasyConnect] IPv4 mode\n");
+#endif
+    #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (ESP8266) \n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
