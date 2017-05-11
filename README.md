@@ -23,6 +23,11 @@ Add the following to your ``mbed_app.json`` file:
     }
 }
 ```
+If you choose `ETHERNET` with `UBLOX_ODIN_EVK_W2` you must add this to your `target-overrides` section in `mbed_app.json`:
+```json
+            "UBLOX_EVK_ODIN_W2": {
+            "target.device_has_remove": ["EMAC"]
+```
 
 If you choose `WIFI_ESP8266` or `WIFI_ODIN`, you'll also need to add the WiFi SSID and password:
 
