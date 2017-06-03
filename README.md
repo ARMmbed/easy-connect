@@ -102,6 +102,10 @@ If you want to avoid using `\r\n` in your printouts and just use normal C-style 
     }
 ```
 
+## Network errors
+
+If easy-connect cannot connect to the network it returns a network error, with an error code. To see what these error code mean, see the [mbed OS Communication API](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/communication/network_sockets/#network-errors).
+
 ## Extra defines
 
 If you'd like to use Easy Connect with mbed Client then you're in luck. Easy Connect automatically defines the `MBED_SERVER_ADDRESS` macro depending on your connectivity method (either IPv4 or IPv6 address). Use this address to connect to the right instance of mbed Device Connector.
