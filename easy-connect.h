@@ -1,5 +1,5 @@
-#ifndef __MAGIC_CONNECT_H__
-#define __MAGIC_CONNECT_H__
+#ifndef __EASY_CONNECT_H__
+#define __EASY_CONNECT_H__
 
 #include "mbed.h"
 
@@ -67,7 +67,31 @@ NanostackRfPhySpirit1 rf_phy(SPIRIT1_SPI_MOSI, SPIRIT1_SPI_MISO, SPIRIT1_SPI_SCL
 #define MBED_CONF_APP_WIFI_PASSWORD MBED_CONF_APP_ESP8266_PASSWORD
 #endif
 
+/* \brief print_MAC - print_MAC  - helper function to print out MAC address
+ * in: network_interface - pointer to network i/f
+ *     bool log-messages   print out logs or not
+ * MAC address is print, if it can be acquired & log_messages is true.
+ *
+ */
+void print_MAC(NetworkInterface* network_interface, bool log_messages) {
+    const char *mac_addr = network_interface->get_mac_address();
+    if (mac_addr == NULL) {
+        if (log_messages) {
+            printf("[EasyConnect] ERROR - No MAC address\n");
+        }
+        return;
+    }
+    if (log_messages) {
+        printf("[EasyConnect] MAC address %s\n", mac_addr);
+    }
+}
 
+
+/* \brief easy_connect - easy_connect function to connect the pre-defined network bearer,
+ *                       config done via mbed_app.json (see README.md for details).
+ * IN: bool log_messages  print out diagnostics or not.
+ *
+ */
 NetworkInterface* easy_connect(bool log_messages = false) {
     NetworkInterface* network_interface = 0;
     int connect_success = -1;
@@ -77,65 +101,60 @@ NetworkInterface* easy_connect(bool log_messages = false) {
 #else
     printf("[EasyConnect] IPv4 mode\n");
 #endif
+
     #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (ESP8266) \n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
-    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
     network_interface = &wifi;
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (ODIN) \n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
-    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
     network_interface = &wifi;
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
     if (log_messages) {
         printf("[EasyConnect] Using Ethernet\n");
     }
-    connect_success = eth.connect();
     network_interface = &eth;
+    connect_success = eth.connect();
 #endif
 #ifdef MESH
     if (log_messages) {
         printf("[EasyConnect] Using Mesh\n");
         printf("[EasyConnect] Connecting to Mesh..\n");
     }
+    network_interface = &mesh;
     mesh.initialize(&rf_phy);
     connect_success = mesh.connect();
-    network_interface = &mesh;
 #endif
     if(connect_success == 0) {
         if (log_messages) {
             printf("[EasyConnect] Connected to Network successfully\n");
+            print_MAC(network_interface, log_messages);
         }
     } else {
         if (log_messages) {
+            print_MAC(network_interface, log_messages);
             printf("[EasyConnect] Connection to Network Failed %d!\n", connect_success);
         }
         return NULL;
     }
     const char *ip_addr  = network_interface->get_ip_address();
-    const char *mac_addr = network_interface->get_mac_address();
     if (ip_addr == NULL) {
         if (log_messages) {
             printf("[EasyConnect] ERROR - No IP address\n");
         }
         return NULL;
     }
-    if (mac_addr == NULL) {
-        if (log_messages) {
-            printf("[EasyConnect] ERROR - No MAC address\n");
-        }
-        return NULL;
-    }
     if (log_messages) {
         printf("[EasyConnect] IP address %s\n", ip_addr);
-        printf("[EasyConnect] MAC address %s\n", mac_addr);
     }
     return network_interface;
 }
 
-#endif // __MAGIC_CONNECT_H__
+#endif // __EASY_CONNECT_H__
