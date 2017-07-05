@@ -10,7 +10,7 @@ Add the following to your ``mbed_app.json`` file:
 {
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN, WIFI_REALTEK, MESH_LOWPAN_ND,MESH_THREAD",
             "value": "ETHERNET"
         }
     },
@@ -29,12 +29,12 @@ If you choose `ETHERNET` with `UBLOX_ODIN_EVK_W2` you must add this to your `tar
             "target.device_has_remove": ["EMAC"]
 ```
 
-If you choose `WIFI_ESP8266` or `WIFI_ODIN`, you'll also need to add the WiFi SSID and password:
+If you choose `WIFI_ESP8266`, `WIFI_ODIN` or `WIFI_REALTEK`, you'll also need to add the WiFi SSID and password:
 
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,WIFI_REALTEK,MESH_LOWPAN_ND,MESH_THREAD",
             "value": "WIFI_ESP8266"
         },
         "esp8266-tx": {
@@ -101,6 +101,10 @@ If you want to avoid using `\r\n` in your printouts and just use normal C-style 
         }
     }
 ```
+
+## Network errors
+
+If easy-connect cannot connect to the network it returns a network error, with an error code. To see what these error code mean, see the [mbed OS Communication API](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/communication/network_sockets/#network-errors).
 
 ## Extra defines
 
