@@ -10,7 +10,7 @@ Add the following to your `mbed_app.json` file:
 {
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN, WIFI_REALTEK, MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND,MESH_THREAD",
             "value": "ETHERNET"
         }
     },
@@ -37,7 +37,7 @@ If you select `WIFI_ESP8266`, `WIFI_ODIN` or `WIFI_REALTEK`, you also need to ad
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_ODIN, WIFI_REALTEK, MESH_LOWPAN_ND, MESH_THREAD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD",
             "value": "WIFI_ESP8266"
         },
         "esp8266-tx": {
@@ -65,7 +65,7 @@ If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you need to specify your radio modu
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,WIFI_RTW,MESH_LOWPAN_ND,MESH_THREAD",
             "value": "MESH_LOWPAN_ND"
         },
         "mesh_radio_type": {

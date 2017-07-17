@@ -23,7 +23,7 @@ ESP8266Interface wifi(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX);
 #include "OdinWiFiInterface.h"
 
 OdinWiFiInterface wifi;
-#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_REALTEK
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
 #include "RTWInterface.h"
 RTWInterface wifi;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
@@ -121,9 +121,9 @@ NetworkInterface* easy_connect(bool log_messages = false) {
     }
     network_interface = &wifi;
     connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
-#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_REALTEK
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
     if (log_messages) {
-        printf("[EasyConnect] Using WiFi (REALTEK)\n");
+        printf("[EasyConnect] Using WiFi (RTW)\n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
     network_interface = &wifi;
