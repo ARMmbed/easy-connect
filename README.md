@@ -32,7 +32,7 @@ If you select `ETHERNET` with `UBLOX_ODIN_EVK_W2` you must add this to your `tar
             }
 ```
 
-If you select `WIFI_ESP8266`, `WIFI_ODIN` or `WIFI_REALTEK`, you also need to add the WiFi SSID and password:
+If you select `WIFI_ESP8266`, `WIFI_ODIN` or `WIFI_RTW`, you also need to add the WiFi SSID and password:
 
 ```json
     "config": {
