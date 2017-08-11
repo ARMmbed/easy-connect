@@ -42,6 +42,13 @@ ThreadInterface mesh;
 #endif
 
 #if defined(MESH)
+
+// Define macros for radio type
+#define ATMEL   1
+#define MCR20   2
+#define SPIRIT1 3
+#define EFR32   4
+
 #if MBED_CONF_APP_MESH_RADIO_TYPE == ATMEL
 #include "NanostackRfPhyAtmel.h"
 NanostackRfPhyAtmel rf_phy(ATMEL_SPI_MOSI, ATMEL_SPI_MISO, ATMEL_SPI_SCLK, ATMEL_SPI_CS,
