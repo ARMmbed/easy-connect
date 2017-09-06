@@ -10,7 +10,7 @@ Add the following to your `mbed_app.json` file:
 {
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "ETHERNET"
         }
     },
@@ -37,7 +37,7 @@ If you select `WIFI_ESP8266`, `WIFI_ODIN` or `WIFI_RTW`, you also need to add th
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "WIFI_ESP8266"
         },
         "esp8266-tx": {
@@ -65,7 +65,7 @@ If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you need to specify your radio modu
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET,WIFI_ESP8266,WIFI_ODIN,WIFI_RTW,MESH_LOWPAN_ND,MESH_THREAD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "MESH_LOWPAN_ND"
         },
         "mesh_radio_type": {
@@ -74,6 +74,40 @@ If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you need to specify your radio modu
         }
     }
 ```
+
+If you use `CELLULAR_ONBOARD` (for which user documentation can be found [here](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/communication/cellular/)) you must specify the following:
+
+```json
+    "target_overrides": {
+        "*": {
+            "ppp-cell-iface.apn-lookup": true
+        }
+    }
+```
+...and you may also need to specify one or more of the following:
+
+```json
+    "config": {
+        "cellular-apn": {
+            "help": "Please provide the APN string for your SIM if it is not already included in APN_db.h.",
+            "value": "\"my_sims_apn\""
+        },
+        "cellular-username": {
+            "help": "May or may not be required for your APN, please consult your SIM provider.",
+            "value": "\"my_sim_apns_username\""
+        },
+        "cellular-password": {
+            "help": "May or may not be required for your APN, please consult your SIM provider.",
+            "value": "\"my_sim_apns_password\""
+        },
+        "cellular-sim-pin": {
+            "help": "Please provide the PIN for your SIM (as a four digit string) if your SIM is normally locked",
+            "value": "\"1234\""
+        }
+    }
+```
+
+None of the optional settings need to be specified for the `UBLOX_C030_U201` cellular target, for which the APN settings are in `APN_db.h`.
 
 ## Using Easy Connect from your application
 
