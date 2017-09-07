@@ -3,13 +3,14 @@
 
 #include "mbed.h"
 
-#define ETHERNET        1
-#define WIFI_ESP8266    2
-#define MESH_LOWPAN_ND  3
-#define MESH_THREAD     4
-#define WIFI_ODIN       5
-#define WIFI_REALTEK    6
-#define WIFI_IDW01M1    7
+#define ETHERNET          1
+#define WIFI_ESP8266      2
+#define MESH_LOWPAN_ND    3
+#define MESH_THREAD       4
+#define WIFI_ODIN         5
+#define WIFI_REALTEK      6
+#define CELLULAR_ONBOARD  7
+#define WIFI_IDW01M1      8
 
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
@@ -41,6 +42,9 @@ LoWPANNDInterface mesh;
 #define MESH
 #include "NanostackInterface.h"
 ThreadInterface mesh;
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
+#include "OnboardCellularInterface.h"
+OnboardCellularInterface cellular;
 #else
 #error "No connectivity method chosen. Please add 'config.network-interfaces.value' to your mbed_app.json (see README.md for more information)."
 #endif
@@ -93,6 +97,7 @@ NanostackRfPhyEfr32 rf_phy;
  *
  */
 void print_MAC(NetworkInterface* network_interface, bool log_messages) {
+#if MBED_CONF_APP_NETWORK_INTERFACE != CELLULAR_ONBOARD
     const char *mac_addr = network_interface->get_mac_address();
     if (mac_addr == NULL) {
         if (log_messages) {
@@ -103,6 +108,7 @@ void print_MAC(NetworkInterface* network_interface, bool log_messages) {
     if (log_messages) {
         printf("[EasyConnect] MAC address %s\n", mac_addr);
     }
+#endif
 }
 
 
@@ -149,6 +155,28 @@ NetworkInterface* easy_connect(bool log_messages = false) {
     }
     network_interface = &wifi;
     connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
+#  ifdef MBED_CONF_APP_CELLULAR_SIM_PIN
+    cellular.set_sim_pin(MBED_CONF_APP_CELLULAR_SIM_PIN);
+#  endif
+#  ifdef MBED_CONF_APP_CELLULAR_APN
+#    ifndef MBED_CONF_APP_CELLULAR_USERNAME
+#      define MBED_CONF_APP_CELLULAR_USERNAME 0
+#    endif
+#    ifndef MBED_CONF_APP_CELLULAR_PASSWORD
+#      define MBED_CONF_APP_CELLULAR_PASSWORD 0
+#    endif
+    cellular.set_credentials(MBED_CONF_APP_CELLULAR_APN, MBED_CONF_APP_CELLULAR_USERNAME, MBED_CONF_APP_CELLULAR_PASSWORD);
+    if (log_messages) {
+        printf("[EasyConnect] Connecting using Cellular interface and APN %s\n", MBED_CONF_APP_CELLULAR_APN);
+    }
+#  else
+    if (log_messages) {
+        printf("[EasyConnect] Connecting using Cellular interface and default APN\n");
+    }
+#  endif
+    connect_success = cellular.connect();
+    network_interface = &cellular;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
     if (log_messages) {
         printf("[EasyConnect] Using Ethernet\n");
@@ -185,6 +213,7 @@ NetworkInterface* easy_connect(bool log_messages = false) {
         }
         return NULL;
     }
+
     if (log_messages) {
         printf("[EasyConnect] IP address %s\n", ip_addr);
     }
