@@ -10,6 +10,7 @@
 #define WIFI_ODIN         5
 #define WIFI_RTW          6
 #define CELLULAR_ONBOARD  7
+#define WIFI_IDW01M1      8
 
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
@@ -27,6 +28,9 @@ OdinWiFiInterface wifi;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
 #include "RTWInterface.h"
 RTWInterface wifi;
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_IDW01M1
+#include "SpwfSAInterface.h"
+SpwfSAInterface wifi(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX);
 #elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
 #include "EthernetInterface.h"
 EthernetInterface eth;
@@ -123,7 +127,7 @@ NetworkInterface* easy_connect(bool log_messages = false) {
     printf("[EasyConnect] IPv4 mode\n");
 #endif
 
- #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
+#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (ESP8266) \n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
@@ -140,6 +144,13 @@ NetworkInterface* easy_connect(bool log_messages = false) {
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (RTW)\n");
+        printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
+    }
+    network_interface = &wifi;
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_IDW01M1
+    if (log_messages) {
+        printf("[EasyConnect] Using WiFi (X-NUCLEO-IDW01M1)\n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
     network_interface = &wifi;
