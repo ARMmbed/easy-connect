@@ -8,8 +8,15 @@
 #define MESH_LOWPAN_ND  3
 #define MESH_THREAD     4
 #define WIFI_ODIN       5
+#define CELLULAR_UBLOX  6
 
-#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
+
+#if MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_UBLOX
+#include "OnboardCellularInterface.h"
+// CellularInterface object
+OnboardCellularInterface cell;
+
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
 
 #ifdef MBED_CONF_APP_ESP8266_DEBUG
@@ -122,6 +129,20 @@ NetworkInterface* easy_connect(bool log_messages = false) {
     }
     network_interface = &eth;
     connect_success = eth.connect();
+
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_UBLOX
+    if (log_messages) {
+        printf("[EasyConnect] Using Ublox cellular\n");
+    }
+    cell.modem_debug_on(MBED_CONF_APP_MODEM_TRACE);
+    /* Set Pin code for SIM card */
+    cell.set_sim_pin(MBED_CONF_APP_SIM_PIN_CODE);
+
+    /* Set network credentials here, e.g., APN*/
+    cell.set_credentials(MBED_CONF_APP_APN, MBED_CONF_APP_USERNAME, MBED_CONF_APP_PASSWORD);
+
+    network_interface = &cell;
+    connect_success = cell.connect();
 #endif
 #ifdef MESH
     if (log_messages) {
