@@ -9,9 +9,16 @@
 #define MESH_THREAD     4
 #define WIFI_ODIN       5
 #define CELLULAR_UBLOX  6
+#define CELLULAR_QUECTEL95 7
 
 
-#if MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_UBLOX
+
+#if MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_QUECTEL95
+#include "nbiot-at-advantech-quectel/BC95Interface.h"
+// CellularInterface object
+BC95Interface cell_95(MBED_CONF_APP_UART_TX_BC95, MBED_CONF_APP_UART_RX_BC95, true);
+
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_UBLOX
 #include "OnboardCellularInterface.h"
 // CellularInterface object
 OnboardCellularInterface cell;
@@ -143,6 +150,14 @@ NetworkInterface* easy_connect(bool log_messages = false) {
 
     network_interface = &cell;
     connect_success = cell.connect();
+
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_QUECTEL95
+    if (log_messages) {
+        printf("[EasyConnect] Using QUECTEL cellular\n");
+    }
+
+    network_interface = &cell_95;
+    connect_success = cell_95.connect();
 #endif
 #ifdef MESH
     if (log_messages) {
