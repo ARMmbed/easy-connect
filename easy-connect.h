@@ -11,6 +11,7 @@
 #define WIFI_RTW          6
 #define CELLULAR_ONBOARD  7
 #define WIFI_IDW01M1      8
+#define NBIOT_QUECTEL     9
 
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
@@ -45,6 +46,9 @@ ThreadInterface mesh;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
 #include "OnboardCellularInterface.h"
 OnboardCellularInterface cellular;
+#elif MBED_CONF_APP_NETWORK_INTERFACE == NBIOT_QUECTEL
+#include "BC95Interface.h"
+BC95Interface nbiot(MBED_CONF_APP_BC95_TX, MBED_CONF_APP_BC95_RX);
 #else
 #error "No connectivity method chosen. Please add 'config.network-interfaces.value' to your mbed_app.json (see README.md for more information)."
 #endif
@@ -183,6 +187,9 @@ NetworkInterface* easy_connect(bool log_messages = false) {
     }
     network_interface = &eth;
     connect_success = eth.connect();
+#elif MBED_CONF_APP_NETWORK_INTERFACE == NBIOT_QUECTEL
+    connect_success = nbiot.connect();
+    network_interface = &nbiot;
 #endif
 
 #ifdef MESH
