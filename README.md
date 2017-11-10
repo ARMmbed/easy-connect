@@ -168,7 +168,7 @@ collect2: error: ld returned 1 exit status
 
 ## Network errors
 
-If Easy Connect cannot connect to the network, it returns a network error with an error code. To see what the error code means, see the [mbed OS Communication API](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/communication/network_sockets/#network-errors).
+If Easy Connect cannot connect to the network, it returns a network error with an error code. To see what the error code means, see the [mbed OS Communication API](https://os.mbed.com/docs/v5.6/reference/network-socket.html).
 
 ## CR/LF in serial output
 
