@@ -10,7 +10,7 @@ Add the following to your `mbed_app.json` file:
 {
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW01M1, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "ETHERNET"
         }
     },
@@ -32,12 +32,12 @@ If you select `ETHERNET` with `UBLOX_ODIN_EVK_W2` you must add this to your `tar
             }
 ```
 
-If you select `WIFI_ESP8266`, `WIFI_IDW01M1`, `WIFI_ODIN` or `WIFI_RTW`, you also need to add the WiFi SSID and password:
+If you select `WIFI_ESP8266`, `WIFI_IDW0XX1`, `WIFI_ODIN` or `WIFI_RTW`, you also need to add the WiFi SSID and password:
 
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW01M1, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "WIFI_ESP8266"
         },
         "esp8266-tx": {
@@ -65,7 +65,7 @@ If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you need to specify your radio modu
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW01M1, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "MESH_LOWPAN_ND"
         },
         "mesh_radio_type": {
