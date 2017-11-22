@@ -1,2 +1,6 @@
-wifi-x-nucleo-idw01m1/ATParser/*
-esp8266-driver/ESP8266/ATParser/*
+esp8266-driver/*
+ATParser/*
+wifi-x-nucleo-idw01m1/*
+atmel-rf-driver/*
+mcr20a-rf-driver/*
+stm-spirit1-rf-driver/*
