@@ -1,5 +1,5 @@
 esp8266-driver/*
-ATParser/*
+quectel-nbiot-driver/QUECTEL-NBIoT-BC95/ATParser/*
 wifi-x-nucleo-idw01m1/*
 atmel-rf-driver/*
 mcr20a-rf-driver/*
