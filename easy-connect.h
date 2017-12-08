@@ -133,28 +133,28 @@ NetworkInterface* easy_connect(bool log_messages = false) {
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
     network_interface = &wifi;
-    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, (strlen(MBED_CONF_APP_WIFI_PASSWORD) > 2) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (ODIN) \n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
     network_interface = &wifi;
-    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, (strlen(MBED_CONF_APP_WIFI_PASSWORD) > 2) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (RTW)\n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
     network_interface = &wifi;
-    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, (strlen(MBED_CONF_APP_WIFI_PASSWORD) > 2) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_IDW0XX1
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (X-NUCLEO-IDW0XX1)\n");
         printf("[EasyConnect] Connecting to WiFi %s\n", MBED_CONF_APP_WIFI_SSID);
     }
     network_interface = &wifi;
-    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, (strlen(MBED_CONF_APP_WIFI_PASSWORD) > 2) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
 #elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
 #  ifdef MBED_CONF_APP_CELLULAR_SIM_PIN
     cellular.set_sim_pin(MBED_CONF_APP_CELLULAR_SIM_PIN);
