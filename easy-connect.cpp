@@ -24,6 +24,7 @@
  */
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
+#define WIFI_TYPE "ESP8266"
 
 #ifdef MBED_CONF_APP_ESP8266_DEBUG
 ESP8266Interface wifi(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX, MBED_CONF_APP_ESP8266_DEBUG);
@@ -32,14 +33,17 @@ ESP8266Interface wifi(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX);
 #endif
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
+#define WIFI_TYPE "Odin"
 #include "OdinWiFiInterface.h"
 OdinWiFiInterface wifi;
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
+#define WIFI_TYPE "RTW"
 #include "RTWInterface.h"
 RTWInterface wifi;
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_IDW0XX1
+#define WIFI_TYPE "IDW0XX1"
 #include "SpwfSAInterface.h"
 SpwfSAInterface wifi(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX);
 
@@ -145,6 +149,7 @@ NetworkInterface* easy_connect(bool log_messages) {
         }
         strncpy(_password, MBED_CONF_APP_WIFI_PASSWORD, WIFI_PASSWORD_MAX_LEN);
     }
+    printf("_password = %s, len = %d\n", _password, strlen(_password));
 #endif // WIFI
 
     /// This should be removed once mbedOS supports proper dual-stack
@@ -154,30 +159,9 @@ NetworkInterface* easy_connect(bool log_messages) {
     printf("[EasyConnect] IPv4 mode\n");
 #endif
 
-#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
+#if defined (WIFI)
     if (log_messages) {
-        printf("[EasyConnect] Using WiFi (ESP8266) \n");
-        printf("[EasyConnect] Connecting to WiFi %s\n", _ssid);
-    }
-    network_interface = &wifi;
-    connect_success = wifi.connect(_ssid, _password, (strlen(_password) > 1) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
-#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
-    if (log_messages) {
-        printf("[EasyConnect] Using WiFi (ODIN) \n");
-        printf("[EasyConnect] Connecting to WiFi %s\n", _ssid);
-    }
-    network_interface = &wifi;
-    connect_success = wifi.connect(_ssid, _password, (strlen(_password) > 1) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
-#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
-    if (log_messages) {
-        printf("[EasyConnect] Using WiFi (RTW)\n");
-        printf("[EasyConnect] Connecting to WiFi %s\n", _ssid);
-    }
-    network_interface = &wifi;
-    connect_success = wifi.connect(_ssid, _password, (strlen(_password) > 1) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
-#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_IDW0XX1
-    if (log_messages) {
-        printf("[EasyConnect] Using WiFi (X-NUCLEO-IDW0XX1)\n");
+        printf("[EasyConnect] Using WiFi (%s) \n", WIFI_TYPE);
         printf("[EasyConnect] Connecting to WiFi %s\n", _ssid);
     }
     network_interface = &wifi;
