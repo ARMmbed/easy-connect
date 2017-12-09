@@ -75,20 +75,24 @@ OnboardCellularInterface cellular;
 #if defined (MESH)
 #if MBED_CONF_APP_MESH_RADIO_TYPE == ATMEL
 #include "NanostackRfPhyAtmel.h"
+#define MESH_TYPE "Atmel"
 NanostackRfPhyAtmel rf_phy(ATMEL_SPI_MOSI, ATMEL_SPI_MISO, ATMEL_SPI_SCLK, ATMEL_SPI_CS,
                            ATMEL_SPI_RST, ATMEL_SPI_SLP, ATMEL_SPI_IRQ, ATMEL_I2C_SDA, ATMEL_I2C_SCL);
 
 #elif MBED_CONF_APP_MESH_RADIO_TYPE == MCR20
 #include "NanostackRfPhyMcr20a.h"
+#define MESH_TYPE "Mcr20A"
 NanostackRfPhyMcr20a rf_phy(MCR20A_SPI_MOSI, MCR20A_SPI_MISO, MCR20A_SPI_SCLK, MCR20A_SPI_CS, MCR20A_SPI_RST, MCR20A_SPI_IRQ);
 
 #elif MBED_CONF_APP_MESH_RADIO_TYPE == SPIRIT1
 #include "NanostackRfPhySpirit1.h"
+#define MESH_TYPE "Spirit1"
 NanostackRfPhySpirit1 rf_phy(SPIRIT1_SPI_MOSI, SPIRIT1_SPI_MISO, SPIRIT1_SPI_SCLK,
                              SPIRIT1_DEV_IRQ, SPIRIT1_DEV_CS, SPIRIT1_DEV_SDN, SPIRIT1_BRD_LED);
 
 #elif MBED_CONF_APP_MESH_RADIO_TYPE == EFR32
 #include "NanostackRfPhyEfr32.h"
+#define MESH_TYPE "EFR32"
 NanostackRfPhyEfr32 rf_phy;
 
 #endif // MBED_CONF_APP_RADIO_TYPE
@@ -98,8 +102,8 @@ NanostackRfPhyEfr32 rf_phy;
 #define WIFI_SSID_MAX_LEN      32
 #define WIFI_PASSWORD_MAX_LEN  64
 
-char _ssid[WIFI_SSID_MAX_LEN+1] = {0};
-char _password[WIFI_PASSWORD_MAX_LEN+1] = {0};
+char* _ssid = NULL;
+char* _password = NULL;
 #endif // WIFI
 
 /* \brief print_MAC - print_MAC  - helper function to print out MAC address
@@ -136,20 +140,19 @@ NetworkInterface* easy_connect(bool log_messages) {
 #if defined (WIFI)
     // We check if the _ssid and _password have already been set (via the easy_connect() that takes thoses parameters or not
     // If they have not been set, use the ones we can gain from mbed_app.json.
-    if (strlen(_ssid) == 0) { 
+    if (_ssid == NULL) { 
         if(strlen(MBED_CONF_APP_WIFI_SSID) > WIFI_SSID_MAX_LEN) {
-            printf("WARNING - MBED_CONF_APP_WIFI_SSID is too long - it will be cut to %d chars.\n", WIFI_SSID_MAX_LEN);
+            printf("ERROR - MBED_CONF_APP_WIFI_SSID is too long %d vs. %d\n", strlen(MBED_CONF_APP_WIFI_SSID), WIFI_SSID_MAX_LEN);
+            return 0;
         }
-        strncpy(_ssid, MBED_CONF_APP_WIFI_SSID, WIFI_SSID_MAX_LEN);
     }
 
-    if (strlen(_password) == 0 ) {
+    if (_password == NULL) {
         if(strlen(MBED_CONF_APP_WIFI_PASSWORD) > WIFI_PASSWORD_MAX_LEN) {
-            printf("WARNING - MBED_CONF_APP_WIFI_PASSWORD is too long - it will be cut to %d chars.\n", WIFI_PASSWORD_MAX_LEN);
+            printf("ERROR - MBED_CONF_APP_WIFI_PASSWORD is too long %d vs. %d\n", strlen(MBED_CONF_APP_WIFI_PASSWORD), WIFI_PASSWORD_MAX_LEN);
+            return 0;
         }
-        strncpy(_password, MBED_CONF_APP_WIFI_PASSWORD, WIFI_PASSWORD_MAX_LEN);
     }
-    printf("_password = %s, len = %d\n", _password, strlen(_password));
 #endif // WIFI
 
     /// This should be removed once mbedOS supports proper dual-stack
@@ -162,10 +165,15 @@ NetworkInterface* easy_connect(bool log_messages) {
 #if defined (WIFI)
     if (log_messages) {
         printf("[EasyConnect] Using WiFi (%s) \n", WIFI_TYPE);
-        printf("[EasyConnect] Connecting to WiFi %s\n", _ssid);
+        printf("[EasyConnect] Connecting to WiFi %s\n", ((_ssid == NULL) ? MBED_CONF_APP_WIFI_SSID : _ssid) );
     }
     network_interface = &wifi;
-    connect_success = wifi.connect(_ssid, _password, (strlen(_password) > 1) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
+    if (_ssid == NULL) {
+        connect_success = wifi.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, (strlen(MBED_CONF_APP_WIFI_PASSWORD) > 1) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
+    }
+    else {
+        connect_success = wifi.connect(_ssid, _password, (strlen(_password) > 1) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
+    }
 #elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
 #  ifdef MBED_CONF_APP_CELLULAR_SIM_PIN
     cellular.set_sim_pin(MBED_CONF_APP_CELLULAR_SIM_PIN);
@@ -198,8 +206,8 @@ NetworkInterface* easy_connect(bool log_messages) {
 
 #ifdef MESH
     if (log_messages) {
-        printf("[EasyConnect] Using Mesh\n");
-        printf("[EasyConnect] Connecting to Mesh..\n");
+        printf("[EasyConnect] Using Mesh (%s)\n", MESH_TYPE);
+        printf("[EasyConnect] Connecting to Mesh...\n");
     }
     network_interface = &mesh;
     mesh.initialize(&rf_phy);
@@ -246,27 +254,23 @@ NetworkInterface* easy_connect(bool log_messages,
                                char* WiFiSSID,
                                char* WiFiPassword ) {
 
-
-#if defined (WIFI) // This function only makes sense when using WiFi
+// This functionality only makes sense when using WiFi
+#if defined (WIFI) 
     // We essentially want to populate the _ssid and _password and then call easy_connect() again. 
     if (WiFiSSID != NULL) {
         if(strlen(WiFiSSID) > WIFI_SSID_MAX_LEN) {
             printf("WARNING - WiFi SSID is too long - it will be cut to %d chars.\n", WIFI_SSID_MAX_LEN);
+            return 0;
         }
-        strncpy(_ssid, WiFiSSID, WIFI_SSID_MAX_LEN);
-    }
-    else {
-        strncpy(_ssid, MBED_CONF_APP_WIFI_SSID, WIFI_SSID_MAX_LEN);
+        _ssid = WiFiSSID;
     }
 
     if (WiFiPassword != NULL) {
         if(strlen(WiFiPassword) > WIFI_PASSWORD_MAX_LEN) {
             printf("WARNING - WiFi Password is too long - it will be cut to %d chars.\n", WIFI_PASSWORD_MAX_LEN);
+            return 0;
         }
-        strncpy(_password, WiFiPassword, WIFI_PASSWORD_MAX_LEN);
-    }
-    else {
-        strncpy(_password, MBED_CONF_APP_WIFI_PASSWORD, WIFI_PASSWORD_MAX_LEN);
+        _password = WiFiPassword;
     }
 #endif // WIFI
     return easy_connect(log_messages);
