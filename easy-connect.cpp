@@ -24,7 +24,7 @@
  */
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
 #include "ESP8266Interface.h"
-#define WIFI_TYPE "ESP8266"
+#define EASY_CONNECT_WIFI_TYPE "ESP8266"
 
 #ifdef MBED_CONF_APP_ESP8266_DEBUG
 ESP8266Interface wifi(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX, MBED_CONF_APP_ESP8266_DEBUG);
@@ -33,17 +33,17 @@ ESP8266Interface wifi(MBED_CONF_APP_ESP8266_TX, MBED_CONF_APP_ESP8266_RX);
 #endif
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
-#define WIFI_TYPE "Odin"
+#define EASY_CONNECT_WIFI_TYPE "Odin"
 #include "OdinWiFiInterface.h"
 OdinWiFiInterface wifi;
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
-#define WIFI_TYPE "RTW"
+#define EASY_CONNECT_WIFI_TYPE "RTW"
 #include "RTWInterface.h"
 RTWInterface wifi;
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_IDW0XX1
-#define WIFI_TYPE "IDW0XX1"
+#define EASY_CONNECT_WIFI_TYPE "IDW0XX1"
 #include "SpwfSAInterface.h"
 SpwfSAInterface wifi(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX);
 
@@ -52,12 +52,12 @@ SpwfSAInterface wifi(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX);
 EthernetInterface eth;
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == MESH_LOWPAN_ND
-#define MESH
+#define EASY_CONNECT_MESH
 #include "NanostackInterface.h"
 LoWPANNDInterface mesh;
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == MESH_THREAD
-#define MESH
+#define EASY_CONNECT_MESH
 #include "NanostackInterface.h"
 ThreadInterface mesh;
 
@@ -72,39 +72,39 @@ OnboardCellularInterface cellular;
 /*
  * In case of Mesh, instantiate the configured RF PHY.
  */
-#if defined (MESH)
+#if defined (EASY_CONNECT_MESH)
 #if MBED_CONF_APP_MESH_RADIO_TYPE == ATMEL
 #include "NanostackRfPhyAtmel.h"
-#define MESH_TYPE "Atmel"
+#define EASY_CONNECT_MESH_TYPE "Atmel"
 NanostackRfPhyAtmel rf_phy(ATMEL_SPI_MOSI, ATMEL_SPI_MISO, ATMEL_SPI_SCLK, ATMEL_SPI_CS,
                            ATMEL_SPI_RST, ATMEL_SPI_SLP, ATMEL_SPI_IRQ, ATMEL_I2C_SDA, ATMEL_I2C_SCL);
 
 #elif MBED_CONF_APP_MESH_RADIO_TYPE == MCR20
 #include "NanostackRfPhyMcr20a.h"
-#define MESH_TYPE "Mcr20A"
+#define EASY_CONNECT_MESH_TYPE "Mcr20A"
 NanostackRfPhyMcr20a rf_phy(MCR20A_SPI_MOSI, MCR20A_SPI_MISO, MCR20A_SPI_SCLK, MCR20A_SPI_CS, MCR20A_SPI_RST, MCR20A_SPI_IRQ);
 
 #elif MBED_CONF_APP_MESH_RADIO_TYPE == SPIRIT1
 #include "NanostackRfPhySpirit1.h"
-#define MESH_TYPE "Spirit1"
+#define EASY_CONNECT_MESH_TYPE "Spirit1"
 NanostackRfPhySpirit1 rf_phy(SPIRIT1_SPI_MOSI, SPIRIT1_SPI_MISO, SPIRIT1_SPI_SCLK,
                              SPIRIT1_DEV_IRQ, SPIRIT1_DEV_CS, SPIRIT1_DEV_SDN, SPIRIT1_BRD_LED);
 
 #elif MBED_CONF_APP_MESH_RADIO_TYPE == EFR32
 #include "NanostackRfPhyEfr32.h"
-#define MESH_TYPE "EFR32"
+#define EASY_CONNECT_MESH_TYPE "EFR32"
 NanostackRfPhyEfr32 rf_phy;
 
 #endif // MBED_CONF_APP_RADIO_TYPE
-#endif // MESH
+#endif // EASY_CONNECT_MESH
 
-#if defined (WIFI)
+#if defined (EASY_CONNECT_WIFI)
 #define WIFI_SSID_MAX_LEN      32
 #define WIFI_PASSWORD_MAX_LEN  64
 
 char* _ssid = NULL;
 char* _password = NULL;
-#endif // WIFI
+#endif // EASY_CONNECT_WIFI
 
 /* \brief print_MAC - print_MAC  - helper function to print out MAC address
  * in: network_interface - pointer to network i/f
@@ -137,7 +137,7 @@ NetworkInterface* easy_connect(bool log_messages) {
     NetworkInterface* network_interface = NULL;
     int connect_success = -1;
 
-#if defined (WIFI)
+#if defined (EASY_CONNECT_WIFI)
     // We check if the _ssid and _password have already been set (via the easy_connect() that takes thoses parameters or not
     // If they have not been set, use the ones we can gain from mbed_app.json.
     if (_ssid == NULL) { 
@@ -153,18 +153,18 @@ NetworkInterface* easy_connect(bool log_messages) {
             return 0;
         }
     }
-#endif // WIFI
+#endif // EASY_CONNECT_WIFI
 
     /// This should be removed once mbedOS supports proper dual-stack
-#if defined (MESH) || (MBED_CONF_LWIP_IPV6_ENABLED==true)
+#if defined (EASY_CONNECT_MESH) || (MBED_CONF_LWIP_IPV6_ENABLED==true)
     printf("[EasyConnect] IPv6 mode\n");
 #else
     printf("[EasyConnect] IPv4 mode\n");
 #endif
 
-#if defined (WIFI)
+#if defined (EASY_CONNECT_WIFI)
     if (log_messages) {
-        printf("[EasyConnect] Using WiFi (%s) \n", WIFI_TYPE);
+        printf("[EasyConnect] Using WiFi (%s) \n", EASY_CONNECT_WIFI_TYPE);
         printf("[EasyConnect] Connecting to WiFi %s\n", ((_ssid == NULL) ? MBED_CONF_APP_WIFI_SSID : _ssid) );
     }
     network_interface = &wifi;
@@ -204,9 +204,9 @@ NetworkInterface* easy_connect(bool log_messages) {
     connect_success = eth.connect();
 #endif
 
-#ifdef MESH
+#ifdef EASY_CONNECT_MESH
     if (log_messages) {
-        printf("[EasyConnect] Using Mesh (%s)\n", MESH_TYPE);
+        printf("[EasyConnect] Using Mesh (%s)\n", EASY_CONNECT_MESH_TYPE);
         printf("[EasyConnect] Connecting to Mesh...\n");
     }
     network_interface = &mesh;
@@ -255,7 +255,7 @@ NetworkInterface* easy_connect(bool log_messages,
                                char* WiFiPassword ) {
 
 // This functionality only makes sense when using WiFi
-#if defined (WIFI) 
+#if defined (EASY_CONNECT_WIFI) 
     // We essentially want to populate the _ssid and _password and then call easy_connect() again. 
     if (WiFiSSID != NULL) {
         if(strlen(WiFiSSID) > WIFI_SSID_MAX_LEN) {
@@ -272,6 +272,6 @@ NetworkInterface* easy_connect(bool log_messages,
         }
         _password = WiFiPassword;
     }
-#endif // WIFI
+#endif // EASY_CONNECT_WIFI
     return easy_connect(log_messages);
 }

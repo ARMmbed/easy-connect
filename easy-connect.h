@@ -32,25 +32,25 @@
 /* Define supersets for WiFi and Mesh */
 
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
-#define WIFI
+#define EASY_CONNECT_WIFI
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
-#define WIFI
+#define EASY_CONNECT_WIFI
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
-#define WIFI
+#define EASY_CONNECT_WIFI
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_IDW0XX1
-#define WIFI
+#define EASY_CONNECT_WIFI
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == MESH_LOWPAN_ND
-#define MESH
+#define EASY_CONNECT_MESH
 
 #elif MBED_CONF_APP_NETWORK_INTERFACE == MESH_THREAD
-#define MESH
+#define EASY_CONNECT_MESH
 #endif // MBED_CONF_APP_NETWORK_INTERFACE
 
-#if defined(MESH)
+#if defined(EASY_CONNECT_MESH)
 
 // Define macros for radio type
 #define ATMEL   1
@@ -65,7 +65,7 @@
 // This is address to mbed Device Connector
 #define MBED_SERVER_ADDRESS "coap://api.connector.mbed.com:5684"
 
-#endif // (MESH)
+#endif // (EASY_CONNECT_MESH)
 
 // In case the mbed_app.json only defined WIFI SSID/PASSWORD, not ESP8266 ones.
 #if not defined MBED_CONF_APP_ESP8266_SSID
