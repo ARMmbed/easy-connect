@@ -40,17 +40,6 @@ If you select `WIFI_ESP8266`, `WIFI_IDW0XX1`, `WIFI_ODIN` or `WIFI_RTW`, you als
             "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "WIFI_ESP8266"
         },
-        "esp8266-tx": {
-            "help": "Pin used as TX (connects to ESP8266 RX)",
-            "value": "PTD3"
-        },
-        "esp8266-rx": {
-            "help": "Pin used as RX (connects to ESP8266 TX)",
-            "value": "PTD2"
-        },
-        "esp8266-debug": {
-            "value": true
-        },
         "wifi-ssid": {
             "value": "\"SSID\""
         },
@@ -126,6 +115,48 @@ int main(int, char**) {
     // Rest of your program
 }
 ```
+
+## Using Easy connect with WiFi
+
+The easy-connect `easy_connect()` is overloaded now for WiFi so that you can submit your WiFi SSID and password programmatically in you want
+the user to be able to supply them via some means.
+
+```cpp
+#include "easy-connect.h"
+
+int main(int, char**) {
+    char* wifi_SSID = "SSID";
+    char* wifi_password = "password";
+
+    NetworkInterface* network = easy_connect(true, wifi_SSID, wifi_password); 
+    if (!network) {
+        printf("Connecting to the network failed... See serial output.\r\n");
+        return 1;
+    }
+
+    // Rest of your program
+}
+```
+
+## Overriding settings
+
+Easy-connect was changed recently with [PR #59](https://github.com/ARMmbed/easy-connect/pull/59) - where some of the defines expected via `mbed_app.json` were
+moved to the [`mbed_lib.json`](https://github.com/ARMmbed/easy-connect/blob/master/mbed_lib.json). 
+This minimises the amount of lines needed (in typical cases) in the applications `mbed_app.json`. However, due to this the overrides
+need to be done slightly differently, as you need to override the `easy-connect` defines.
+
+So, for example changing the ESP8266 TX/RX pins and enable debugs - you would now have modify as below.
+
+```json
+    "target_overrides": {
+        "*": {
+            "easy-connect.wifi-esp8266-tx": "A1",
+            "easy-connect.wifi-esp8266-rx": "A2",
+            "easy-connect.wifi-esp8266-debug: true
+         }
+    }
+```
+
 
 ## Configuration examples
 

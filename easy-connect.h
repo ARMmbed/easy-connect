@@ -29,6 +29,11 @@
 #define MESH_THREAD       102
 #define CELLULAR_ONBOARD  201
 
+// Define different Nucleo X Wifi  module types
+// The mbed_app.json MBED_CONF_IDW0XX1_EXPANSION_BOARD needs this
+#define IDW01M1           1
+#define IDW01A1           2
+
 /* Define supersets for WiFi and Mesh */
 
 #if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ESP8266
@@ -66,27 +71,6 @@
 #define MBED_SERVER_ADDRESS "coap://api.connector.mbed.com:5684"
 
 #endif // (EASY_CONNECT_MESH)
-
-// In case the mbed_app.json only defined WIFI SSID/PASSWORD, not ESP8266 ones.
-#if not defined MBED_CONF_APP_ESP8266_SSID
-#define MBED_CONF_APP_ESP8266_SSID         MBED_CONF_APP_WIFI_SSID
-#else
-#define MBED_CONF_APP_WIFI_PASSWORD        MBED_CONF_APP_ESP8266_PASSWORD
-#endif
-
-#if not defined MBED_CONF_APP_ESP8266_PASSWORD
-#define MBED_CONF_APP_ESP8266_PASSWORD     MBED_CONF_APP_WIFI_PASSWORD
-#else
-#define MBED_CONF_APP_WIFI_SSID            MBED_CONF_APP_ESP8266_SSID
-#endif
-
-#if not defined MBED_CONF_APP_ESP8266_TX
-#define MBED_CONF_APP_ESP8266_TX         MBED_CONF_APP_WIFI_TX
-#endif
-
-#if not defined MBED_CONF_APP_ESP8266_RX
-#define MBED_CONF_APP_ESP8266_RX         MBED_CONF_APP_WIFI_RX
-#endif
 
 /* \brief print_MAC - print_MAC  - helper function to print out MAC address
  * in: network_interface - pointer to network i/f
