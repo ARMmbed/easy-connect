@@ -117,7 +117,7 @@ char* _password = NULL;
 /* \brief print_MAC - print_MAC  - helper function to print out MAC address
  * in: network_interface - pointer to network i/f
  *     bool log-messages   print out logs or not
- * MAC address is print, if it can be acquired & log_messages is true.
+ * MAC address is printed, if it can be acquired & log_messages is true.
  *
  */
 void print_MAC(NetworkInterface* network_interface, bool log_messages) {
@@ -139,6 +139,7 @@ void print_MAC(NetworkInterface* network_interface, bool log_messages) {
 
 /* \brief easy_connect     easy_connect() function to connect the pre-defined network bearer,
  *                         config done via mbed_app.json (see README.md for details).
+ *
  * IN: bool  log_messages  print out diagnostics or not.
  */
 NetworkInterface* easy_connect(bool log_messages) {
@@ -289,4 +290,56 @@ NetworkInterface* easy_connect(bool log_messages,
     }
 #endif // EASY_CONNECT_WIFI
     return easy_connect(log_messages);
+}
+
+/* \brief easy_get_netif - easy_connect function to get pointer to network interface
+ *                        without connecting to it.
+ *
+ * IN: bool  log_messages  print out diagnostics or not.
+ */
+NetworkInterface* easy_get_netif(bool log_messages) {
+#if defined (EASY_CONNECT_WIFI)
+    if (log_messages) {
+        printf("[EasyConnect] WiFi: %s\n", EASY_CONNECT_WIFI_TYPE);
+    }
+    return &wifi;
+
+#elif MBED_CONF_APP_NETWORK_INTERFACE == ETHERNET
+    if (log_messages) {
+        printf("[EasyConnect] Ethernet\n");
+    }
+    return &eth;
+
+#elif defined (EASY_CONNECT_MESH)
+    if (log_messages) {
+        printf("[EasyConnect] Mesh : %s\n", EASY_CONNECT_MESH_TYPE);
+    }
+    return &mesh;
+
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
+    if (log_messages) {
+        printf("[EasyConnect] Cellular\n");
+    }
+    return  &cellular;
+#endif
+}
+
+/* \brief easy_get_wifi - easy_connect function to get pointer to Wifi interface 
+ *                        without connecting to it. You would want this 1st so that
+ *                        you can scan the APNs, choose the right one and then connect.
+ *
+ * IN: bool  log_messages  print out diagnostics or not.
+ */
+WiFiInterface* easy_get_wifi(bool log_messages) {
+#if defined (EASY_CONNECT_WIFI)
+    if (log_messages) {
+        printf("[EasyConnect] WiFi: %s\n", EASY_CONNECT_WIFI_TYPE);
+    }
+    return &wifi;
+#else
+    if (log_messages) {
+        printf("[EasyConnect] ERROR - Wifi not in use, can not return WifiInterface.\n");
+    }
+    return NULL;
+#endif
 }

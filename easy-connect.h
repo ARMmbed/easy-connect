@@ -98,4 +98,20 @@ NetworkInterface* easy_connect(bool log_messages = false);
 NetworkInterface* easy_connect(bool log_messages,
                                char* WiFiSSID,
                                char* WiFiPassword);
+
+/* \brief easy_get_netif - easy_connect function to get pointer to network interface w/o connect it.
+                           You might need this for example getting the WiFi interface, then doing a scan
+                           and then connecting to one of the SSIDs found with a password end user supplies.
+ * IN: bool  log_messages  print out diagnostics or not.
+ */
+
+NetworkInterface* easy_get_netif(bool log_messages);
+/* \brief easy_get_wifi - easy_connect function to get pointer to Wifi interface 
+ *                        without connecting to it. You would want this 1st so that
+ *                        you can scan the APNs, choose the right one and then connect.
+ *
+ * IN: bool  log_messages  print out diagnostics or not.
+ */
+WiFiInterface* easy_get_wifi(bool log_messages);
+
 #endif // __EASY_CONNECT_H__
