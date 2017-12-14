@@ -1,9 +1,38 @@
 {
     "name": "easy-connect",
+    "config": {
+        "wifi-esp8266-tx": {
+            "help": "TX pin for serial connection to external device (ESP8266)",
+            "value": "D1"
+        },
+        "wifi-esp8266-rx": {
+            "help": "RX pin for serial connection to external device (ESP8266)",
+            "value": "D0"
+        },
+        "wifi-esp8266-debug": {
+            "help": "Enable debug logs for (ESP8266)",
+            "value": false
+        },
+        "wifi-idw01m1-tx": {
+            "help": "TX pin for serial connection to external device (WIFI-X-Nucleo-IDW01M1)",
+            "value": "PA_9"
+        },
+        "wifi-idw01m1-rx": {
+            "help": "RX pin for serial connection to external device (WIFI-X-Nucleo-IDW01M1)",
+            "value": "PA_10"
+        },
+        "wifi-idw01a1-tx": {
+            "help": "TX pin for serial connection to external device (WIFI-X-Nucleo-IDW01A1)",
+            "value": "D8"
+        },
+        "wifi-idw01a1-rx": {
+            "help": "RX pin for serial connection to external device (WIFI-X-Nucleo-IDW01A1)",
+            "value": "D2"
+        }
+    },
     "target_overrides": {
         "*": {
             "target.features_add": ["COMMON_PAL"]
         }
     }
 }
-
