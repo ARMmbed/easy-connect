@@ -33,6 +33,10 @@
     "target_overrides": {
         "*": {
             "target.features_add": ["COMMON_PAL"]
+        },
+         "HEXIWEAR": {
+            "wifi-esp8266-tx": "PTD3",
+            "wifi-esp8266-rx": "PTD2"
         }
-    }
+     }
 }
