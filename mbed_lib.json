@@ -14,19 +14,19 @@
             "value": false
         },
         "wifi-idw01m1-tx": {
-            "help": "TX pin for serial connection to external device (WIFI-X-Nucleo-IDW01M1)",
+            "help": "TX pin for serial connection to external device (X-NUCLEO-IDW01M1)",
             "value": "PA_9"
         },
         "wifi-idw01m1-rx": {
-            "help": "RX pin for serial connection to external device (WIFI-X-Nucleo-IDW01M1)",
+            "help": "RX pin for serial connection to external device (X-NUCLEO-IDW01M1)",
             "value": "PA_10"
         },
-        "wifi-idw01a1-tx": {
-            "help": "TX pin for serial connection to external device (WIFI-X-Nucleo-IDW01A1)",
+        "wifi-idw04a1-tx": {
+            "help": "TX pin for serial connection to external device (X-NUCLEO-IDW04A1)",
             "value": "D8"
         },
-        "wifi-idw01a1-rx": {
-            "help": "RX pin for serial connection to external device (WIFI-X-Nucleo-IDW01A1)",
+        "wifi-idw04a1-rx": {
+            "help": "RX pin for serial connection to external device (X-NUCLEO-IDW04A1)",
             "value": "D2"
         }
     },
