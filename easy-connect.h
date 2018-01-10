@@ -29,10 +29,6 @@
 #define MESH_THREAD       102
 #define CELLULAR_ONBOARD  201
 
-// Define different Nucleo X Wifi  module types
-// The mbed_app.json MBED_CONF_IDW0XX1_EXPANSION_BOARD needs this
-#define IDW01M1           1
-#define IDW01A1           2
 
 /* Define supersets for WiFi and Mesh */
 
