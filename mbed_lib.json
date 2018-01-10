@@ -28,6 +28,18 @@
         "wifi-idw04a1-rx": {
             "help": "RX pin for serial connection to external device (X-NUCLEO-IDW04A1)",
             "value": "D2"
+        },
+        "wifi-wizfi310-tx": {
+            "help": "TX pin for serial connection to external device (WizFi310)",
+            "value": "D1"
+        },
+        "wifi-wizfi310-rx": {
+            "help": "RX pin for serial connection to external device (WizFi310)",
+            "value": "D0"
+        },
+        "wifi-wizfi310-debug": {
+            "help": "Enable debug logs for (WizFi310)",
+            "value": false
         }
     },
     "target_overrides": {

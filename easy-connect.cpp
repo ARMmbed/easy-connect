@@ -73,6 +73,17 @@ ThreadInterface mesh;
 #include "OnboardCellularInterface.h"
 OnboardCellularInterface cellular;
 
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_WIZFI310
+#include "WizFi310Interface.h"
+#define EASY_CONNECT_WIFI_TYPE "WizFi310"
+
+#ifdef MBED_CONF_APP_WIZFI310_DEBUG
+    WizFi310Interface wifi(MBED_CONF_EASY_CONNECT_WIFI_WIZFI310_TX, MBED_CONF_EASY_CONNECT_WIFI_WIZFI310_RX, MBED_CONF_EASY_CONNECT_WIFI_WIZFI310_DEBUG);
+#else
+    WizFi310Interface wifi(MBED_CONF_EASY_CONNECT_WIFI_WIZFI310_TX, MBED_CONF_EASY_CONNECT_WIFI_WIZFI310_RX);
+#endif
+
+
 #else
 #error "No connectivity method chosen. Please add 'config.network-interfaces.value' to your mbed_app.json (see README.md for more information)."
 #endif // MBED_CONF_APP_NETWORK_INTERFACE
