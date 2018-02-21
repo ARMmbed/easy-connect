@@ -83,6 +83,10 @@ ThreadInterface mesh;
 #include "OnboardCellularInterface.h"
 OnboardCellularInterface cellular;
 
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR
+#include "EasyCellularConnection.h"
+EasyCellularConnection cellular;
+
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_WIZFI310
 #include "WizFi310Interface.h"
 #define EASY_CONNECT_WIFI_TYPE "WizFi310"
@@ -142,7 +146,7 @@ char* _password = NULL;
  *
  */
 void print_MAC(NetworkInterface* network_interface, bool log_messages) {
-#if MBED_CONF_APP_NETWORK_INTERFACE != CELLULAR_ONBOARD
+#if MBED_CONF_APP_NETWORK_INTERFACE != CELLULAR_ONBOARD && MBED_CONF_APP_NETWORK_INTERFACE != CELLULAR
     const char *mac_addr = network_interface->get_mac_address();
     if (mac_addr == NULL) {
         if (log_messages) {
@@ -211,7 +215,7 @@ NetworkInterface* easy_connect(bool log_messages) {
     else {
         connect_success = wifi.connect(_ssid, _password, (strlen(_password) > 1) ? NSAPI_SECURITY_WPA_WPA2 : NSAPI_SECURITY_NONE);
     }
-#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD || MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR
 #  ifdef MBED_CONF_APP_CELLULAR_SIM_PIN
     cellular.set_sim_pin(MBED_CONF_APP_CELLULAR_SIM_PIN);
 #  endif
@@ -337,7 +341,7 @@ NetworkInterface* easy_get_netif(bool log_messages) {
     }
     return &mesh;
 
-#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD
+#elif MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR_ONBOARD || MBED_CONF_APP_NETWORK_INTERFACE == CELLULAR
     if (log_messages) {
         printf("[EasyConnect] Cellular\n");
     }

@@ -30,7 +30,7 @@
 #define MESH_LOWPAN_ND    101
 #define MESH_THREAD       102
 #define CELLULAR_ONBOARD  201
-
+#define CELLULAR          202
 
 /* Define supersets for WiFi and Mesh */
 
