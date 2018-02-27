@@ -195,11 +195,13 @@ NetworkInterface* easy_connect(bool log_messages) {
 #endif // EASY_CONNECT_WIFI
 
     /// This should be removed once mbedOS supports proper dual-stack
+    if (log_messages) {
 #if defined (EASY_CONNECT_MESH) || (MBED_CONF_LWIP_IPV6_ENABLED==true)
-    printf("[EasyConnect] IPv6 mode\n");
+        printf("[EasyConnect] IPv6 mode\n");
 #else
-    printf("[EasyConnect] IPv4 mode\n");
+        printf("[EasyConnect] IPv4 mode\n");
 #endif
+    }
 
 #if defined (EASY_CONNECT_WIFI)
     if (log_messages) {
