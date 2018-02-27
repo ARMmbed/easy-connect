@@ -162,23 +162,6 @@ So, for example changing the ESP8266 TX/RX pins and enable debugs - you would no
 
 There are many things that you have to modify for all of the combinations. Examples for configurations are available for example in the [mbed-os-example-client](https://github.com/ARMmbed/mbed-os-example-client/tree/master/configs) repository.
 
-## Compilation error NanostackRfPhyAtmel.cpp
-
-If you encounter a compilation error such as below, you need to add an `.mbedignore` file that tells the mbed compiler to skip compiling the files that require Nanostack. By default, the mbed compiler compiles every single file from all folders.
-
-```
-Scan: env
-Compile [  0.2%]: NanostackRfPhyAtmel.cpp
-[Fatal Error] NanostackRfPhyAtmel.cpp@18,44: nanostack/platform/arm_hal_phy.h: No such file or directory
-[ERROR] ./easy-connect/atmel-rf-driver/source/NanostackRfPhyAtmel.cpp:18:44: fatal error: nanostack/platform/arm_hal_phy.h: No such file or directory
- #include "nanostack/platform/arm_hal_phy.h"
-                                            ^
-compilation terminated.
-
-```
-
-An example of a suitable `.mbedignore` file is available in the [mbed-os-example-client](https://github.com/ARMmbed/mbed-os-example-client/tree/master/configs) repository.
-
 ## Linking error with UBLOX_EVK_ODIN_W2
 
 If you get a linking error such as below, you are compiling the `WIFI_ODIN` with the `EMAC override` section in `mbed_app.json`. Remove the `EMAC override` from your `mbed_app.json`. 
