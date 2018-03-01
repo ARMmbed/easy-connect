@@ -40,7 +40,36 @@
         "wifi-wizfi310-debug": {
             "help": "Enable debug logs for (WizFi310)",
             "value": false
+        },
+        "wifi-ism43362-spi_miso": {
+            "help": "SPI-MISO connection to external device (ISM43362)",
+            "value": "PC_11"
+        },
+        "wifi-ism43362-spi_mosi": {
+            "help": "SPI-MOSI connection to external device (ISM43362)",
+            "value": "PC_12"
+        },
+        "wifi-ism43362-spi_sclk": {
+            "help": "SPI-CLOCK connection to external device (ISM43362)",
+            "value": "PC_10"
+        },
+        "wifi-ism43362-spi_nss": {
+            "help": "SPI chip select of external device (ISM43362)",
+            "value": "PE_0"
+        },
+        "wifi-ism43362-reset": {
+            "help": "WIFI module reset pin (ISM43362)",
+            "value": "PE_8"
+        },
+        "wifi-ism43362-dataready": {
+            "help": "WIFI module data ready pin (ISM43362)",
+            "value": "PE_1"
+        },
+        "wifi-ism43362-wakeup": {
+            "help": "WIFI module wakeup pin (ISM43362)",
+            "value": "PB_12"
         }
+
     },
     "target_overrides": {
         "*": {
@@ -57,6 +86,24 @@
         "NUCLEO_F411RE": {
             "wifi-esp8266-tx": "D8",
             "wifi-esp8266-rx": "D2"
+        },
+        "DISCO_L475VG_IOT1A": {
+            "wifi-ism43362-spi_miso": "PC_11",
+            "wifi-ism43362-spi_mosi": "PC_12",
+            "wifi-ism43362-spi_sclk": "PC_10",
+            "wifi-ism43362-spi_nss": "PE_0",
+            "wifi-ism43362-reset": "PE_8",
+            "wifi-ism43362-dataready": "PE_1",
+            "wifi-ism43362-wakeup": "PB_12"
+        },
+        "DISCO_F413ZH": {
+            "wifi-ism43362-spi_miso": "PB_4",
+            "wifi-ism43362-spi_mosi": "PB_5",
+            "wifi-ism43362-spi_sclk": "PB_12",
+            "wifi-ism43362-spi_nss": "PG_11",
+            "wifi-ism43362-reset": "PH_1",
+            "wifi-ism43362-dataready": "PG_12",
+            "wifi-ism43362-wakeup": "PB_15"
         }
      }
 }
