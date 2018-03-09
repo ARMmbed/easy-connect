@@ -31,6 +31,7 @@
 #define MESH_THREAD       102
 #define CELLULAR_ONBOARD  201
 #define CELLULAR          202
+#define CELLULAR_WNC14A2A 203
 
 /* Define supersets for WiFi and Mesh */
 
