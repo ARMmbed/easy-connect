@@ -214,6 +214,12 @@ If you want to avoid using `\r\n` in your printouts and just use normal C style 
     }
 ```
 
+## For network stack developers
+
+Please try out the reliability of your networking stack using
+[stress-test](https://github.com/ARMmbed/mbed-stress-test) to ensure
+your stack is performing as expected.
+
 ## Extra defines
 
 If you'd like to use Easy Connect with mbed Client then you're in luck. Easy Connect automatically defines the `MBED_SERVER_ADDRESS` macro depending on your connectivity method (either IPv4 or IPv6 address). Use this address to connect to the right instance of mbed Device Connector.
