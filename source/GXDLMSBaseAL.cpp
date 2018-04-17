@@ -72,6 +72,30 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #endif
 
 #include "GXDLMSBaseAL.h"
+#include "GXTime.h"
+#include "GXDate.h"
+#include "GXDLMSClient.h"
+#include "GXDLMSData.h"
+#include "GXDLMSRegister.h"
+#include "GXDLMSClock.h"
+#include "GXDLMSTcpUdpSetup.h"
+#include "GXDLMSProfileGeneric.h"
+#include "GXDLMSAutoConnect.h"
+#include "GXDLMSIECOpticalPortSetup.h"
+#include "GXDLMSActivityCalendar.h"
+#include "GXDLMSDemandRegister.h"
+#include "GXDLMSRegisterMonitor.h"
+#include "GXDLMSActionSchedule.h"
+#include "GXDLMSSapAssignment.h"
+#include "GXDLMSAutoAnswer.h"
+#include "GXDLMSModemConfiguration.h"
+#include "GXDLMSMacAddressSetup.h"
+#include "GXDLMSModemInitialisation.h"
+#include "GXDLMSActionSet.h"
+#include "GXDLMSIp4Setup.h"
+#include "GXDLMSPushSetup.h"
+#include "GXDLMSAssociationLogicalName.h"
+#include "GXDLMSAssociationShortName.h"
 
 using namespace std;
 static const char* DATAFILE = "data.csv";
