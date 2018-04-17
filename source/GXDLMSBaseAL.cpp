@@ -41,10 +41,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h> //Add support for sockets
 #include <pthread.h>
-//#include <termios.h>
 #include <sys/types.h>
-//#include <sys/socket.h> //Add support for sockets
-//#include <unistd.h> //Add support for sockets
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
@@ -61,16 +58,12 @@ Thread listerner(osPriorityHigh, sizeof(uint32_t) * LISTENER_THREAD_STACK_SIZE);
 Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_SIZE);
 #endif
 
-//#include <mbed.h>
-//#include <stdio.h>
+
 #include <netdb.h>
 #include <string.h>
 #include <sys/time.h>
 #include <errno.h>
 #include <netdb.h>
-//#include "pal.h"
-//#include "pal_network.h"
-//#include "pal_rtos.h"
 
 
 #ifdef __MBED__
@@ -78,33 +71,7 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "../mbed-os/drivers/RawSerial.h"
 #endif
 
-//#include "comp_defines.h"
 #include "GXDLMSBaseAL.h"
-
-#include "../Gurux.DLMS/development/include/GXTime.h"
-#include "../Gurux.DLMS/development/include/GXDate.h"
-#include "../Gurux.DLMS/development/include/GXDLMSClient.h"
-#include "../Gurux.DLMS/development/include/GXDLMSData.h"
-#include "../Gurux.DLMS/development/include/GXDLMSRegister.h"
-#include "../Gurux.DLMS/development/include/GXDLMSClock.h"
-#include "../Gurux.DLMS/development/include/GXDLMSTcpUdpSetup.h"
-#include "../Gurux.DLMS/development/include/GXDLMSProfileGeneric.h"
-#include "../Gurux.DLMS/development/include/GXDLMSAutoConnect.h"
-#include "../Gurux.DLMS/development/include/GXDLMSIECOpticalPortSetup.h"
-#include "../Gurux.DLMS/development/include/GXDLMSActivityCalendar.h"
-#include "../Gurux.DLMS/development/include/GXDLMSDemandRegister.h"
-#include "../Gurux.DLMS/development/include/GXDLMSRegisterMonitor.h"
-#include "../Gurux.DLMS/development/include/GXDLMSActionSchedule.h"
-#include "../Gurux.DLMS/development/include/GXDLMSSapAssignment.h"
-#include "../Gurux.DLMS/development/include/GXDLMSAutoAnswer.h"
-#include "../Gurux.DLMS/development/include/GXDLMSModemConfiguration.h"
-#include "../Gurux.DLMS/development/include/GXDLMSMacAddressSetup.h"
-#include "../Gurux.DLMS/development/include/GXDLMSModemInitialisation.h"
-#include "../Gurux.DLMS/development/include/GXDLMSActionSet.h"
-#include "../Gurux.DLMS/development/include/GXDLMSIp4Setup.h"
-#include "../Gurux.DLMS/development/include/GXDLMSPushSetup.h"
-#include "../Gurux.DLMS/development/include/GXDLMSAssociationLogicalName.h"
-#include "../Gurux.DLMS/development/include/GXDLMSAssociationShortName.h"
 
 using namespace std;
 static const char* DATAFILE = "data.csv";

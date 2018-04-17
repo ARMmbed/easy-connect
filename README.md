@@ -1,6 +1,6 @@
 # steps to run server on linux:
 
-1) cd Gurux.DLMS/development
+1) cd GuruxDLMS/development
 
 2) mkdir obj lib
 

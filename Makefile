@@ -24,13 +24,7 @@ SOURCES			:= $(wildcard $(addsuffix /*.cpp,$(SRCDIR)))
 SOURCES 		:= $(filter-out src/main.cpp, $(SOURCES))
 SOURCES_NO_EXT 	:= $(notdir $(basename $(SOURCES)))
 
-INC= -I./mbed-client-pal/Source/PAL-Impl/Services-API/ \
-	-I./mbed-client-pal/Source/Port/Platform-API/ \
-	-I./mbed-client-pal/Configs/pal_config/ \
-	-I./e2eIoT-test-device/e2e-unity \
-	-I./mbed-trace \
-	-I./include \
-	-I./nanostack-libservice/mbed-client-libservice
+INC= -I./GuruxDLMS/development/include
 
 # List of objects
 OBJECTS 	:= $(SOURCES_NO_EXT:%=$(OBJDIR)/%.o)
