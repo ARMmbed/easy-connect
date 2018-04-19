@@ -48,7 +48,7 @@ ThreadInterface mesh;
 OnboardCellularInterface cellular;
 #elif MBED_CONF_APP_NETWORK_INTERFACE == NBIOT_QUECTEL
 #include "BC95Interface.h"
-BC95Interface nbiot(MBED_CONF_APP_BC95_TX, MBED_CONF_APP_BC95_RX, MBED_CONF_APP_BC95_BAND);
+BC95Interface nbiot(MBED_CONF_APP_BC95_TX, MBED_CONF_APP_BC95_RX, MBED_CONF_APP_BC95_BAND, false);
 #else
 #error "No connectivity method chosen. Please add 'config.network-interfaces.value' to your mbed_app.json (see README.md for more information)."
 #endif
