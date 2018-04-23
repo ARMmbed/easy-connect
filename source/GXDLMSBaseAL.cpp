@@ -369,6 +369,7 @@ int CGXDLMSBaseAL::StartServer(const char* pPort)
 
 #ifdef __linux__
 	ret = pthread_create(&m_ReceiverThread, NULL, UnixListenerThread, (void *)this);
+	pthread_join(m_ReceiverThread, NULL);
 #else
 	listerner.start(mbed::callback(ListenerThread, (void*)this));
 	sensorThread.start(mbed::callback(sensor_thread, (void*)this));
