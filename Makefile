@@ -1,5 +1,5 @@
 # project name (generate executable with this name)
-TARGET   = server.bin
+TARGET   = dlms-sim-server
 
 CC       = g++
 
