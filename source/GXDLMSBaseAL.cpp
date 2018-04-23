@@ -211,7 +211,7 @@ static void ListenerThread(const void* pVoid)
 }
 
 #ifdef __linux__
-void * UnixListenerThread(void * pVoid)
+static void * UnixListenerThread(void * pVoid)
 {
 	ListenerThread(pVoid);
 	return NULL;

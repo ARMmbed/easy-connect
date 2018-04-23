@@ -21,21 +21,21 @@
 #include "GXDLMSBaseAL.h"
 #include "GXDLMSServerFactory.h"
 
-int get_hex_value(unsigned char c);
-int hex_string_to_int(char *s);
+static int get_hex_value(unsigned char c);
+static int hex_string_to_int(char *s);
 
-DLMS_INTERFACE_TYPE interfaceType = DLMS_INTERFACE_TYPE_WRAPPER;
-DLMS_SERVICE_TYPE protocolType = DLMS_SERVICE_TYPE_UDP;
-int max_pdu_size = 1024;
-char *port = LN_SERVER_PORT_STR;
-int conformance = DLMS_CONFORMANCE_GENERAL_PROTECTION |
+static DLMS_INTERFACE_TYPE interfaceType = DLMS_INTERFACE_TYPE_WRAPPER;
+static DLMS_SERVICE_TYPE protocolType = DLMS_SERVICE_TYPE_UDP;
+static int max_pdu_size = 1024;
+static char *port = LN_SERVER_PORT_STR;
+static int conformance = DLMS_CONFORMANCE_GENERAL_PROTECTION |
 DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER |
 DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_GET_OR_READ |
 DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_SET_OR_WRITE | DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_ACTION |
 DLMS_CONFORMANCE_GET | DLMS_CONFORMANCE_SET |
 DLMS_CONFORMANCE_SELECTIVE_ACCESS | DLMS_CONFORMANCE_ACTION;
 
-int getopt(int argc, char* argv[])
+static int getopt(int argc, char* argv[])
 {
 	for (int i = 0; i < argc; ++i)
 	{
@@ -119,7 +119,7 @@ int getopt(int argc, char* argv[])
 	}
 }
 
-int get_hex_value(unsigned char c)
+static int get_hex_value(unsigned char c)
 {
 	if (c >= '0' && c <= '9')
 	{
@@ -137,7 +137,7 @@ int get_hex_value(unsigned char c)
 	}
 }
 
-int hex_string_to_int(char *s)
+static int hex_string_to_int(char *s)
 {
 	int ret = 0;
 	char *ptr = s;
