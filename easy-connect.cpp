@@ -37,6 +37,11 @@ ESP8266Interface wifi(MBED_CONF_EASY_CONNECT_WIFI_ESP8266_TX, MBED_CONF_EASY_CON
 #include "OdinWiFiInterface.h"
 OdinWiFiInterface wifi;
 
+#elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_WISE1530
+#define EASY_CONNECT_WIFI_TYPE "WISE1530"
+#include "WicedInterface.h"
+WicedInterface wifi;
+
 #elif MBED_CONF_APP_NETWORK_INTERFACE == WIFI_RTW
 #define EASY_CONNECT_WIFI_TYPE "RTW"
 #include "RTWInterface.h"
