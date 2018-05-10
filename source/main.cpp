@@ -16,30 +16,27 @@
 
 #ifdef __linux__
 #include <cstdio>
-#else // __MBED__
-#include "../../e2eIoT-test-device/qe-device-infra/os-specific-source/mbedOS/init_plat.h"
+#endif // __linux__
+
+#if defined(CLI_MODE) || defined(__MBED__)
+#include "init_plat.h"
+#include "cmd_unity.h"
 #define TRACE_GROUP "main"
-#endif
 
 extern int main_server(int argc, char* argv[]);
 
-#ifdef __linux__
-int main(int argc, char* argv[])
-{
-	int ret = main_server(argc, argv);
 
-	//the server run in seperate thread
-	getchar();
-
-	return ret;
-}
-
-#else // MBED
+#if defined(CLI_MODE) || defined(__MBED__)
+extern void init_signals();
+#endif // defined(CLI_MODE) || defined(__MBED__)
 
 int trace_cnt_i=0;
 
-extern void initialize_app_commands();
 int main_server(int argc, char* argv[]);
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 char* trace_cnt(size_t size)
 {
@@ -54,6 +51,16 @@ void serial_trace_printer(const char* str)
     printf("%s\r\n", str);
     stdout_mutex_release();
     cmd_output();
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+int run_unity_test_group(int argc, char **argv)
+{
+	// dummy function
+	return 0;
 }
 
 void cmd_ready_cb(int retcode)
@@ -72,16 +79,35 @@ void main_thread_cb(const void* arg)
   	cmd_init(NULL);
 	cmd_set_ready_cb(cmd_ready_cb);
 	cmd_add("server", main_server, "Run The Server", 0);
+#ifdef __linux__
+	init_signals();
+#endif
 	wait_for_signal();
 }
 
-int main(void)
-{
-	palStatus_t pal_status;
-	static const uint32_t MAIN_THREAD_STACK_SIZE = 8 * 1024;
-	static palThreadID_t main_thread_id;
 
+void pal_destroy_caller()
+{
+	pal_destroy();
+}
+
+#endif // defined(CLI_MODE) || defined(__MBED__)
+
+int main(int argc, char* argv[])
+{
+#if defined(CLI_MODE) || defined(__MBED__)
+	int ret = 0;
+	palStatus_t pal_status;
+#ifdef __MBED__
+	static const uint32_t MAIN_THREAD_STACK_SIZE = 8 * 1024;
+#else // __linux__
+	static const uint32_t MAIN_THREAD_STACK_SIZE = 8 * 1024 * 16;
+#endif
+	static palThreadID_t main_thread_id;
+	atexit(pal_destroy_caller);
+	
 	pal_status = pal_init();
+	
 	if (pal_status != PAL_SUCCESS)
 	{
 		//cmd_printf("Error initializing pal. status %lX\n",pal_status);
@@ -95,8 +121,12 @@ int main(void)
 		NULL,
 		&main_thread_id);
 
-		wait_for_commands();
+	wait_for_commands();
 
-	return 0;
+#else // linux non-test mode
+	int ret = main_server(argc, argv);
+#endif // defined(CLI_MODE) || defined(__MBED__)
+
+	return ret;
 }
-#endif
+

@@ -17,6 +17,10 @@
 #include "mbed-os/features/FEATURE_LWIP/lwip-interface/EthernetInterface.h"
 #endif
 
+#if defined(CLI_MODE) || defined(__MBED__)
+#include "init_plat.h"
+#endif // defined(CLI_MODE) || defined(__MBED__)
+
 #include "comp_defines.h"
 #include "GXDLMSBaseAL.h"
 #include "GXDLMSServerFactory.h"

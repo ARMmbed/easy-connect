@@ -1,0 +1,8 @@
+easy-connect/atmel-rf-driver/*
+easy-connect/mcr20a-rf-driver/*
+easy-connect/stm-spirit1-rf-driver/*
+pal-platform/*
+platform/linux/*
+e2eIoT-test-device/e2e-unity/*
+e2eIoT-test-device/qe-device-infra/source/qe_setup.cpp
+e2eIoT-test-device/qe-device-infra/os-specific-source/mbedOS/FileSystemInit.cpp

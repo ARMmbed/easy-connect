@@ -1,17 +1,31 @@
-# steps to run server on linux:
+# e2e-iot-dlms-server
 
-1) ./build_server.sh
+## steps to run on linux:
+`./build_server.sh`
 
-2) ./bin/server.bin <flag> <argument>
+`./bin/dlms-sim-server`
 
-configurations options:
-interface:         -i         wrapper/hdlc     (default = wrapper)
-protocol:          -protocol  udp/tcp          (default = udp)
-port:              -p         <number>         (default = 4061)
-max pdu size:      -m         <number>         (default = 1024)
-conformance block: -c         <number in hex>  (default is as requested by Yael)
+### clean the build:
 
+`./build_server.sh -c`
 
-# clean:
+## steps to run on linux-cli:
+'python ./devenv/update_repository.py linux'
 
-1) ./build_server.sh -c
+'. devenv/qe_env_setup.sh PC Linux GNUC'
+
+'../prepare_lib.sh'
+
+'make'
+
+'./Debug/Linux_GNUC.elf'
+
+## steps to run on mbed-cli:
+'python ./devenv/update_repository.py mbed'
+
+'./devenv/qe_env_setup.sh K64F MBEDOS GNUC'
+
+'mbed compile -t GCC_ARM -m K64F -j 16'
+
+the binary file will be in path:
+./BUILD/K64F/GCC_ARM/e2e-iot-dlms-server.bin

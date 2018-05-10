@@ -45,7 +45,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
-#define closesocket close
 
 
 #define MAX_MEMORY 1
@@ -155,7 +154,7 @@ static void ListenerThread(const void* pVoid)
 				server->SetState(false);
 				//Notify error.
 				server->Reset();
-				close(client_sock); client_sock = -1;
+				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 				break;
 			}
 
@@ -164,7 +163,7 @@ static void ListenerThread(const void* pVoid)
 			{
 				server->SetState(false);
 				server->Reset();
-				close(client_sock); client_sock = -1;
+				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 				printf("PAL_ERR_SOCKET_CONNECTION_CLOSED, close socket\n");
 				break;
 			}
@@ -175,7 +174,7 @@ static void ListenerThread(const void* pVoid)
 			if (server->HandleRequest(bb, reply) != 0)
 			{
 				server->SetState(false);
-				close(client_sock); client_sock = -1;
+				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 			}
 			bb.SetSize(0);
 
@@ -187,7 +186,7 @@ static void ListenerThread(const void* pVoid)
 				{
 					//If error has occured
 					server->Reset();
-					close(client_sock); client_sock = -1;
+					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 				}
 
 				server->SetState(true);
@@ -1440,7 +1439,7 @@ STATUS CGXDLMSTcp::Accept(SOCKET *client_sock, SOCKADDR *client_sock_addr, SOCKL
 	else return -1;
 
 #else // MBED
-	return pal_accept(m_ServerSocket, address, addressLen, &accepted_socket);
+	return pal_accept(m_ServerSocket, client_sock_addr, client_sock_addr_len, client_sock);
 #endif
 }
 

@@ -1,0 +1,62 @@
+{
+    "repositories":{
+        "mbed-client-esfs": {
+            "git-url": "git@github.com:ARMmbed/mbed-client-esfs.git",
+            "ref-spec": "9362f981d35422351fd12784a6b840736d07ca9d",
+            "ref-file-name": "mbed-client-esfs.lib"
+        },
+        "mbed-os": {
+            "git-url": "git@github.com:ARMmbed/mbed-os.git",
+            "ref-spec": "4c256f04596179699c4f14b6863b07cc024ca9be",
+            "ref-file-name": "mbed-os.lib"
+        },
+        "sd-driver": {
+            "git-url": "git@github.com:ARMmbed/sd-driver.git",
+            "ref-spec": "efc6bbc46ef264925f5e771a3563638707c6875b",
+            "ref-file-name": "sd-driver.lib"
+        },
+        "mbed-trace": {
+            "git-url": "git@github.com:ARMmbed/mbed-trace.git",
+            "ref-spec": "a5cce883e651aa5206c5b1cb47eea063a814b575",
+            "ref-file-name": "mbed-trace.lib"
+        },
+        "pal-platform": {
+            "git-url": "git@github.com:ARMmbed/pal-platform.git",
+            "ref-spec": "f1021bcbe2fb33cfe9945772bffa5846632c45fb",
+            "ref-file-name": "pal-platform.lib"
+        },
+        "nanostack-libservice": {
+            "git-url": "git@github.com:ARMmbed/nanostack-libservice.git",
+            "ref-spec": "f908f79b11b06100dd8cd2a4e87bd95d48890142",
+            "ref-file-name": "nanostack-libservice.lib"
+        },
+		"mbed-cloud-client-restricted": {
+		    "git-url": "git@github.com:ARMmbed/mbed-cloud-client-restricted.git",
+            "ref-spec": "c0c6a4c0b68487ea82881553b1904ebeba90041b",
+            "ref-file-name": "mbed-cloud-client-restricted.lib"
+		},
+		"easy-connect": {
+		    "git-url": "git@github.com:ARMmbed/easy-connect.git",
+            "ref-spec": "15b79c8657b87f13da52dee8d41b3cbea4f7e2f0",
+            "ref-file-name": "easy-connect.lib"
+
+		},
+        "e2eIoT-test-device": {
+            "git-url": "git@github.com:ARMmbed/e2eIoT-test-device.git",
+            "ref-spec": "d33c82c92df7b776c53be8c55e9a243ef6b3623f",
+            "ref-file-name": "e2eIoT-test-device.lib"
+        }
+
+      },
+
+      "mbed-os-dev": {
+          "repositories-to-clone": ["e2eIoT-test-device"],
+          "files-to-generate": ["mbed-client-esfs", "easy-connect", "mbed-os", "sd-driver", "mbed-trace", "mbed-cloud-client-restricted"]
+      },
+
+      "pal-dev": {
+          "repositories-to-clone": ["mbed-client-esfs", "e2eIoT-test-device", "pal-platform", "mbed-trace", "nanostack-libservice", "mbed-cloud-client-restricted"],
+          "files-to-generate": ["pal-platform", "mbed-client-esfs", "mbed-trace", "nanostack-libservice", "mbed-cloud-client-restricted"]
+      }
+}
+
