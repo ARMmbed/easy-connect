@@ -21,18 +21,18 @@
 #if defined(CLI_MODE) || defined(__MBED__)
 #include "init_plat.h"
 #include "cmd_unity.h"
-#define TRACE_GROUP "main"
-
-extern int main_server(int argc, char* argv[]);
+#endif
 
 
 #if defined(CLI_MODE) || defined(__MBED__)
 extern void init_signals();
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
-int trace_cnt_i=0;
+extern int main_server(int argc, char* argv[]);
 
-int main_server(int argc, char* argv[]);
+#if defined(CLI_MODE) || defined(__MBED__)
+
+int trace_cnt_i=0;
 
 #ifdef __cplusplus
 extern "C"{
