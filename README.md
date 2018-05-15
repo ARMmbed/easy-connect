@@ -20,6 +20,13 @@
 
 `./Debug/Linux_GNUC.elf`
 
+# handle entropy
+The program can get stucked when running in this mode before the server starts to run. That's happen in function "pal_init" because of non-available entropy.
+To solve this you need to do next steps for only one time:
+1. get out of the docker
+2. `sudo apt-get install rng-tools`
+3. `sudo rngd -r /dev/urandom`
+
 ## steps to run on mbed-cli
 `python ./devenv/update_repository.py mbed`
 
@@ -30,15 +37,28 @@
 the binary file will be in path:
 ./BUILD/K64F/GCC_ARM/e2e-iot-dlms-server.bin
 
-
 ## command line in cli
-`server <argument> <argument value>`
+# to start the server:
+`start <argument> <argument value>`
 
 * `-i           <hdlc/wrapper>` - default wrraper
 * `-protocol    <tcp/udp>` - default udp
 * `-p           <port number>` - default 4061
 * `-m           <max pdu sizw>` - default 1024
 * `-c           <conformance block (in hexadecimal - can start with 0x)>` - default as Yael requested
+
+# while the server is running:
+`setval <argument> <argument value>`
+
+* `-i    <float number>` - starts with 1
+* `-v    <float number>` - starts with 1
+* `-p    <float number>` - starts with 1
+
+# to end the server:
+`end`
+
+
+
 
 
 

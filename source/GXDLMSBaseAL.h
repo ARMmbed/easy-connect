@@ -41,6 +41,8 @@
 #include <netinet/udp.h>
 #include <unistd.h>
 #include <errno.h>
+
+#include <semaphore.h>
 #else // MBED
 #include "pal.h"
 #include "pal_network.h"
@@ -57,6 +59,12 @@
 #define SN47_SERVER_PORT_STR	"4062"
 #define LN47_SERVER_PORT_STR	"4063"
 
+#define TEMPERATURE_OBJECT	"0.0.96.9.0.255"
+#define POWER_OBJECT		"0.0.96.9.1.255"
+#define VOLTAGE_OBJECT		"0.0.96.9.2.255"
+#define CURRENT_OBJECT		"0.0.96.9.3.255"
+#define WAIT_TIME 5000
+#define RECEIVE_BUFFER_SIZE 200
 
 class CGXDLMSBaseAL : public CGXDLMSSecureServer
 {
@@ -65,9 +73,11 @@ protected:
 	THREAD_ID   m_ReceiverThread;
 	THREAD_ID   m_TempratureThread;
 
+
 	DLMS_SERVICE_TYPE m_protocolType;
 	 
 public:
+	SEMAPHORE m_wait_server_start;
  //   GX_TRACE_LEVEL m_Trace;
 
     /////////////////////////////////////////////////////////////////////////
@@ -82,6 +92,12 @@ public:
         m_ServerSocket = (SOCKET)0;
         m_ReceiverThread = -1;
         m_protocolType = ProtocolType;
+#if defined(__linux__) && defined(CLI_MODE)
+        sem_init(&m_wait_server_start, 0, 0);
+#elif defined(__MBED__)
+        pal_osSemaphoreCreate(1, &m_wait_server_start);
+#endif
+
         _ready = false;
     }
 
@@ -116,6 +132,7 @@ public:
     int StartServer(const char* pPort);
 
     int StopServer();
+    int KillThread();
 
     int Init(const char* pPort);
     int CreateObjects();

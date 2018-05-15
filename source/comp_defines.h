@@ -23,6 +23,7 @@
 #define SOCKLEN unsigned int
 #define SUCCESS 0
 #define NETADD_INFO struct sockaddr_in
+#define SEMAPHORE sem_t
 #else // MBED
 #define STATUS palStatus_t // int
 #define SOCKET palSocket_t // void*
@@ -31,6 +32,7 @@
 #define SOCKLEN palSocketLength_t // unsigned int
 #define SUCCESS PAL_SUCCESS // = 0
 #define NETADD_INFO palNetInterfaceInfo_t
+#define SEMAPHORE palSemaphoreID_t
 #endif
 
 #endif //_COMP_DEFINES_

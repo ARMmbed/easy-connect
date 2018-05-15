@@ -53,7 +53,7 @@
 
 #ifdef __MBED__
 using namespace rtos;
-Thread listerner(osPriorityHigh, sizeof(uint32_t) * LISTENER_THREAD_STACK_SIZE);
+Thread listener(osPriorityHigh, sizeof(uint32_t) * LISTENER_THREAD_STACK_SIZE);
 Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_SIZE);
 #endif
 
@@ -99,12 +99,7 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 using namespace std;
 static const char* DATAFILE = "data.csv";
 
-#define TEMPERATURE_OBJECT	"0.0.96.9.0.255"
-#define POWER_OBJECT		"0.0.96.9.1.255"
-#define VOLTAGE_OBJECT		"0.0.96.9.2.255"
-#define CURRENT_OBJECT		"0.0.96.9.3.255"
-#define WAIT_TIME 5000
-#define RECEIVE_BUFFER_SIZE 200
+
 
 #ifdef __MBED__
 
@@ -119,6 +114,23 @@ CDC Interface 4 - UART 4 (UART4_TX = PTC15 [J199-4], UART4_RX = PTC14 [J199-3] -
 
 #endif
 
+static void PrintfBuff(unsigned char *ptr, int size)
+{
+	printf("\n#########################\n");
+	for(int i = 0 ; i < size ; ++i)
+	{
+		printf("%02x ", *ptr++);
+		if((i+1)% 8 == 0) printf("\n");
+	}
+	if((size+1)% 8 != 0) printf("\n");
+	printf("#########################\n");
+}
+
+static void PrintfBuff(CGXByteBuffer *bb)
+{
+	PrintfBuff(bb->GetData(), bb->GetSize() > 20 ? bb->GetSize() : 20);
+}
+
 static void ListenerThread(const void* pVoid)
 {
     CGXByteBuffer reply;
@@ -130,6 +142,7 @@ static void ListenerThread(const void* pVoid)
 	SOCKET client_sock = { 0 };
 	SOCKADDR client_sock_addr = { 0 };
 	SOCKLEN client_sock_addr_len;
+	bool first_packet = true;
 
     while (server->IsConnected())
     {
@@ -140,14 +153,27 @@ static void ListenerThread(const void* pVoid)
     		printf("failed to accept socket result = %d\r\n", (int)result);
 			continue;
 		}
-
     	printf("DLMS server connected\n");
+
+#ifdef CLI_MODE
+#ifdef __linux__
+		sem_post(&(server->m_wait_server_start));
+#else // __MBED__
+		pal_osSemaphoreRelease(server->m_wait_server_start);
+#endif
+#endif // CLI_MODE
 
 		while (server->IsConnected())
 		{
 			size_t len;
 			//If client is left wait for next client.
 			ret = server->Read(client_sock, bb, &len);
+
+			if(ret == SUCCESS && first_packet)
+			{
+				printf("Received packet\n\n");
+				first_packet = false;
+			}
 
 			if ( ret == 0 && len == 0 )
 			{
@@ -168,7 +194,6 @@ static void ListenerThread(const void* pVoid)
 				break;
 			}
 
-			printf("Received packet\n\n");
 			bb.SetSize(bb.GetSize() + len);
 
 			if (server->HandleRequest(bb, reply) != 0)
@@ -207,6 +232,7 @@ static void ListenerThread(const void* pVoid)
 		osThreadYield();
 #endif
     }
+
 }
 
 #ifdef __linux__
@@ -231,12 +257,10 @@ static void sensor_thread(void const *pVoid)
 	CGXDLMSObjectCollection& items = pDLMSBase->GetItems();
 	CGXDLMSObject* obj;
 	string str_id;
-	CGXDLMSVariant temp_value;
-	CGXDLMSVariant old_value;
+	CGXDLMSVariant vol = 0.0;
+	CGXDLMSVariant curr = 0.0;
+	CGXDLMSVariant power = 0.0;
 	CGXDLMSVariant new_value;
-	mbed::AnalogIn current_pin(A0);
-	float current = 0.0;
-	float voltage = 0.0;
 
 	while(1)
 	{
@@ -246,28 +270,31 @@ static void sensor_thread(void const *pVoid)
 		obj= items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
 		if(obj!=NULL)
 		{
-			float min = 220.0, max = 225.0;
-			new_value = voltage = random_between_two_int(min, max);
-			printf("sensor_thread() - voltage new value %f\r\n", new_value.fltVal);
+			vol = ((CGXDLMSData*)obj)->GetValue();
+			new_value = (vol.fltVal + 1 > 225) ? 225 :vol.fltVal + 1;
 			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("voltage: prev value = %f   new value = %f\n", vol.fltVal, new_value.fltVal);
+
 		}
 		/* CURRENT_OBJECT  */
 		str_id = CURRENT_OBJECT;
 		obj = items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
 		if (obj != NULL)
 		{
-			new_value = current = 5.0 * (current_pin.read() * 3.00);
-			printf("sensor_thread() - current new value %f\r\n", new_value.fltVal);
+			curr = ((CGXDLMSData*)obj)->GetValue();
+			new_value = (curr.fltVal + 1 > 30) ? 30 :curr.fltVal + 1;
 			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("current: prev value = %f   new value = %f\n", curr.fltVal, new_value.fltVal);
 		}
 		/* POWER_OBJECT  */
 		str_id = POWER_OBJECT;
 		obj = items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
 		if (obj != NULL)
 		{
-			new_value = new_value.fltVal = voltage * current;
-			printf("sensor_thread() - power new value %f\r\n", new_value.fltVal);
+			power = ((CGXDLMSData*)obj)->GetValue();
+			new_value = (power.fltVal + 1 > 100) ? 100 : power.fltVal + 1;
 			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("power:   prev value = %f   new value = %f\n", power.fltVal, new_value.fltVal);
 		}
 		pal_osDelay(10000);
 	}
@@ -342,8 +369,6 @@ int CGXDLMSBaseAL::Connect(int port)
     if (pal_bind(m_ServerSocket, &(interfaceInfo.address), interfaceInfo.addressSize) == -1) return -1;
 #endif
 
-    printf("Bind Completed \r\n");
-
     if (Listen(1) == -1) return -1;
 
     return 0;
@@ -364,13 +389,19 @@ int CGXDLMSBaseAL::StartServer(const char* pPort)
         return ret;
     }
 
-    printf("Port Connected\n");
+//    printf("Port Connected\n");
 
 #ifdef __linux__
 	ret = pthread_create(&m_ReceiverThread, NULL, UnixListenerThread, (void *)this);
+#ifndef CLI_MODE
 	pthread_join(m_ReceiverThread, NULL);
 #else
-	listerner.start(mbed::callback(ListenerThread, (void*)this));
+	sem_wait(&m_wait_server_start);
+#endif // __linux__
+
+#else // MBED
+	listener.start(mbed::callback(ListenerThread, (void*)this));
+	pal_osSemaphoreWait(m_wait_server_start, 1000, NULL);
 	sensorThread.start(mbed::callback(sensor_thread, (void*)this));
 #endif
 
@@ -385,6 +416,24 @@ int CGXDLMSBaseAL::StopServer()
     }
 
     return 0;
+}
+
+int CGXDLMSBaseAL::KillThread()
+{
+#ifdef __linux__
+	if(pthread_cancel(m_ReceiverThread) != 0)
+	{
+		return -1;
+	}
+#else
+	if( listener.terminate() != 0 ||
+		sensorThread.terminate() != 0 ||
+		pal_osSemaphoreDelete(&m_wait_server_start) != 0)
+	{
+		return -1;
+	}
+#endif
+	return 0;
 }
 
 static int GetIpAddressAL(std::string& address)
@@ -674,7 +723,7 @@ int CGXDLMSBaseAL::CreateObjects()
     std::string address;
     GetIpAddressAL(address);
 
-#if MAX_MEMORY
+//#if MAX_MEMORY
     unsigned long sn = 123456;
     CGXDLMSData* ldn = AddLogicalDeviceNameAL(GetItems(), sn);
     //Add firmaware.
@@ -687,39 +736,36 @@ int CGXDLMSBaseAL::CreateObjects()
     //Set access right. Client can't change Device name.
     pRegister->SetAccess(2, DLMS_ACCESS_MODE_READ);
     GetItems().push_back(pRegister);
-#endif  //MAX_MEMORY
+//#endif  //MAX_MEMORY
 
 	int count = GetItems().size();
-#ifdef __MBED__
+//#ifdef __MBED__
 	/* VOLTAGE_OBJECT */
 	CGXDLMSVariant voltage_value = 0;
     CGXDLMSData* pDataVoltage = new CGXDLMSData(VOLTAGE_OBJECT);
 	pDataVoltage->SetValue(voltage_value);
     GetItems().push_back(pDataVoltage);
     count = GetItems().size();
-    printf("Init() - pDataVoltage pushed, obj count = %d\r\n", count);
 	/* POWER_OBJECT */
 	CGXDLMSVariant power_value = 0;
 	CGXDLMSData* pDataPower = new CGXDLMSData(POWER_OBJECT);
 	pDataPower->SetValue(power_value);
 	GetItems().push_back(pDataPower);
 	count = GetItems().size();
-	printf("Init() - pDataPower pushed, obj count = %d\r\n", count);
 	/* CURRENT_OBJECT */
 	CGXDLMSVariant current_value = 0;
 	CGXDLMSData* pDataCurrent = new CGXDLMSData(CURRENT_OBJECT);
 	pDataCurrent->SetValue(current_value);
 	GetItems().push_back(pDataCurrent);
 	count = GetItems().size();
-	printf("Init() - pDataCurrent pushed, obj count = %d\r\n", count);
-#else
+//#else
     CGXDLMSVariant temp_value=30;
     //add temp value
     CGXDLMSRegister* pRegisterTemp = new CGXDLMSRegister(TEMPERATURE_OBJECT);
     pRegisterTemp->SetValue(temp_value);
     GetItems().push_back(pRegisterTemp);
-#endif
-#if MAX_MEMORY
+//#endif
+//#if MAX_MEMORY
 
     //Add default clock. Clock's Logical Name is 0.0.1.0.0.255.
     CGXDLMSClock* pClock = new CGXDLMSClock();
@@ -823,7 +869,7 @@ int CGXDLMSBaseAL::CreateObjects()
     // Add 0.0.25.1.0.255 Ch. 0 IPv4 setup IP address.
     //pPush->GetPushObjectList().push_back(std::pair<CGXDLMSObject*, CGXDLMSCaptureObject>(pIp4, CGXDLMSCaptureObject(3, 0)));
 
-#endif //MAX_MEMORY
+//#endif //MAX_MEMORY
 	///////////////////////////////////////////////////////////////////////
     //Server must initialize after all objects are added.
     ret = Initialize();
@@ -1037,7 +1083,7 @@ void CGXDLMSBaseAL::PreRead(std::vector<CGXDLMSValueEventArg*>& args)
             //Framework will handle profile generic automatically.
             type == DLMS_OBJECT_TYPE_PROFILE_GENERIC)
         {
-        	printf("continue \n");
+        	//printf("continue \n");
             continue;
         }
         DLMS_DATA_TYPE ui, dt;
@@ -1261,7 +1307,7 @@ DLMS_METHOD_ACCESS_MODE CGXDLMSBaseAL::GetMethodAccess(CGXDLMSValueEventArg* arg
 void CGXDLMSBaseAL::Connected(
     CGXDLMSConnectionEventArgs& connectionInfo)
 {
-    printf("Connected.\r\n");
+    //printf("Connected.\r\n");
 }
 
 void CGXDLMSBaseAL::InvalidConnection(

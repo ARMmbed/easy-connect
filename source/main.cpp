@@ -21,19 +21,20 @@
 #if defined(CLI_MODE) || defined(__MBED__)
 #include "init_plat.h"
 #include "cmd_unity.h"
-#endif
+#endif // defined(CLI_MODE) || defined(__MBED__)
 
 
 #if defined(CLI_MODE) || defined(__MBED__)
 extern void init_signals();
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
+extern int setObj(int argc, char* argv[]);
 extern int main_server(int argc, char* argv[]);
-
-#if defined(CLI_MODE) || defined(__MBED__)
+extern int kill_server(int argc, char* argv[]);
 
 int trace_cnt_i=0;
 
+#if defined(CLI_MODE) || defined(__MBED__)
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -78,7 +79,9 @@ void main_thread_cb(const void* arg)
 	initPlatform(0, NULL);
   	cmd_init(NULL);
 	cmd_set_ready_cb(cmd_ready_cb);
-	cmd_add("server", main_server, "Run The Server", 0);
+	cmd_add("start", main_server, "Run The Server", 0);
+	cmd_add("setval", setObj, "set the value", 0);
+	cmd_add("end", kill_server, "kill the server", 0);
 #ifdef __linux__
 	init_signals();
 #endif
@@ -125,6 +128,8 @@ int main(int argc, char* argv[])
 
 #else // linux non-test mode
 	int ret = main_server(argc, argv);
+
+	char ch = getchar();
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
 	return ret;

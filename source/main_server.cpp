@@ -21,12 +21,42 @@
 #include "init_plat.h"
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
+#include <cstring>
+
 #include "comp_defines.h"
 #include "GXDLMSBaseAL.h"
 #include "GXDLMSServerFactory.h"
 
+
+#include "GXTime.h"
+#include "GXDate.h"
+#include "GXDLMSClient.h"
+#include "GXDLMSData.h"
+#include "GXDLMSRegister.h"
+#include "GXDLMSClock.h"
+#include "GXDLMSTcpUdpSetup.h"
+#include "GXDLMSProfileGeneric.h"
+#include "GXDLMSAutoConnect.h"
+#include "GXDLMSIECOpticalPortSetup.h"
+#include "GXDLMSActivityCalendar.h"
+#include "GXDLMSDemandRegister.h"
+#include "GXDLMSRegisterMonitor.h"
+#include "GXDLMSActionSchedule.h"
+#include "GXDLMSSapAssignment.h"
+#include "GXDLMSAutoAnswer.h"
+#include "GXDLMSModemConfiguration.h"
+#include "GXDLMSMacAddressSetup.h"
+#include "GXDLMSModemInitialisation.h"
+#include "GXDLMSActionSet.h"
+#include "GXDLMSIp4Setup.h"
+#include "GXDLMSPushSetup.h"
+#include "GXDLMSAssociationLogicalName.h"
+#include "GXDLMSAssociationShortName.h"
+
 static int get_hex_value(unsigned char c);
 static int hex_string_to_int(char *s);
+
+static CGXDLMSBaseAL *server = NULL;
 
 static DLMS_INTERFACE_TYPE interfaceType = DLMS_INTERFACE_TYPE_WRAPPER;
 static DLMS_SERVICE_TYPE protocolType = DLMS_SERVICE_TYPE_UDP;
@@ -162,6 +192,91 @@ static int hex_string_to_int(char *s)
 	return ret;
 }
 
+int setObj(int argc, char* argv[])
+{
+	if(server == NULL)
+	{
+		printf("server isn't running\n");
+		return -1;
+	}
+
+	CGXDLMSVariant val;
+
+	for (int i = 0; i < argc; ++i)
+	{
+		val.Clear();
+
+		if (strcmp(argv[i], "-v") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				std::string volStr = VOLTAGE_OBJECT;
+				CGXDLMSObject *voltage_object = (server->GetItems()).FindByLN(DLMS_OBJECT_TYPE_ALL, volStr);
+
+				if(voltage_object != NULL)
+				{
+					val.fltVal = atof(argv[i + 1]);
+					((CGXDLMSData*)voltage_object)->SetValue(val);
+					printf("### set ###   voltage = %.6f\n", val.fltVal);
+					++i;
+				}
+			}
+		}
+
+		if (strcmp(argv[i], "-i") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				std::string currStr = CURRENT_OBJECT;
+				CGXDLMSObject *current_object = (server->GetItems()).FindByLN(DLMS_OBJECT_TYPE_ALL, currStr);
+
+				if(current_object != NULL)
+				{
+					val.fltVal = atof(argv[i + 1]);
+					((CGXDLMSData*)current_object)->SetValue(val);
+					printf("### set ###   current = %.6f\n", val.fltVal);
+					++i;
+				}
+			}
+		}
+
+		if (strcmp(argv[i], "-p") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				std::string powerStr = POWER_OBJECT;
+				CGXDLMSObject *power_object = (server->GetItems()).FindByLN(DLMS_OBJECT_TYPE_ALL, powerStr);
+
+				if(power_object != NULL)
+				{
+					float power = atof(argv[i + 1]);
+					val.fltVal = atof(argv[i + 1]);
+					((CGXDLMSData*)power_object)->SetValue(val);
+					printf("### set ###   power = %.6f\n", val.fltVal);
+					++i;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int kill_server(int argc, char* argv[])
+{
+	if(server->StopServer() != 0 ||
+	server->KillThread() != 0)
+	{
+		printf("thread didn't killed correctly\n");
+		return -1;
+	}
+
+	delete server;
+	server = NULL;
+
+	return 0;
+}
+
 int main_server(int argc, char* argv[])
 {
 	getopt(argc, argv);
@@ -188,12 +303,16 @@ int main_server(int argc, char* argv[])
     }
 #endif
 
-	CGXDLMSBaseAL *server = CGXDLMSServerFactory::getCGXDLMSServer(true, interfaceType, protocolType);
+	server = CGXDLMSServerFactory::getCGXDLMSServer(true, interfaceType, protocolType);
 
 	server->SetMaxReceivePDUSize(max_pdu_size);
 	server->SetConformance((DLMS_CONFORMANCE)conformance);
 
 	server->CreateObjects();
+
+//	std::string volObj = VOLTAGE_OBJECT;
+//	CGXDLMSObject *voltage_object = (server->GetItems()).FindByLN(DLMS_OBJECT_TYPE_ALL, volObj);
+//	printf("voltage_object = %p\n", voltage_object);
 
 	server->StartServer(port);
 
