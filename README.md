@@ -20,7 +20,7 @@
 
 `./Debug/Linux_GNUC.elf`
 
-# handle entropy
+### handle entropy
 The program can get stucked when running in this mode before the server starts to run. That's happen in function "pal_init" because of non-available entropy.
 To solve this you need to do next steps for only one time:
 1. get out of the docker
@@ -38,7 +38,7 @@ the binary file will be in path:
 ./BUILD/K64F/GCC_ARM/e2e-iot-dlms-server.bin
 
 ## command line in cli
-# to start the server:
+### to start the server:
 `start <argument> <argument value>`
 
 * `-i           <hdlc/wrapper>` - default wrraper
@@ -47,14 +47,14 @@ the binary file will be in path:
 * `-m           <max pdu sizw>` - default 1024
 * `-c           <conformance block (in hexadecimal - can start with 0x)>` - default as Yael requested
 
-# while the server is running:
+### while the server is running:
 `setval <argument> <argument value>`
 
 * `-i    <float number>` - starts with 1
 * `-v    <float number>` - starts with 1
 * `-p    <float number>` - starts with 1
 
-# to end the server:
+### to end the server:
 `end`
 
 
