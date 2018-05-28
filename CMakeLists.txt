@@ -4,6 +4,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/pal-platform/SDK/K64F_FreeRTOS/K
 
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/source)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/security_util/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/mbed-cloud-client/mbed-trace/mbed-trace)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/mbed-cloud-client/mbed-client)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/mbed-cloud-client/mbed-client-pal/Source/PAL-Impl/Services-API)
@@ -44,6 +45,7 @@ File(
 	 GLOB_RECURSE
 	 SECSRV_QE_DEVICE_SRC
 	"${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/security_util/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/GuruxDLMS/development/src/*.cpp"
 )
 

@@ -22,7 +22,7 @@
         },
         "pal-platform": {
             "git-url": "git@github.com:ARMmbed/pal-platform.git",
-            "ref-spec": "f1021bcbe2fb33cfe9945772bffa5846632c45fb",
+            "ref-spec": "46303b3d9d4acd15ac97b29c0702f025ba836551",
             "ref-file-name": "pal-platform.lib"
         },
         "nanostack-libservice": {

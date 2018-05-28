@@ -175,6 +175,10 @@ static void ListenerThread(const void* pVoid)
 				first_packet = false;
 			}
 
+			printf("packet received\n");
+			//PrintfBuff(&bb);
+
+
 			if ( ret == 0 && len == 0 )
 			{
 				server->SetState(false);
@@ -196,6 +200,7 @@ static void ListenerThread(const void* pVoid)
 
 			bb.SetSize(bb.GetSize() + len);
 
+
 			if (server->HandleRequest(bb, reply) != 0)
 			{
 				server->SetState(false);
@@ -205,6 +210,8 @@ static void ListenerThread(const void* pVoid)
 
 			if (reply.GetSize() != 0)
 			{
+				printf("packet sent\n");
+				//PrintfBuff(&reply);
 				ret = server->Write(client_sock, reply, &len);
 
 				if (ret == -1)

@@ -10,7 +10,9 @@ CFLAGS   = -c -g -D__LINUX__
 LINKER   = g++ -o
 
 # linking flags here
-LFLAGS   = -L./GuruxDLMS/development/lib
+LFLAGS   = -L./GuruxDLMS/development/lib \
+			-L./security_util/lib \
+			-L./mbedtls/library
 
 # change these to set the proper directories where each files should be
 #VPATH 	 = src:src/test-device
@@ -31,7 +33,7 @@ OBJECTS 	:= $(SOURCES_NO_EXT:%=$(OBJDIR)/%.o)
 rm       = rm -f
 
 $(BINDIR)/$(TARGET): $(OBJECTS)  
-	@$(LINKER) $@ $(LFLAGS) $(OBJECTS) -lpthread -lrt -lgurux_dlms_cpp
+	@$(LINKER) $@ $(LFLAGS) $(OBJECTS) -lpthread -lrt -lgurux_dlms_cpp -lsecurity -lmbedx509 -lmbedtls -lmbedcrypto
 	@echo "Linking complete!"
 	
 # Compile

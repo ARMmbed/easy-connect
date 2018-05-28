@@ -37,6 +37,11 @@
 #include "../include/GXDLMSAssociationLogicalName.h"
 #include "../include/GXDLMSServer.h"
 
+#include "../../../security_util/include/security_api.h"
+
+ // this a large numer that will be changed when we will understand more
+#define MAX_BUFFER_SIZE 512
+
 void CGXDLMSAssociationLogicalName::UpdateAccessRights(CGXDLMSObject* pObj, CGXDLMSVariant data)
 {
     for (std::vector<CGXDLMSVariant >::iterator it = data.Arr[0].Arr.begin(); it != data.Arr[0].Arr.end(); ++it)
@@ -528,64 +533,112 @@ int CGXDLMSAssociationLogicalName::GetDataType(int index, DLMS_DATA_TYPE& type)
     return DLMS_ERROR_CODE_INVALID_PARAMETER;
 }
 
+static void fill_hls_params(hls_auth_params_t& auth_params, CGXDLMSSettings& settings)
+{
+	auth_params.originator_sys_title.buf = settings.GetSourceSystemTitle().GetData(); // originator - always the client
+	auth_params.originator_sys_title.size = settings.GetSourceSystemTitle().GetSize(); // originator - always the client
+	auth_params.originator_challenge.buf = settings.GetCtoSChallenge().GetData();
+	auth_params.originator_challenge.size = settings.GetCtoSChallenge().GetSize();
+	auth_params.recipient_sys_title.buf = (settings.GetCipher())->GetSystemTitle().GetData(); // recipient - always the server
+	auth_params.recipient_sys_title.size = (settings.GetCipher())->GetSystemTitle().GetSize(); // recipient - always the server
+	auth_params.recipient_challenge.buf = settings.GetStoCChallenge().GetData();
+	auth_params.recipient_challenge.size = settings.GetStoCChallenge().GetSize();
+	//auth_params.public_key_x = ; //should get the public key of the client
+	//auth_params.public_key_y = ;
+	auth_params.public_key_size = 64;
+}
+
 int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e)
 {
     // Check reply_to_HLS_authentication
     if (e.GetIndex() == 1)
     {
-        int ret;
-        unsigned long ic = 0;
-        CGXByteBuffer* readSecret;
-        if (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_GMAC)
-        {
-            unsigned char ch;
-            readSecret = &settings.GetSourceSystemTitle();
-            CGXByteBuffer bb;
-            bb.Set(e.GetParameters().byteArr, e.GetParameters().GetSize());
-            if ((ret = bb.GetUInt8(&ch)) != 0)
-            {
-                return ret;
-            }
-            if ((ret = bb.GetUInt32(&ic)) != 0)
-            {
-                return ret;
-            }
-        }
-        else
-        {
-            readSecret = &m_Secret;
-        }
-        CGXByteBuffer serverChallenge;
-        if ((ret = CGXSecure::Secure(settings, settings.GetCipher(), ic,
-            settings.GetStoCChallenge(), *readSecret, serverChallenge)) != 0)
-        {
-            return ret;
-        }
-        if (serverChallenge.Compare(e.GetParameters().byteArr, e.GetParameters().GetSize()))
-        {
-            if (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_GMAC)
-            {
-                readSecret = &settings.GetCipher()->GetSystemTitle();
-                ic = settings.GetCipher()->GetFrameCounter();
-            }
-            else
-            {
-                readSecret = &m_Secret;
-            }
-            if ((ret = CGXSecure::Secure(settings, settings.GetCipher(), ic,
-                settings.GetCtoSChallenge(), *readSecret, serverChallenge)) != 0)
-            {
-                return ret;
-            }
-            e.SetValue(serverChallenge);
-            settings.SetConnected(true);
-            m_AssociationStatus = DLMS_ASSOCIATION_STATUS_ASSOCIATED;
-        }
-        else
-        {
-            settings.SetConnected(false);
-            m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
-        }
+		int ret;
+		if (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_ECDSA)
+		{
+			uint32_t buffer_size = e.GetParameters().GetSize();
+			uint8_t *buffer = e.GetParameters().byteArr;
+			uint8_t is_originator = !settings.IsServer(); // server is never the originator
+			hls_auth_params_t auth_params;
+
+			fill_hls_params(auth_params, settings);
+
+			// server validate the F(StoC) before creating the F(CtoS)
+			if ((ret = verify_HLS_authentication(&auth_params, buffer, buffer_size, is_originator)) != 0)
+			{
+				settings.SetConnected(false);
+				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
+				return ret;
+			}
+
+			buffer_size = MAX_BUFFER_SIZE; // this a large numer that will be changed when we will understand more
+			if ((buffer = (uint8_t*)malloc(buffer_size)) == NULL) return 1;
+
+			if ((ret = create_HLS_authentication(&auth_params, buffer, &buffer_size, is_originator)) != 0)
+				return ret;
+
+			// the server sends the F(CtoS)
+			e.SetValue(buffer);
+			// the server accepts the connection
+			settings.SetConnected(true);
+			m_AssociationStatus = DLMS_ASSOCIATION_STATUS_ASSOCIATED;
+		}
+
+		else
+		{
+			unsigned long ic = 0;
+			CGXByteBuffer* readSecret;
+			if (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_GMAC)
+			{
+				unsigned char ch;
+				readSecret = &settings.GetSourceSystemTitle();
+				CGXByteBuffer bb;
+				bb.Set(e.GetParameters().byteArr, e.GetParameters().GetSize());
+				if ((ret = bb.GetUInt8(&ch)) != 0)
+				{
+					return ret;
+				}
+				if ((ret = bb.GetUInt32(&ic)) != 0)
+				{
+					return ret;
+				}
+			}
+			else
+			{
+				readSecret = &m_Secret;
+			}
+			CGXByteBuffer serverChallenge;
+			if ((ret = CGXSecure::Secure(settings, settings.GetCipher(), ic,
+				settings.GetStoCChallenge(), *readSecret, serverChallenge)) != 0)
+			{
+				return ret;
+			}
+			if (serverChallenge.Compare(e.GetParameters().byteArr, e.GetParameters().GetSize()))
+			{
+				if (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_GMAC)
+				{
+					readSecret = &settings.GetCipher()->GetSystemTitle();
+					ic = settings.GetCipher()->GetFrameCounter();
+				}
+				else
+				{
+					readSecret = &m_Secret;
+				}
+				if ((ret = CGXSecure::Secure(settings, settings.GetCipher(), ic,
+					settings.GetCtoSChallenge(), *readSecret, serverChallenge)) != 0)
+				{
+					return ret;
+				}
+				e.SetValue(serverChallenge);
+				settings.SetConnected(true);
+				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_ASSOCIATED;
+			}
+			else
+			{
+				settings.SetConnected(false);
+				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
+			}
+		}
     }
     else if (e.GetIndex() == 2)
     {

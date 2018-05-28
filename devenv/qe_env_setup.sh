@@ -149,9 +149,17 @@ spv_set_Linux_env() {
 	# generate CMake files
 	echo "current Directory:" ${PWD}
 	cmake -G 'Unix Makefiles' -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_TOOLCHAIN_FILE=../pal-platform/Toolchain/GCC/GCC.cmake
+	
+	rm -rf ../platform
+	rm -rf ../mbed-cloud-client/mbed-client-pal/Test
+	rm -rf ../mbed-cloud-client/factory-configurator-client/mbed-client-esfs/CMakeLists.txt
+	rm -rf ../mbed-os
+	python ../replace_line.py ../source/setup.h "extern int initPlatform();" "//extern int initPlatform();"
+	cp ../pal-platform/Middleware/mbedtls/mbedtls/configs/config-suite-b.h ../pal-platform/Middleware/mbedtls/mbedtls/include/mbedtls/config.h
 }
 
 spv_set_MbedOS_env() {
+	rm -rf security_util/obj security_util/lib
 	rm -f os_specific_source/.mbedignore
 	rm -rf __K64F_FreeRTOS_mbedtls
 	rm -rf __x86_x64_NativeLinux_mbedtls

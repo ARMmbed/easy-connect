@@ -16,9 +16,21 @@
 CLEAN="$1"
 
 if [[ "$CLEAN" == "-c" ]]; then
-	rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin
+	rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
 else
-	cd GuruxDLMS/development
+	cd mbedtls
+	make -j10
+	cd ../security_util
+	
+	if [ ! -d "obj" ]; then
+	mkdir obj
+	fi
+	if [ ! -d "lib" ]; then
+	mkdir lib
+	fi
+	
+	make -j10
+	cd ../GuruxDLMS/development
 
 	if [ ! -d "obj" ]; then
 	mkdir obj
