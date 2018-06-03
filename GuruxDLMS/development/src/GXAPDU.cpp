@@ -33,6 +33,7 @@
 //---------------------------------------------------------------------------
 
 #include "../include/GXAPDU.h"
+#include "../include/GXDLMSSettings.h"
 
 /**
  * Retrieves the string that indicates the level of authentication, if any.
@@ -716,7 +717,9 @@ int UpdateAuthentication(
     {
         return ret;
     }
-    if (ch > DLMS_AUTHENTICATION_HIGH_SHA256)
+    //[#ecdsa#]
+    //if (ch > DLMS_AUTHENTICATION_HIGH_SHA256)
+    if (ch > DLMS_AUTHENTICATION_HIGH_ECDSA)
     {
         return DLMS_ERROR_CODE_INVALID_TAG;
     }
@@ -996,6 +999,33 @@ int CGXAPDU::ParsePDU(
             settings.SetSourceSystemTitle(tmp);
             break;
             // 0xAA Server system title.
+
+            //[#ecdsa#]
+            // 0xA7
+        case BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED |  PDU_TYPE_CALLING_AE_QUALIFIER:
+			if ((ret = buff.GetUInt8(&len)) != 0)
+			{
+				return ret;
+			}
+			if ((ret = buff.GetUInt8(&tag)) != 0)
+			{
+				return ret;
+			}
+			if ((ret = buff.GetUInt8(&len)) != 0)
+			{
+				return ret;
+			}
+			if(len != PUBLIC_KEY_SIZE)
+			{
+				// public key length should be 64
+				return DLMS_ERROR_CODE_FALSE;
+			}
+
+			memcpy(settings.GetKey().m_originator_public, buff.GetData() + buff.GetPosition(), PUBLIC_KEY_SIZE);
+
+			buff.SetPosition(buff.GetPosition() + PUBLIC_KEY_SIZE);
+			break;
+
         case BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | PDU_TYPE_SENDER_ACSE_REQUIREMENTS:
             if ((ret = buff.GetUInt8(&len)) != 0)
             {
@@ -1129,8 +1159,8 @@ int CGXAPDU::GenerateAARE(
     // diagnostic
     data.SetUInt8(diagnostic);
     // SystemTitle
-    if (cipher != NULL
-        && (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_GMAC
+    //[#ecdsa#] add: settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_ECDSA
+    if (cipher != NULL && (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_ECDSA || settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_GMAC
             || cipher->IsCiphered()))
     {
         data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | PDU_TYPE_CALLED_AP_INVOCATION_ID);
@@ -1139,8 +1169,21 @@ int CGXAPDU::GenerateAARE(
         GXHelpers::SetObjectCount(cipher->GetSystemTitle().GetSize(), data);
         data.Set(&cipher->GetSystemTitle());
     }
+
     if (settings.GetAuthentication() > DLMS_AUTHENTICATION_LOW)
     {
+    	// [#ecdsa#] add server public key to AARE
+    	if(settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_ECDSA)
+    	{
+    		// 0xA5 - responding-AE-qualifier (server public key)
+    		data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | 0x5);
+    		data.SetUInt8(0x42);
+    		// octet string
+    		data.SetUInt8(0x04);
+    		// public key length = 64
+    		data.SetUInt8(PUBLIC_KEY_SIZE);
+    		data.Set(settings.GetKey().m_recipient_public, PUBLIC_KEY_SIZE);
+    	}
         // Add server ACSE-requirenents field component.
         data.SetUInt8(0x88);
         data.SetUInt8(0x02); // Len.

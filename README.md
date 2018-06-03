@@ -48,13 +48,16 @@ the binary file will be in path:
 * `-p           <port number>` - default 4061
 * `-m           <max pdu sizw>` - default 1024
 * `-c           <conformance block (in hexadecimal - can start with 0x)>` - default as Yael requested
+* `-print`      print the received and sent packets - default is not printing
 
 ### while the server is running:
-`setval <argument> <argument value>`
+`conf <argument> <argument value>`
 
 * `-i    <float number>` - starts with 1
 * `-v    <float number>` - starts with 1
 * `-p    <float number>` - starts with 1
+* `-print`               - print the received and sent packets
+* `-stoprint`            - stop print the received and sent packets
 
 ### to end the server:
 `end`

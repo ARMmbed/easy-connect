@@ -78,6 +78,9 @@ protected:
 	 
 public:
 	SEMAPHORE m_wait_server_start;
+	
+	bool m_print;
+	
  //   GX_TRACE_LEVEL m_Trace;
 
     /////////////////////////////////////////////////////////////////////////
@@ -99,6 +102,7 @@ public:
 #endif
 
         _ready = false;
+		m_print = false;
     }
 
 

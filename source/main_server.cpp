@@ -53,6 +53,7 @@
 #include "GXDLMSAssociationLogicalName.h"
 #include "GXDLMSAssociationShortName.h"
 
+
 static int get_hex_value(unsigned char c);
 static int hex_string_to_int(char *s);
 
@@ -62,12 +63,35 @@ static DLMS_INTERFACE_TYPE interfaceType = DLMS_INTERFACE_TYPE_WRAPPER;
 static DLMS_SERVICE_TYPE protocolType = DLMS_SERVICE_TYPE_UDP;
 static int max_pdu_size = 1024;
 static char *port = LN_SERVER_PORT_STR;
+static bool is_print_packets = false;
 static int conformance = DLMS_CONFORMANCE_GENERAL_PROTECTION |
 DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER |
 DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_GET_OR_READ |
 DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_SET_OR_WRITE | DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_ACTION |
 DLMS_CONFORMANCE_GET | DLMS_CONFORMANCE_SET |
 DLMS_CONFORMANCE_SELECTIVE_ACCESS | DLMS_CONFORMANCE_ACTION;
+
+static unsigned char server_sys_title[] =
+{
+	0x4D,0x4D,0x4D,0x00,0x00,0x00,0x00,0x01
+};
+
+static unsigned char d_server[] =
+{
+	0xB5,0x82,0xD8,0xC9,0x10,0x01,0x83,0x02,0xBA,0x31,0x31,
+	0xBA,0xB9,0xBB,0x68,0x38,0x10,0x8B,0xB9,0x40,0x8C,0x30,
+	0xB2,0xE4,0x92,0x85,0x98,0x52,0x56,0xA5,0x90,0x38
+};
+
+static unsigned char q_server[] =
+{
+	0xE4,0xD0,0x7C,0xEB,0x0A,0x5A,0x6D,0xA9,0xD2,0x22,0x8B,
+	0x05,0x4A,0x1F,0x5E,0x29,0x5E,0x17,0x47,0xA9,0x63,0x97,
+	0x4A,0xF7,0x50,0x91,0xA0,0xB0,0xBC,0x2F,0xB9,0x2D,0xA7,
+	0xD2,0xAB,0xD9,0xFD,0xD4,0x15,0x79,0xF3,0x6A,0x1C,0x81,
+	0x71,0xA0,0xCB,0x63,0x82,0x21,0xDF,0x19,0x49,0xFD,0x95,
+	0xC8,0xFA,0xE1,0x48,0x89,0x69,0x20,0x45,0x0D
+};
 
 static int getopt(int argc, char* argv[])
 {
@@ -149,6 +173,12 @@ static int getopt(int argc, char* argv[])
 				printf("### configuration ###   conformance = 0x%x\n", conformance);
 				++i;
 			}
+		}
+		
+		else if (strcmp(argv[i], "-print") == 0)
+		{
+			printf("### configuration ###   print received and sent packets\n");
+			is_print_packets = true;
 		}
 	}
 }
@@ -257,6 +287,16 @@ int setObj(int argc, char* argv[])
 				}
 			}
 		}
+		
+		else if (strcmp(argv[i], "-print") == 0)
+		{
+			server->m_print = true;
+		}
+		
+		else if (strcmp(argv[i], "-stoprint") == 0)
+		{
+			server->m_print = false;
+		}
 	}
 
 	return 0;
@@ -264,6 +304,7 @@ int setObj(int argc, char* argv[])
 
 int kill_server(int argc, char* argv[])
 {
+	is_print_packets = false;
 	if(server->StopServer() != 0 ||
 	server->KillThread() != 0)
 	{
@@ -304,15 +345,20 @@ int main_server(int argc, char* argv[])
 #endif
 
 	server = CGXDLMSServerFactory::getCGXDLMSServer(true, interfaceType, protocolType);
-
 	server->SetMaxReceivePDUSize(max_pdu_size);
 	server->SetConformance((DLMS_CONFORMANCE)conformance);
+	server->m_print = is_print_packets;
+
+	///////////////////// ECDSA /////////////////////////////
+	server->SetPrivateKey(d_server);
+	server->SetServerPublicKey(q_server);
+
+	CGXByteBuffer server_system_title;
+	server_system_title.Set(server_sys_title, 8);
+	(server->GetCiphering())->SetSystemTitle(server_system_title);
+	/////////////////////////////////////////////////////////
 
 	server->CreateObjects();
-
-//	std::string volObj = VOLTAGE_OBJECT;
-//	CGXDLMSObject *voltage_object = (server->GetItems()).FindByLN(DLMS_OBJECT_TYPE_ALL, volObj);
-//	printf("voltage_object = %p\n", voltage_object);
 
 	server->StartServer(port);
 

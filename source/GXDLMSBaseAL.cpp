@@ -96,6 +96,8 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "GXDLMSAssociationLogicalName.h"
 #include "GXDLMSAssociationShortName.h"
 
+#define MAX_PACKET_PRINT 170
+
 using namespace std;
 static const char* DATAFILE = "data.csv";
 
@@ -116,19 +118,19 @@ CDC Interface 4 - UART 4 (UART4_TX = PTC15 [J199-4], UART4_RX = PTC14 [J199-3] -
 
 static void PrintfBuff(unsigned char *ptr, int size)
 {
-	printf("\n#########################\n");
+	printf("#########################\n");
 	for(int i = 0 ; i < size ; ++i)
 	{
 		printf("%02x ", *ptr++);
 		if((i+1)% 8 == 0) printf("\n");
 	}
 	if((size+1)% 8 != 0) printf("\n");
-	printf("#########################\n");
+	printf("#########################\n\n");
 }
 
 static void PrintfBuff(CGXByteBuffer *bb)
 {
-	PrintfBuff(bb->GetData(), bb->GetSize() > 20 ? bb->GetSize() : 20);
+	PrintfBuff(bb->GetData(), bb->GetSize() < MAX_PACKET_PRINT ? MAX_PACKET_PRINT : bb->GetSize());
 }
 
 static void ListenerThread(const void* pVoid)
@@ -171,13 +173,15 @@ static void ListenerThread(const void* pVoid)
 
 			if(ret == SUCCESS && first_packet)
 			{
-				printf("Received packet\n\n");
+				printf("First Packet Received\n\n");
 				first_packet = false;
 			}
 
-			printf("packet received\n");
-			//PrintfBuff(&bb);
-
+			if(server->m_print)
+			{
+				printf("packet received\n");
+				PrintfBuff(&bb);
+			}
 
 			if ( ret == 0 && len == 0 )
 			{
@@ -210,8 +214,12 @@ static void ListenerThread(const void* pVoid)
 
 			if (reply.GetSize() != 0)
 			{
-				printf("packet sent\n");
-				//PrintfBuff(&reply);
+				if(server->m_print)
+				{
+					printf("packet sent\n");
+					PrintfBuff(&reply);
+				}
+				
 				ret = server->Write(client_sock, reply, &len);
 
 				if (ret == -1)

@@ -80,7 +80,7 @@ void main_thread_cb(const void* arg)
   	cmd_init(NULL);
 	cmd_set_ready_cb(cmd_ready_cb);
 	cmd_add("start", main_server, "Run The Server", 0);
-	cmd_add("setval", setObj, "set the value", 0);
+	cmd_add("conf", setObj, "set the value", 0);
 	cmd_add("end", kill_server, "kill the server", 0);
 #ifdef __linux__
 	init_signals();

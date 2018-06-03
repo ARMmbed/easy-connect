@@ -42,6 +42,7 @@
 #include "../include/GXAPDU.h"
 #include "../include/GXSecure.h"
 #include "../include/GXDLMSValueEventCollection.h"
+#include "../include/GXDLMSSettings.h"
 
 CGXDLMSServer::CGXDLMSServer(bool logicalNameReferencing,
     DLMS_INTERFACE_TYPE type) : m_Transaction(NULL), m_Settings(true)
@@ -474,6 +475,7 @@ int CGXDLMSServer::HandleAarqRequest(
         {
             return ret;
         }
+
         m_Settings.SetStoCChallenge(challenge);
 
         if (m_Settings.GetUseLogicalNameReferencing())
@@ -2366,4 +2368,14 @@ int CGXDLMSServer::GeneratePushSetupMessages(
         AddData(it->first, it->second.GetAttributeIndex(), buff);
     }
     return GenerateDataNotificationMessages(date, buff, reply);
+}
+
+void CGXDLMSServer::SetPrivateKey(unsigned char *d)
+{
+	memcpy(m_Settings.GetKey().m_private, d, PRIVATE_KEY_SIZE);
+}
+
+void CGXDLMSServer::SetServerPublicKey(unsigned char *q)
+{
+	memcpy(m_Settings.GetKey().m_recipient_public, q, PUBLIC_KEY_SIZE);
 }

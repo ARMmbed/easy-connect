@@ -41,6 +41,9 @@
 #include "GXDLMSObjectCollection.h"
 #include "GXCipher.h"
 
+#define PRIVATE_KEY_SIZE 32
+#define PUBLIC_KEY_SIZE 64
+
 // Server sender frame sequence starting number.
 const unsigned char SERVER_START_SENDER_FRAME_SEQUENCE = 0x1E;
 
@@ -57,9 +60,20 @@ const unsigned char DLMS_VERSION = 6;
 
 const unsigned short MAX_RECEIVE_PDU_SIZE = 0xFFFF;
 
+//[ecdsa]
+// originator - always the client
+// recipient - always the server
+typedef struct keys
+{
+	unsigned char m_private[PRIVATE_KEY_SIZE];
+	unsigned char m_recipient_public[PUBLIC_KEY_SIZE];
+	unsigned char m_originator_public[PUBLIC_KEY_SIZE];
+}keys_t;
+
 // This class includes DLMS communication Settings.
 class CGXDLMSSettings
 {
+	keys_t m_keys;
     //Is connection made for the server.
     bool m_Connected;
 
@@ -397,6 +411,12 @@ public:
     *            Functionality.
     */
     void SetProposedConformance(DLMS_CONFORMANCE value);
+
+	void SetPrivateKey(unsigned char *d);
+	void SetOriginatorPublicKey(unsigned char *q);
+	void SetRecipientPublicKey(unsigned char *q);
+
+	keys_t& GetKey() {return m_keys;}
 };
 
 #endif //GXDLMSSETTINGS_H

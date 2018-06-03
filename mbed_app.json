@@ -2,7 +2,7 @@
     "macros": [
 		"MEM_ALLOC=malloc",
 		"MEM_FREE=free",
-		"MBEDTLS_USER_CONFIG_FILE=\"mbedtls_mbed_client_config.h\"",
+		"MBEDTLS_USER_CONFIG_FILE=\"config-suite-b.h\"",
 		"MBED_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
         "MBED_CLOUD_CLIENT_USER_CONFIG_FILE=\"mbed_cloud_client_user_config.h\"",
         "PAL_USE_FATFS_SD=1",

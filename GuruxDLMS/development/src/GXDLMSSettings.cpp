@@ -508,3 +508,18 @@ void CGXDLMSSettings::SetProposedConformance(DLMS_CONFORMANCE value)
 {
     m_ProposedConformance = value;
 }
+
+void CGXDLMSSettings::SetPrivateKey(unsigned char *d)
+{
+	memcpy(m_keys.m_private, d, PRIVATE_KEY_SIZE);
+}
+
+void CGXDLMSSettings::SetOriginatorPublicKey(unsigned char *q)
+{
+	memcpy(m_keys.m_originator_public, q, PUBLIC_KEY_SIZE);
+}
+
+void CGXDLMSSettings::SetRecipientPublicKey(unsigned char *q)
+{
+	memcpy(m_keys.m_recipient_public, q, PUBLIC_KEY_SIZE);
+}

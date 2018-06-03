@@ -431,6 +431,9 @@ protected:
     int UpdateShortNames();
 
 public:
+	void SetPrivateKey(unsigned char *d);
+	void SetServerPublicKey(unsigned char *q);
+
     /**
     * @return HDLC settings.
     */
