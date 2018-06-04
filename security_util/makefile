@@ -18,7 +18,7 @@ LFLAGS   =
 
 # change these to set the proper directories where each files shoould be
 
-SRCDIR   = .
+SRCDIR   = src
 OBJDIR   = obj
 LIBDIR   = lib
 

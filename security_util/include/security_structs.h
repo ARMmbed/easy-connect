@@ -22,17 +22,17 @@ typedef enum e_security_group_id {
 /* internal parameters for Digital Signature sign/verify */
 typedef struct ds_int_params {
 	e_security_group_id_t	security_grp_id;
-	const unsigned char	*private_key;
-	uint32_t	private_key_size;
-	const unsigned char	*public_key;
-	uint32_t	public_key_size;
+	const uint8_t			*private_key;
+	uint32_t				private_key_size;
+	const uint8_t			*public_key;
+	uint32_t				public_key_size;
 } ds_int_params_t;
 
 /* Shared Secret Calculation Parameters */
 typedef struct shared_secret_params {
 	e_security_group_id_t	security_grp_id;
-	unsigned char	*public_key;
-	uint32_t	public_key_size;
+	uint8_t					*public_key;
+	uint32_t				public_key_size;
 } shared_secret_params_t;
 
 /* HLS authentication Parameters */
@@ -43,8 +43,8 @@ typedef struct hls_auth_params {
 	octet_string_t	originator_challenge;
 	octet_string_t	recipient_sys_title;
 	octet_string_t	recipient_challenge;
-	unsigned char	*public_key;
-	uint32_t	public_key_size;
+	uint8_t			*public_key;
+	uint32_t		public_key_size;
 } hls_auth_params_t;
 
 /* Key Derivation Parameters */

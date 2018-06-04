@@ -5,29 +5,29 @@
 #include "security_structs.h"
 
 /*
- * Extract public key (x, y) from buffer
- * public_key_x and public_key_y should be pre-allocated before
- * and have at least buffer_size/2 size
+ * Extract public key from buffer
+ * public_key should be pre-allocated before
+ * and have at least buffer_size size
  */
 void extract_public_key(uint8_t *buffer, uint32_t buffer_size,
-			char	*public_key_x, char	*public_key_y,
+			uint8_t *public_key,
 			uint32_t	*public_key_size);
 /*
- * Get pre-saved DS public key (x, y)
- * public_key_x and public_key_y should be pre-allocated (32 bytes)
+ * Get pre-saved DS public key
+ * public_key should be pre-allocated (64 bytes)
  * return 0 if the key exists
  * return 1 if not
  */
-uint8_t get_presaved_DS_public_key(char	*public_key_x, char	*public_key_y,
+uint8_t get_presaved_DS_public_key(uint8_t *public_key,
 				uint32_t	*public_key_size);
 
 /*
- * Get pre-saved KA public key (x, y)
- * public_key_x and public_key_y should be pre-allocated (32 bytes)
+ * Get pre-saved KA public key
+ * public_key should be pre-allocated (64 bytes)
  * return 0 if the key exists
  * return 1 if not
  */
-uint8_t get_presaved_KA_public_key(char	*public_key_x, char	*public_key_y,
+uint8_t get_presaved_KA_public_key(uint8_t *public_key,
 					uint32_t	*public_key_size);
 
 /*

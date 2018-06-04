@@ -13,12 +13,13 @@
 
 #define HASH_SIZE			32
 #define OCTET_STRING_TAG	9
+#define HALF_SIG_SIZE		33
 
 /*
  * This function was taken from mbedTLS tests.
  * Replace by real rng function - TBD
  */
-static int myrand(void *rng_state, unsigned char *output, size_t len)
+static int myrand(void *rng_state, uint8_t *output, size_t len)
 {
 	size_t use_len;
 	int rnd;
@@ -64,6 +65,8 @@ static int32_t init_mbedtls_context(mbedtls_ecdsa_context *ctx,
 	return ret;
 }
 
+
+
 int32_t ECDSA_Sign(ds_int_params_t	*params,
 					uint8_t		*buffer,
 					uint32_t	*buffer_size,
@@ -73,9 +76,14 @@ int32_t ECDSA_Sign(ds_int_params_t	*params,
 	printf("%s\n", __func__);
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	mbedtls_ecdsa_context mbedTls_ctx;
-	unsigned char *hash = NULL;
-	unsigned char *sig = NULL;
-	size_t sig_len;
+	uint8_t  *hash = NULL;
+	uint8_t  *sig = NULL;
+	size_t sig_len, len_r, len_s, max_half;
+	mbedtls_mpi r, s;
+	int i = 0;
+
+	mbedtls_mpi_init(&r);
+	mbedtls_mpi_init(&s);
 
 	ret = init_mbedtls_context(&mbedTls_ctx, params);
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
@@ -84,34 +92,51 @@ int32_t ECDSA_Sign(ds_int_params_t	*params,
 		return ret;
 	}
 
-	hash = (unsigned char *)calloc(HASH_SIZE, sizeof(unsigned char));
+	hash = (uint8_t *)calloc(HASH_SIZE, sizeof(uint8_t));
 	assert(hash != NULL);
-
-	sig = (unsigned char *)calloc(MBEDTLS_ECDSA_MAX_LEN,
-							sizeof(unsigned char));
-	assert(sig != NULL);
 
 	ret = mbedtls_sha256_ret(message, message_size, hash, 0);
 
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 		printf(" failed! mbedtls_sha256_ret returned %d\n", ret);
 	} else {
-		ret = mbedtls_ecdsa_write_signature(&mbedTls_ctx,
-			MBEDTLS_MD_SHA256, hash, HASH_SIZE, sig, &sig_len,
-			myrand, NULL);
+
+		ret = mbedtls_ecdsa_sign
+			(&mbedTls_ctx.grp, &r, &s, &mbedTls_ctx.d,
+			hash, HASH_SIZE, myrand, NULL);
+
+		len_r = mbedtls_mpi_size(&r);
+		len_s = mbedtls_mpi_size(&s);
+		printf("%s: len_r=%d, len_s=%d\n",
+			__func__, (int)len_r, (int)len_s);
+//		assert(len_r == len_s);
+		assert((len_r <= HALF_SIG_SIZE) && (len_r > 0));
+		assert((len_s <= HALF_SIG_SIZE) && (len_s > 0));
+
+		max_half = (len_r > len_s) ? len_r : len_s;
+		sig_len = 2 * max_half;
+
+		assert(sig_len > 0);
+		sig = (uint8_t *)calloc(sig_len, sizeof(uint8_t));
+		assert(sig != NULL);
+
+		if (len_r < max_half) {
+			for (i = 0; i < (int)(max_half-len_r); i++)
+				sig[i] = 0;
+		}
+		mbedtls_mpi_write_binary(&r, sig+max_half-len_r, len_r);
+
+		if (len_s < max_half) {
+			for (i = max_half; i < (int)(sig_len-len_s); i++)
+				sig[i] = 0;
+		}
+		mbedtls_mpi_write_binary(&s, sig+sig_len-len_s, len_s);
+
 		if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 			printf
 			("mbedtls_ecdsa_write_signature returned %d\n", ret);
 		} else {
 			uint32_t ind = 0;
-/*
- *			for(int i = 0; i < sig_len; i+=4)
- *				printf("0x%x 0x%x 0x%x 0x%x\n",
- *				(unsigned int) sig[i],
- *				(unsigned int) sig[i+1],
- *				(unsigned int) sig[i+2],
- *				(unsigned int) sig[i+3]);
- */
 
 			buffer[ind++] = OCTET_STRING_TAG;
 			// The length should be less than 128 byte
@@ -121,11 +146,13 @@ int32_t ECDSA_Sign(ds_int_params_t	*params,
 			memcpy(buffer + ind, sig, sig_len);
 			*buffer_size = sig_len + ind;
 		}
+		free(sig);
 	}
 
 	mbedtls_ecdsa_free(&mbedTls_ctx);
 	free(hash);
-	free(sig);
+	mbedtls_mpi_free(&r);
+	mbedtls_mpi_free(&s);
 	return ret;
 }
 
@@ -138,11 +165,15 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 	printf("%s\n", __func__);
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	mbedtls_ecdsa_context mbedTls_ctx;
-	unsigned char *hash = NULL;
+	uint8_t *hash = NULL;
+	mbedtls_mpi r, s;
+
+	mbedtls_mpi_init(&r);
+	mbedtls_mpi_init(&s);
 
 	init_mbedtls_context(&mbedTls_ctx, params);
 
-	hash = (unsigned char *)calloc(HASH_SIZE, sizeof(unsigned char));
+	hash = (uint8_t *)calloc(HASH_SIZE, sizeof(uint8_t));
 	assert(hash != NULL);
 
 	ret = mbedtls_sha256_ret(message, message_size, hash, 0);
@@ -156,14 +187,34 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 		assert(buffer != NULL);
 		if (buffer[ind++] == OCTET_STRING_TAG) {
 			sig_size = buffer[ind++];
+			printf("buffer_size %d, sig_size=%d\n",
+				(int)buffer_size, (int)sig_size);
 			assert(sig_size == buffer_size-2);
-			ret = mbedtls_ecdsa_read_signature(&mbedTls_ctx,
-							hash, HASH_SIZE,
-							buffer + ind, sig_size);
+			assert(sig_size % 2 == 0);
+
+			ret = mbedtls_mpi_read_binary
+					(&r, buffer + ind, sig_size/2);
 			if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 				printf
-				("mbedtls_ecdsa_read_signature returned %d\n",
-				ret);
+				("read of r failed %d\n", ret);
+			} else {
+				ret = mbedtls_mpi_read_binary
+					(&s, buffer + ind + sig_size/2,
+					sig_size/2);
+				if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+					printf
+					("read of s failed %d\n", ret);
+				} else {
+					ret = mbedtls_ecdsa_verify
+						(&mbedTls_ctx.grp,
+						hash, HASH_SIZE,
+						&mbedTls_ctx.Q, &r, &s);
+					if (ret !=
+						SECURITY_UTIL_STATUS_SUCCESS) {
+						printf
+						("verify failed %d\n", ret);
+					}
+				}
 			}
 		} else {
 			printf("%s: wrong buffer format\n", __func__);
@@ -173,5 +224,7 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 
 	mbedtls_ecdsa_free(&mbedTls_ctx);
 	free(hash);
+	mbedtls_mpi_free(&r);
+	mbedtls_mpi_free(&s);
 	return ret;
 }
