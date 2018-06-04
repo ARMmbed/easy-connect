@@ -9,9 +9,14 @@
 
 `./bin/dlms-sim-server`
 
-### clean the build:
+### clean and compile:
 
 `./build_server.sh -c`
+
+### only clean:
+
+`./build_server.sh -clean`
+
 
 ## steps to run on linux-cli
 `python ./devenv/update_repository.py linux`

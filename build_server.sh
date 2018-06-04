@@ -15,20 +15,22 @@
 
 CLEAN="$1"
 
-if [[ "$CLEAN" == "-c" ]]; then
+if [ "$CLEAN" == "-c" ] || [ "$CLEAN" == "-clean" ]; then
 	rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
-else
+fi
+
+if [[ "$CLEAN" != "-clean" ]]; then
 	cd mbedtls
 	make -j10
 	cd ../security_util
-	
+
 	if [ ! -d "obj" ]; then
 	mkdir obj
 	fi
 	if [ ! -d "lib" ]; then
 	mkdir lib
 	fi
-	
+
 	make -j10
 	cd ../GuruxDLMS/development
 
