@@ -49,12 +49,25 @@ static int32_t init_mbedtls_context(mbedtls_ecdsa_context *ctx,
 						ds_int_params_t	*params)
 {
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
+/*
+ * Pay attention:
+ * according to mbedTLS rules, public key MUST start from this byte:
+ * BER_OCTET_STRING tag 0x4
+ */
+	uint32_t public_size = params->public_key_size + 1;
+	uint8_t *buff = (uint8_t *)calloc(public_size, sizeof(uint8_t));
+
+	assert(buff != NULL);
+	buff[0] = 0x04; // adding BER_OCTET_STRING tag
+	memcpy(buff + 1, params->public_key, params->public_key_size);
 
 	mbedtls_ecdsa_init(ctx);
 	ctx->grp.id = MBEDTLS_ECP_DP_SECP256R1;
 	mbedtls_ecp_group_load(&ctx->grp, MBEDTLS_ECP_DP_SECP256R1);
+
+
 	ret = mbedtls_ecp_point_read_binary(&ctx->grp, &ctx->Q,
-		params->public_key, params->public_key_size);
+						buff, public_size);
 
 	if (ret == 0) {
 		ret = mbedtls_mpi_read_binary(&ctx->d,
@@ -62,6 +75,7 @@ static int32_t init_mbedtls_context(mbedtls_ecdsa_context *ctx,
 				params->private_key_size);
 
 	}
+	free(buff);
 	return ret;
 }
 
