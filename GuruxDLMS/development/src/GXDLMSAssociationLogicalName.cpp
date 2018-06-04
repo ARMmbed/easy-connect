@@ -598,8 +598,10 @@ static void fill_hls_params(hls_auth_params_t& auth_params, CGXDLMSSettings& set
 	auth_params.recipient_sys_title.size = (settings.GetCipher())->GetSystemTitle().GetSize(); // recipient - always the server
 	auth_params.recipient_challenge.buf = settings.GetStoCChallenge().GetData();
 	auth_params.recipient_challenge.size = settings.GetStoCChallenge().GetSize();
-	auth_params.public_key = settings.GetKey().m_originator_public; //should get the public key of the client
-	auth_params.public_key_size = 64;
+	auth_params.public_key = settings.GetKey().m_originator_public; // get the public key of the client
+	auth_params.public_key_size = PUBLIC_KEY_SIZE;
+	auth_params.security_suite = 1;
+	auth_params.mechanism_id = 7;
 }
 
 int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e)
