@@ -633,8 +633,12 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			if ((ret = create_HLS_authentication(&auth_params, buffer, &buffer_size, is_originator, NULL)) != 0)
 				return ret;
 
+			CGXByteBuffer F_CtoS;
+			F_CtoS.Set(buffer, buffer_size);
+			free(buffer);
+			
 			// the server sends the F(CtoS)
-			e.SetValue(buffer);
+			e.SetValue(F_CtoS);
 			// the server accepts the connection
 			settings.SetConnected(true);
 			m_AssociationStatus = DLMS_ASSOCIATION_STATUS_ASSOCIATED;
