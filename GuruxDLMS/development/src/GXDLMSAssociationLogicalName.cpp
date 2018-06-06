@@ -39,7 +39,8 @@
 
 #include "../../../security_util/include/security_api.h"
 
-#define MAX_BUFFER_SIZE 512
+//no need buffer size larger
+#define MAX_BUFFER_SIZE 72
 
 static unsigned char client_sys_title[] =
 { 0x4D,0x4D,0x4D,0x00,0x00,0xBC,0x61,0x4E };

@@ -51,9 +51,10 @@ the binary file will be in path:
 * `-i           <hdlc/wrapper>` - default wrraper
 * `-protocol    <tcp/udp>` - default udp
 * `-p           <port number>` - default 4061
-* `-m           <max pdu sizw>` - default 1024
+* `-m           <max pdu size>` - default 1024
 * `-c           <conformance block (in hexadecimal - can start with 0x)>` - default as Yael requested
 * `-print`      print the received and sent packets - default is not printing
+* `-k`          <key number (1 - 10)> - default is 1
 
 ### while the server is running:
 `conf <argument> <argument value>`
