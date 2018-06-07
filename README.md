@@ -24,6 +24,10 @@ Add the following to your `mbed_app.json` file:
 }
 ```
 
+### UBLOX ODIN/Ethernet
+
+#### Mbed OS 5.8 and older
+
 If you select `ETHERNET` with `UBLOX_ODIN_EVK_W2` you must add this to your `target-overrides` section in `mbed_app.json`:
 
 ```json
@@ -31,6 +35,18 @@ If you select `ETHERNET` with `UBLOX_ODIN_EVK_W2` you must add this to your `tar
             "target.device_has_remove": ["EMAC"]
             }
 ```
+
+#### Mbed OS 5.9 and newer
+
+With Mbed OS 5.9, the EMAC SW was refactored and a default network selector is used instead. You must add the following `target-overrides` section to `mbed_app.json`:
+
+```json
+        "UBLOX_EVK_ODIN_W2": {
+             "target.network-default-interface-type": "ETHERNET"
+       }
+```
+
+### Other WiFi stacks
 
 If you select `WIFI_ESP8266`, `WIFI_IDW0XX1`, `WIFI_ODIN` or `WIFI_RTW`, `WIFI_WIZFI310` you also need to add the WiFi SSID and password:
 
@@ -64,7 +80,9 @@ If you use `MESH_LOWPAN_ND` or `MESH_THREAD` you need to specify your radio modu
     }
 ```
 
-If you use `CELLULAR_ONBOARD` (for which user documentation can be found [here](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/communication/cellular/)) you must specify the following:
+### CELLULAR_ONBOARD
+
+If you use [`CELLULAR_ONBOARD`](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/communication/cellular/) you must specify the following:
 
 ```json
     "target_overrides": {
