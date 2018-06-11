@@ -6,5 +6,11 @@ mcr20a-rf-driver/*
 mcr20a-rf-driver
 stm-spirit1-rf-driver
 stm-spirit1-rf-driver/*
+wifi-ism43362
+wifi-ism43362/*
 wifi-x-nucleo-idw01m1
 wifi-x-nucleo-idw01m1/*
+wizfi310-driver
+wizfi310-driver/*
+wnc14a2a-driver
+wnc14a2a-driver/*
