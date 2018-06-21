@@ -268,6 +268,7 @@ int ParseUserInformation(
     int ret;
     unsigned short pduSize;
     unsigned char ch, len, tag;
+
     if ((ret = data.GetUInt8(&len)) != 0)
     {
         return ret;
@@ -289,6 +290,7 @@ int ParseUserInformation(
     {
         return ret;
     }
+
     // Tag for xDLMS-Initate.response
     if ((ret = data.GetUInt8(&tag)) != 0)
     {
@@ -302,6 +304,7 @@ int ParseUserInformation(
         {
             return ret;
         }
+
         cipher->SetSecurity(security);
         if ((ret = data.GetUInt8(&tag)) != 0)
         {
@@ -549,6 +552,8 @@ int ParseApplicationContextName(
         //Encoding failed. Not an Object ID.
         return DLMS_ERROR_CODE_INVALID_PARAMETER;
     }
+
+
     if (settings.IsServer() && settings.GetCipher() != NULL)
     {
         settings.GetCipher()->SetSecurity(DLMS_SECURITY_NONE);
@@ -558,6 +563,7 @@ int ParseApplicationContextName(
     {
         return ret;
     }
+
     if (settings.GetUseLogicalNameReferencing())
     {
         if (buff.Compare((unsigned char*)LOGICAL_NAME_OBJECT_ID, sizeof(LOGICAL_NAME_OBJECT_ID)))
@@ -565,13 +571,15 @@ int ParseApplicationContextName(
             return 0;
         }
         // If ciphering is used.
-        if (!buff.Compare((unsigned char*)LOGICAL_NAME_OBJECT_ID_WITH_CIPHERING, sizeof(LOGICAL_NAME_OBJECT_ID_WITH_CIPHERING)))
+        // [#ecdsa#]
+        if (buff.Compare((unsigned char*)LOGICAL_NAME_OBJECT_ID_WITH_CIPHERING, sizeof(LOGICAL_NAME_OBJECT_ID_WITH_CIPHERING)))
         {
-            return DLMS_ERROR_CODE_FALSE;
+        	settings.GetCipher()->SetSecurity(DLMS_SECURITY_AUTHENTICATION);
+            return 0;
         }
         else
         {
-            return 0;
+            return DLMS_ERROR_CODE_FALSE;
         }
     }
     if (buff.Compare((unsigned char*)SHORT_NAME_OBJECT_ID, sizeof(SHORT_NAME_OBJECT_ID)))
@@ -758,18 +766,19 @@ int GetUserInformation(
     {
         data.SetUInt16(0xFA00);
     }
-    if (cipher != NULL && cipher->IsCiphered())
-    {
-        CGXByteBuffer tmp(data);
-        data.Clear();
-        return cipher->Encrypt(cipher->GetSecurity(),
-            DLMS_COUNT_TYPE_PACKET,
-            settings.GetCipher()->GetFrameCounter(),
-            DLMS_COMMAND_GLO_INITIATE_RESPONSE,
-            cipher->GetSystemTitle(),
-            tmp,
-            data);
-    }
+	//[#ecdsa]
+//    if (cipher != NULL && cipher->IsCiphered())
+//    {
+//        CGXByteBuffer tmp(data);
+//        data.Clear();
+//        return cipher->Encrypt(cipher->GetSecurity(),
+//            DLMS_COUNT_TYPE_PACKET,
+//            settings.GetCipher()->GetFrameCounter(),
+//            DLMS_COMMAND_GLO_INITIATE_RESPONSE,
+//            cipher->GetSystemTitle(),
+//            tmp,
+//            data);
+//    }
     return 0;
 }
 
@@ -1120,6 +1129,7 @@ int CGXAPDU::ParsePDU(
 /**
  * Server generates AARE message.
  */
+// [#ecdsa#]
 int CGXAPDU::GenerateAARE(
     CGXDLMSSettings& settings,
     CGXByteBuffer& data,
@@ -1127,47 +1137,49 @@ int CGXAPDU::GenerateAARE(
     DLMS_SOURCE_DIAGNOSTIC diagnostic,
     CGXCipher* cipher,
     CGXByteBuffer *errorData,
-    CGXByteBuffer *encryptedData)
+    CGXByteBuffer *encryptedData,
+	int test_case)
 {
     int ret;
+    CGXByteBuffer tmp_data;
     unsigned long offset = data.GetSize();
     // Set AARE tag and length 0x61
+
     data.SetUInt8(BER_TYPE_APPLICATION | BER_TYPE_CONSTRUCTED | PDU_TYPE_APPLICATION_CONTEXT_NAME);
-    // Length is updated later.
-    data.SetUInt8(0);
-    if ((ret = GenerateApplicationContextName(settings, data, cipher)) != 0)
+
+    if ((ret = GenerateApplicationContextName(settings, tmp_data, cipher)) != 0)
     {
         return ret;
     }
     // Result 0xA2
-    data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | BER_TYPE_INTEGER);
-    data.SetUInt8(3); // len
+    tmp_data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | BER_TYPE_INTEGER);
+    tmp_data.SetUInt8(3); // len
     // Tag
-    data.SetUInt8(BER_TYPE_INTEGER);
+    tmp_data.SetUInt8(BER_TYPE_INTEGER);
     // Choice for result (INTEGER, universal)
-    data.SetUInt8(1); // Len
+    tmp_data.SetUInt8(1); // Len
     // ResultValue
-    data.SetUInt8(result);
+    tmp_data.SetUInt8(result);
     // SourceDiagnostic
-    data.SetUInt8(0xA3);
-    data.SetUInt8(5); // len
-    data.SetUInt8(0xA1); // Tag
-    data.SetUInt8(3); // len
-    data.SetUInt8(2); // Tag
+    tmp_data.SetUInt8(0xA3);
+    tmp_data.SetUInt8(5); // len
+    tmp_data.SetUInt8(0xA1); // Tag
+    tmp_data.SetUInt8(3); // len
+    tmp_data.SetUInt8(2); // Tag
     // Choice for result (INTEGER, universal)
-    data.SetUInt8(1); // Len
+    tmp_data.SetUInt8(1); // Len
     // diagnostic
-    data.SetUInt8(diagnostic);
+    tmp_data.SetUInt8(diagnostic);
     // SystemTitle
     //[#ecdsa#] add: settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_ECDSA
     if (cipher != NULL && (settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_ECDSA || settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_GMAC
             || cipher->IsCiphered()))
     {
-        data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | PDU_TYPE_CALLED_AP_INVOCATION_ID);
-        GXHelpers::SetObjectCount(2 + cipher->GetSystemTitle().GetSize(), data);
-        data.SetUInt8(BER_TYPE_OCTET_STRING);
-        GXHelpers::SetObjectCount(cipher->GetSystemTitle().GetSize(), data);
-        data.Set(&cipher->GetSystemTitle());
+    	tmp_data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | PDU_TYPE_CALLED_AP_INVOCATION_ID);
+        GXHelpers::SetObjectCount(2 + cipher->GetSystemTitle().GetSize(), tmp_data);
+        tmp_data.SetUInt8(BER_TYPE_OCTET_STRING);
+        GXHelpers::SetObjectCount(cipher->GetSystemTitle().GetSize(), tmp_data);
+        tmp_data.Set(&cipher->GetSystemTitle());
     }
 
     if (settings.GetAuthentication() > DLMS_AUTHENTICATION_LOW)
@@ -1175,40 +1187,44 @@ int CGXAPDU::GenerateAARE(
     	// [#ecdsa#] add server public key to AARE
     	if(settings.GetAuthentication() == DLMS_AUTHENTICATION_HIGH_ECDSA)
     	{
-    		// 0xA5 - responding-AE-qualifier (server public key)
-    		data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | 0x5);
-    		data.SetUInt8(0x42);
-    		// octet string
-    		data.SetUInt8(0x04);
-    		// public key length = 64
-    		data.SetUInt8(PUBLIC_KEY_SIZE);
-    		data.Set(settings.GetKey().m_recipient_public, PUBLIC_KEY_SIZE);
+    		if(test_case != 2) // if ( tast_case != BAD_PATH_NO_KEY_IN_SERVER)
+    		{
+				// 0xA5 - responding-AE-qualifier (server public key)
+				tmp_data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | 0x5);
+				tmp_data.SetUInt8(0x42);
+				// octet string
+				tmp_data.SetUInt8(0x04);
+				// public key length = 64
+				tmp_data.SetUInt8(PUBLIC_KEY_SIZE);
+				tmp_data.Set(settings.GetKey().m_recipient_public, PUBLIC_KEY_SIZE);
+    		}
     	}
         // Add server ACSE-requirenents field component.
-        data.SetUInt8(0x88);
-        data.SetUInt8(0x02); // Len.
-        data.SetUInt16(0x0780);
+    	// [#ecdsa#] commented for testing if it pass BER encoding
+    	tmp_data.SetUInt8(0x88);
+    	tmp_data.SetUInt8(0x02); // Len.
+    	tmp_data.SetUInt16(0x0780);
         // Add tag.
-        data.SetUInt8(0x89);
-        data.SetUInt8(0x07); // Len
-        data.SetUInt8(0x60);
-        data.SetUInt8(0x85);
-        data.SetUInt8(0x74);
-        data.SetUInt8(0x05);
-        data.SetUInt8(0x08);
-        data.SetUInt8(0x02);
-        data.SetUInt8(settings.GetAuthentication());
+    	tmp_data.SetUInt8(0x89);
+    	tmp_data.SetUInt8(0x07); // Len
+    	tmp_data.SetUInt8(0x60);
+    	tmp_data.SetUInt8(0x85);
+    	tmp_data.SetUInt8(0x74);
+    	tmp_data.SetUInt8(0x05);
+    	tmp_data.SetUInt8(0x08);
+    	tmp_data.SetUInt8(0x02);
+    	tmp_data.SetUInt8(settings.GetAuthentication());
         // Add tag.
-        data.SetUInt8(0xAA);
-        GXHelpers::SetObjectCount(2 + settings.GetStoCChallenge().GetSize(), data); // Len
-        data.SetUInt8(BER_TYPE_CONTEXT);
-        GXHelpers::SetObjectCount(settings.GetStoCChallenge().GetSize(), data);
-        data.Set(settings.GetStoCChallenge().GetData(), settings.GetStoCChallenge().GetSize());
+    	tmp_data.SetUInt8(0xAA);
+        GXHelpers::SetObjectCount(2 + settings.GetStoCChallenge().GetSize(), tmp_data); // Len
+        tmp_data.SetUInt8(BER_TYPE_CONTEXT);
+        GXHelpers::SetObjectCount(settings.GetStoCChallenge().GetSize(), tmp_data);
+        tmp_data.Set(settings.GetStoCChallenge().GetData(), settings.GetStoCChallenge().GetSize());
     }
     if (result == DLMS_ASSOCIATION_RESULT_ACCEPTED || cipher == NULL || cipher->GetSecurity() == DLMS_SECURITY_NONE)
     {
         // Add User Information. Tag 0xBE
-        data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | PDU_TYPE_USER_INFORMATION);
+    	tmp_data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | PDU_TYPE_USER_INFORMATION);
         CGXByteBuffer tmp;
         if (encryptedData != NULL && encryptedData->GetSize() != 0)
         {
@@ -1232,13 +1248,19 @@ int CGXAPDU::GenerateAARE(
             }
         }
 
-        GXHelpers::SetObjectCount(2 + tmp.GetSize(), data);
+        GXHelpers::SetObjectCount(2 + tmp.GetSize(), tmp_data);
         // Coding the choice for user-information (Octet STRING, universal)
-        data.SetUInt8(BER_TYPE_OCTET_STRING);
+        tmp_data.SetUInt8(BER_TYPE_OCTET_STRING);
         // Length
-        GXHelpers::SetObjectCount(tmp.GetSize(), data);
-        data.Set(&tmp);
+        GXHelpers::SetObjectCount(tmp.GetSize(), tmp_data);
+        tmp_data.Set(&tmp);
     }
-    data.SetUInt8(offset + 1, (unsigned char)(data.GetSize() - offset - 2));
+
+    unsigned int len = tmp_data.GetSize();
+
+    GXHelpers::SetObjectCount(tmp_data.GetSize(), data);
+
+    data.Set(tmp_data.GetData(), len);
+
     return 0;
 }

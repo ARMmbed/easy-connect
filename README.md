@@ -1,10 +1,6 @@
 # e2e-iot-dlms-server
 
 ## steps to run on linux
-`git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git`
-
-`cp mbedtls/configs/config-suite-b.h mbedtls/include/mbedtls/config.h`
-
 `./build_server.sh`
 
 `./bin/dlms-sim-server`

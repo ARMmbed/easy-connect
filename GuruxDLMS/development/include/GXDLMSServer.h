@@ -49,6 +49,16 @@
 #include "GXDLMSAssociationShortName.h"
 #include "GXDLMSPushSetup.h"
 
+enum TEST_CASE
+{
+	NO_TEST,
+	GOOD_PATH_OPEN_FLOW_WITH_HLS, // should return specific key from the green book example
+	BAD_PATH_NO_KEY_IN_SERVER,
+	BAD_PATH_FAILED_CERTIFICATE_AUTHORITY,
+	BAD_PATH_KEY_MISMATCH,
+	BAD_PATH_IDENTICAL_CHALLENGES
+};
+
 class CGXDLMSProfileGeneric;
 
 class CGXDLMSServer
@@ -58,6 +68,7 @@ class CGXDLMSServer
     friend class CGXDLMSAssociationLogicalName;
     friend class CGXDLMSAssociationShortName;
 private:
+    TEST_CASE m_test_case;
     long m_DataReceived;
     CGXDLMSIecHdlcSetup* m_Hdlc;
     CGXDLMSTcpUdpSetup* m_Wrapper;
@@ -433,6 +444,8 @@ protected:
 public:
 	void SetPrivateKey(unsigned char *d);
 	void SetServerPublicKey(unsigned char *q);
+	void SetTestCase(TEST_CASE _t) {m_test_case = _t;};
+	TEST_CASE GetTestCase() {return m_test_case;};
 
     /**
     * @return HDLC settings.

@@ -40,14 +40,6 @@
 #include <stdlib.h> //rand
 
 
-//[#ecdsa#] injection of StoC
-//static unsigned char StoC[] =
-//{
-//	0x18,0xE9,0x5F,0xFE,0x3A,0xD0,0xDC,0xAB,0xDC,0x5D,0x0D,
-//	0x14,0x1D,0xC9,0x87,0xE2,0x70,0xCB,0x0A,0x39,0x59,0x48,
-//	0xD4,0x23,0x1B,0x09,0xDE,0x65,0x79,0x88,0x36,0x57
-//};
-
 int CGXSecure::GenerateChallenge(DLMS_AUTHENTICATION authentication, CGXByteBuffer& challenge)
 {
     int len = PRIVATE_KEY_SIZE;
@@ -55,8 +47,6 @@ int CGXSecure::GenerateChallenge(DLMS_AUTHENTICATION authentication, CGXByteBuff
     for (int pos = 0; pos != len; ++pos)
     {
         val = rand();
-		//[example]
-		//val = StoC[pos];
         challenge.SetUInt8(val);
     }
     return 0;

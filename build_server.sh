@@ -15,6 +15,12 @@
 
 CLEAN="$1"
 
+
+if [ ! -d "mbedtls" ]; then
+	git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git
+	cp mbedtls/configs/config-suite-b.h mbedtls/include/mbedtls/config.h
+fi
+
 if [ "$CLEAN" == "-c" ] || [ "$CLEAN" == "-clean" ]; then
 	rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
 fi

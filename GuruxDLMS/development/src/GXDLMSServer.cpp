@@ -364,6 +364,9 @@ void CGXDLMSServer::Reset(bool connected)
         m_Info.Clear();
         m_Settings.SetServerAddress(0);
         m_Settings.SetClientAddress(0);
+
+        //#ecdsa#
+//        m_Settings.GetCipher()->SetSecurity(DLMS_SECURITY_NONE);
     }
 
     m_Settings.SetAuthentication(DLMS_AUTHENTICATION_NONE);
@@ -385,6 +388,14 @@ void CGXDLMSServer::Reset()
     Reset(false);
 }
 
+//#ecdsa#
+static unsigned char StoC[] =
+{
+	0x18,0xE9,0x5F,0xFE,0x3A,0xD0,0xDC,0xAB,0xDC,0x5D,0x0D,
+	0x14,0x1D,0xC9,0x87,0xE2,0x70,0xCB,0x0A,0x39,0x59,0x48,
+	0xD4,0x23,0x1B,0x09,0xDE,0x65,0x79,0x88,0x36,0x57
+};
+
 /**
     * Parse AARQ request that client send and returns AARE request.
     *
@@ -404,11 +415,14 @@ int CGXDLMSServer::HandleAarqRequest(
     {
         Reset(true);
     }
+
     ret = CGXAPDU::ParsePDU(m_Settings, m_Settings.GetCipher(), data, result, diagnostic);
+
     if (ret != 0)
     {
         return ret;
     }
+
     if (result == DLMS_ASSOCIATION_RESULT_ACCEPTED)
     {
         if (m_Settings.GetDLMSVersion() != 6)
@@ -471,9 +485,20 @@ int CGXDLMSServer::HandleAarqRequest(
     {
         // If High authentication is used.
         CGXByteBuffer challenge;
-        if ((ret = CGXSecure::GenerateChallenge(m_Settings.GetAuthentication(), challenge)) != 0)
+
+        //[#ecdsa#] injection of StoC
+        if(m_test_case != GOOD_PATH_OPEN_FLOW_WITH_HLS)
         {
-            return ret;
+			if ((ret = CGXSecure::GenerateChallenge(m_Settings.GetAuthentication(), challenge)) != 0)
+			{
+				return ret;
+			}
+        }
+
+        else
+        {
+        	// inject challenge from green book example
+        	challenge.Set(StoC, sizeof(StoC));
         }
 
         m_Settings.SetStoCChallenge(challenge);
@@ -521,7 +546,8 @@ int CGXDLMSServer::HandleAarqRequest(
     }
     // Generate AARE packet.
     m_Settings.ResetFrameSequence();
-    return CGXAPDU::GenerateAARE(m_Settings, m_ReplyData, result, diagnostic, m_Settings.GetCipher(), &error, NULL);
+
+    return CGXAPDU::GenerateAARE(m_Settings, m_ReplyData, result, diagnostic, m_Settings.GetCipher(), &error, NULL, (int)m_test_case);
 }
 
 /**

@@ -109,7 +109,8 @@ public:
         DLMS_SOURCE_DIAGNOSTIC diagnostic,
         CGXCipher* cipher,
         CGXByteBuffer *errorData,
-        CGXByteBuffer *encryptedData);
+        CGXByteBuffer *encryptedData,
+		int test_case);
 };
 
 #endif //GXAPDU_H

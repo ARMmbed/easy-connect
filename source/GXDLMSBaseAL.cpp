@@ -124,7 +124,7 @@ static void PrintfBuff(unsigned char *ptr, int size)
 		printf("%02x ", *ptr++);
 		if((i+1)% 8 == 0) printf("\n");
 	}
-	if((size+1)% 8 != 0) printf("\n");
+	if(size% 8 != 0) printf("\n");
 	printf("#########################\n\n");
 }
 
@@ -218,7 +218,7 @@ static void ListenerThread(const void* pVoid)
 					printf("packet sent\n");
 					PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
 				}
-				
+
 				ret = server->Write(client_sock, reply, &len);
 
 				if (ret == -1)

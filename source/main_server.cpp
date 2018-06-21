@@ -60,6 +60,7 @@ static int hex_string_to_int(char *s);
 
 static CGXDLMSBaseAL *server = NULL;
 
+static TEST_CASE s_test_case = NO_TEST;
 static DLMS_INTERFACE_TYPE interfaceType = DLMS_INTERFACE_TYPE_WRAPPER;
 static DLMS_SERVICE_TYPE protocolType = DLMS_SERVICE_TYPE_UDP;
 static int max_pdu_size = 1024;
@@ -69,7 +70,7 @@ static char *port = LN_SERVER_PORT_STR;
 static bool is_print_packets = false;
 static int conformance = DLMS_CONFORMANCE_GENERAL_PROTECTION |
 // remove until milestone 5 - GBT support
-//DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER |
+DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER |
 DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_GET_OR_READ |
 DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_SET_OR_WRITE | DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_ACTION |
 DLMS_CONFORMANCE_GET | DLMS_CONFORMANCE_SET |
@@ -176,6 +177,18 @@ static int getopt(int argc, char* argv[])
 				key_number = atoi(argv[i + 1]);
 				key_number = (key_number > 10 || key_number < 1) ? 1 : key_number;
 				printf("### configuration ###   use key number %d\n", key_number);
+				++i;
+			}
+		}
+
+		else if (strcmp(argv[i], "-test") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				int test_num = atoi(argv[i + 1]);
+				test_num = (test_num > 5 || test_num < 1) ? 0 : test_num;
+				s_test_case = (TEST_CASE)test_num;
+				printf("### configuration ###   test case number %d\n", test_num);
 				++i;
 			}
 		}
@@ -321,6 +334,12 @@ int main_server(int argc, char* argv[])
 {
 	getopt(argc, argv);
 
+	if(s_test_case == GOOD_PATH_OPEN_FLOW_WITH_HLS)
+	{
+		// set the key pair to the one in the green book example
+		key_number = 1;
+	}
+
 	keys.m_num_pair = key_number - 1;
 	keys.m_private = private_keys[keys.m_num_pair];
 	keys.m_public = public_keys[keys.m_num_pair];
@@ -355,6 +374,7 @@ int main_server(int argc, char* argv[])
 	///////////////////// ECDSA /////////////////////////////
 	server->SetPrivateKey(keys.m_private);
 	server->SetServerPublicKey(keys.m_public);
+	server->SetTestCase(s_test_case);
 
 	CGXByteBuffer server_system_title;
 	server_system_title.Set(server_sys_title, 8);
