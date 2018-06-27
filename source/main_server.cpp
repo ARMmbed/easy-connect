@@ -227,7 +227,7 @@ static int handle_test_params()
 			break;
 	}
 
-	printf("\nkey_number=%d\n\n", key_number);
+	printf("key_number=%d\n", key_number);
 	if(key_number > 0 && key_number <= NUM_OF_KEYS) {
 		keys.m_num_pair = key_number - 1;
 		keys.m_private = private_keys[keys.m_num_pair];
