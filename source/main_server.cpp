@@ -197,6 +197,8 @@ static int getopt(int argc, char* argv[])
 
 static int handle_test_params()
 {
+	if(key_number == 0)
+		key_number = 1;
 	switch (s_test_case) {
 		case GOOD_PATH_OPEN_FLOW_WITH_HLS: 
 		{
@@ -225,6 +227,7 @@ static int handle_test_params()
 			break;
 	}
 
+	printf("\nkey_number=%d\n\n", key_number);
 	if(key_number > 0 && key_number <= NUM_OF_KEYS) {
 		keys.m_num_pair = key_number - 1;
 		keys.m_private = private_keys[keys.m_num_pair];
@@ -405,8 +408,11 @@ int main_server(int argc, char* argv[])
 	server->m_print = is_print_packets;
 
 	///////////////////// ECDSA /////////////////////////////
-	server->SetPrivateKey(keys.m_private);
-	server->SetServerPublicKey(keys.m_public);
+	if(s_test_case != BAD_PATH_NO_KEY_IN_SERVER) {
+		server->SetPrivateKey(keys.m_private);
+		server->SetServerPublicKey(keys.m_public);
+	}
+
 	server->SetTestCase(s_test_case);
 
 	CGXByteBuffer server_system_title;
