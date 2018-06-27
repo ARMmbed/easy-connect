@@ -482,26 +482,28 @@ int CGXDLMSServer::HandleAarqRequest(
         }
     }
     if (m_Settings.GetAuthentication() > DLMS_AUTHENTICATION_LOW)
-    {
-        // If High authentication is used.
-        CGXByteBuffer challenge;
+    { // If High authentication is used.
 
         //[#ecdsa#] injection of StoC
-        if(m_test_case != GOOD_PATH_OPEN_FLOW_WITH_HLS)
+        if(m_test_case != BAD_PATH_IDENTICAL_CHALLENGES)
         {
+			CGXByteBuffer challenge;
 			if ((ret = CGXSecure::GenerateChallenge(m_Settings.GetAuthentication(), challenge)) != 0)
 			{
 				return ret;
 			}
+			m_Settings.SetStoCChallenge(challenge);
         }
+		else {
+			// Test case: BAD_PATH_IDENTICAL_CHALLENGES
+			m_Settings.SetStoCChallenge(m_Settings.GetCtoSChallenge());
+		}
 
-        else
-        {
-        	// inject challenge from green book example
-        	challenge.Set(StoC, sizeof(StoC));
-        }
-
-        m_Settings.SetStoCChallenge(challenge);
+//       else
+//        {
+//       	// inject challenge from green book example
+//        	challenge.Set(StoC, sizeof(StoC));
+//        }
 
         if (m_Settings.GetUseLogicalNameReferencing())
         {

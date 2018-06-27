@@ -279,15 +279,15 @@ static void sensor_thread(void const *pVoid)
 	while(1)
 	{
 		printf("*********************************************************************\r\n");
-		/* VOLTAGE_OBJECT  */
-		str_id= VOLTAGE_OBJECT;
+		/* HUMIDITY_OBJECT  */
+		str_id= HUMIDITY_OBJECT;
 		obj= items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
 		if(obj!=NULL)
 		{
 			vol = ((CGXDLMSData*)obj)->GetValue();
 			new_value = (vol.fltVal + 1 > 225) ? 225 :vol.fltVal + 1;
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("voltage: prev value = %f   new value = %f\n", vol.fltVal, new_value.fltVal);
+			printf("Humidity: prev value = %f   new value = %f\n", vol.fltVal, new_value.fltVal);
 
 		}
 		/* CURRENT_OBJECT  */
@@ -754,11 +754,13 @@ int CGXDLMSBaseAL::CreateObjects()
 
 	int count = GetItems().size();
 //#ifdef __MBED__
-	/* VOLTAGE_OBJECT */
-	CGXDLMSVariant voltage_value = 0;
-    CGXDLMSData* pDataVoltage = new CGXDLMSData(VOLTAGE_OBJECT);
-	pDataVoltage->SetValue(voltage_value);
-    GetItems().push_back(pDataVoltage);
+	/* HUMIDITY_OBJECT */
+//	CGXDLMSVariant voltage_value = 0;
+	unsigned char test_humidity_val[] = {0xDE, 0xAD, 0xBE, 0xEF};
+	CGXDLMSVariant humidity_value(test_humidity_val, 4, DLMS_DATA_TYPE_FLOAT32);
+    CGXDLMSData* pDataHumidity = new CGXDLMSData(HUMIDITY_OBJECT);
+	pDataHumidity->SetValue(humidity_value);
+    GetItems().push_back(pDataHumidity);
     count = GetItems().size();
 	/* POWER_OBJECT */
 	CGXDLMSVariant power_value = 0;
