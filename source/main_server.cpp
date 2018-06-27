@@ -175,7 +175,7 @@ static int getopt(int argc, char* argv[])
 			if (i + 1 < argc)
 			{
 				key_number = atoi(argv[i + 1]);
-				key_number = (key_number > 10 || key_number < 1) ? 1 : key_number;
+				key_number = (key_number > NUM_OF_KEYS || key_number < 1) ? 1 : key_number;
 				printf("### configuration ###   use key number %d\n", key_number);
 				++i;
 			}
@@ -191,6 +191,48 @@ static int getopt(int argc, char* argv[])
 				printf("### configuration ###   test case number %d\n", test_num);
 				++i;
 			}
+		}
+	}
+}
+
+static int handle_test_params()
+{
+	switch (s_test_case) {
+		case GOOD_PATH_OPEN_FLOW_WITH_HLS: 
+		{
+			// set the key pair to the one in the green book example
+			// key_number = 1; - default
+			break;
+		}
+		case BAD_PATH_NO_KEY_IN_SERVER:
+		{
+			key_number = 0;
+			break;
+		}
+		case BAD_PATH_FAILED_CERTIFICATE_AUTHORITY:
+		{
+			break;
+		}
+		case BAD_PATH_KEY_MISMATCH:
+		{
+			break;
+		}
+		case BAD_PATH_IDENTICAL_CHALLENGES:
+		{
+			break;
+		}
+		default:
+			break;
+	}
+
+	if(key_number > 0 && key_number <= NUM_OF_KEYS) {
+		keys.m_num_pair = key_number - 1;
+		keys.m_private = private_keys[keys.m_num_pair];
+		keys.m_public = public_keys[keys.m_num_pair];
+		
+		if(s_test_case == BAD_PATH_KEY_MISMATCH) {
+			int wrong_ind = (keys.m_num_pair + 1) % NUM_OF_KEYS;
+			keys.m_public = public_keys[wrong_ind];
 		}
 	}
 }
@@ -248,18 +290,18 @@ int setObj(int argc, char* argv[])
 	{
 		val.Clear();
 
-		if (strcmp(argv[i], "-v") == 0)
+		if (strcmp(argv[i], "-hum") == 0)
 		{
 			if (i + 1 < argc)
 			{
-				std::string volStr = VOLTAGE_OBJECT;
-				CGXDLMSObject *voltage_object = (server->GetItems()).FindByLN(DLMS_OBJECT_TYPE_ALL, volStr);
+				std::string humidityStr = HUMIDITY_OBJECT;
+				CGXDLMSObject *humidity_object = (server->GetItems()).FindByLN(DLMS_OBJECT_TYPE_ALL, humidityStr);
 
-				if(voltage_object != NULL)
+				if(humidity_object != NULL)
 				{
 					val.fltVal = atof(argv[i + 1]);
-					((CGXDLMSData*)voltage_object)->SetValue(val);
-					printf("### set ###   voltage = %.6f\n", val.fltVal);
+					((CGXDLMSData*)humidity_object)->SetValue(val);
+					printf("### set ###   humidity = %.6f\n", val.fltVal);
 					++i;
 				}
 			}
@@ -333,16 +375,7 @@ int kill_server(int argc, char* argv[])
 int main_server(int argc, char* argv[])
 {
 	getopt(argc, argv);
-
-	if(s_test_case == GOOD_PATH_OPEN_FLOW_WITH_HLS)
-	{
-		// set the key pair to the one in the green book example
-		key_number = 1;
-	}
-
-	keys.m_num_pair = key_number - 1;
-	keys.m_private = private_keys[keys.m_num_pair];
-	keys.m_public = public_keys[keys.m_num_pair];
+	handle_test_params();
 
 #ifdef __MBED__
 	uint32_t _net_iface;
