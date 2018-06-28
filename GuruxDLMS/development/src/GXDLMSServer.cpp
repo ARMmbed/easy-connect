@@ -485,8 +485,22 @@ int CGXDLMSServer::HandleAarqRequest(
     { // If High authentication is used.
 
         //[#ecdsa#] injection of StoC
-        if(m_test_case != BAD_PATH_IDENTICAL_CHALLENGES)
+		if (m_test_case == BAD_PATH_IDENTICAL_CHALLENGES)
+		{
+			// Test case: BAD_PATH_IDENTICAL_CHALLENGES
+			m_Settings.SetStoCChallenge(m_Settings.GetCtoSChallenge());
+		}
+		else  //if (m_test_case > NO_TEST)
         {
+			// inject challenge from green book example
+			// regular
+			CGXByteBuffer challenge;
+			challenge.Set(StoC, sizeof(StoC));
+			m_Settings.SetStoCChallenge(challenge);
+        }
+/*      else
+        {
+			// regular
 			CGXByteBuffer challenge;
 			if ((ret = CGXSecure::GenerateChallenge(m_Settings.GetAuthentication(), challenge)) != 0)
 			{
@@ -494,16 +508,7 @@ int CGXDLMSServer::HandleAarqRequest(
 			}
 			m_Settings.SetStoCChallenge(challenge);
         }
-		else {
-			// Test case: BAD_PATH_IDENTICAL_CHALLENGES
-			m_Settings.SetStoCChallenge(m_Settings.GetCtoSChallenge());
-		}
-
-//       else
-//        {
-//       	// inject challenge from green book example
-//        	challenge.Set(StoC, sizeof(StoC));
-//        }
+*/
 
         if (m_Settings.GetUseLogicalNameReferencing())
         {

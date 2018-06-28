@@ -199,6 +199,7 @@ static int handle_test_params()
 {
 	if(key_number == 0)
 		key_number = 1;
+
 	switch (s_test_case) {
 		case GOOD_PATH_OPEN_FLOW_WITH_HLS: 
 		{
