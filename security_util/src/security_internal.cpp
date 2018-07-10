@@ -150,15 +150,17 @@ int32_t ECDSA_Sign(ds_int_params_t	*params,
 			printf
 			("mbedtls_ecdsa_write_signature returned %d\n", ret);
 		} else {
-			uint32_t ind = 0;
+//			uint32_t ind = 0;
 
-			buffer[ind++] = OCTET_STRING_TAG;
+//			buffer[ind++] = OCTET_STRING_TAG;
 			// The length should be less than 128 byte
-			assert(sig_len < 0x80);
-			buffer[ind++] = sig_len;
+//			assert(sig_len < 0x80);
+//			buffer[ind++] = sig_len;
 
-			memcpy(buffer + ind, sig, sig_len);
-			*buffer_size = sig_len + ind;
+//			memcpy(buffer + ind, sig, sig_len);
+//			*buffer_size = sig_len + ind;
+			memcpy(buffer, sig, sig_len);
+			*buffer_size = sig_len;
 		}
 		free(sig);
 	}
@@ -194,27 +196,33 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 		printf(" failed! mbedtls_sha256_ret returned %d\n", ret);
 	} else {
-		uint32_t ind = 0;
+//		uint32_t ind = 0;
 		size_t sig_size;
 
 		assert(buffer_size > 2);
 		assert(buffer != NULL);
-		printf("print buffer start: %u \n", buffer[ind]);
-		if (buffer[ind++] == OCTET_STRING_TAG) {
-			sig_size = buffer[ind++];
+
+//		if (buffer[ind++] == OCTET_STRING_TAG) {
+//			sig_size = buffer[ind++];
+			sig_size = buffer_size;
 			printf("buffer_size %d, sig_size=%d\n",
 				(int)buffer_size, (int)sig_size);
-			assert(sig_size == buffer_size-2);
-			assert(sig_size % 2 == 0);
+//			assert(sig_size == buffer_size-2);
+//			assert(sig_size % 2 == 0);
 
+//			ret = mbedtls_mpi_read_binary
+//					(&r, buffer + ind, sig_size/2);
 			ret = mbedtls_mpi_read_binary
-					(&r, buffer + ind, sig_size/2);
+					(&r, buffer, sig_size/2);
 			if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 				printf
 				("read of r failed %d\n", ret);
 			} else {
+//				ret = mbedtls_mpi_read_binary
+//					(&s, buffer + ind + sig_size/2,
+//					sig_size/2);
 				ret = mbedtls_mpi_read_binary
-					(&s, buffer + ind + sig_size/2,
+					(&s, buffer + sig_size/2,
 					sig_size/2);
 				if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 					printf
@@ -231,10 +239,11 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 					}
 				}
 			}
-		} else {
-			printf("%s: wrong buffer format\n", __func__);
-			ret = 1;
-		}
+//		}
+//		else {
+//			printf("%s: wrong buffer format\n", __func__);
+//			ret = 1;
+//		}
 	}
 
 	mbedtls_ecdsa_free(&mbedTls_ctx);
