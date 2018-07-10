@@ -572,7 +572,8 @@ int CGXDLMS::GetLNPdu(
     else
     {
 		printf("\n\CGXDLMS::GetLNPdu: here4\n\n\n");
-        if ((p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) != 0)
+        if (if_ciphering && 
+		((p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) != 0))
         {
 			printf("\n\CGXDLMS::GetLNPdu: here5\n\n\n");
             reply.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
