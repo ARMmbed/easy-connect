@@ -206,6 +206,8 @@ static void ListenerThread(const void* pVoid)
 
 			if (server->HandleRequest(bb, reply) != 0)
 			{
+				printf("\n\nServer: Error!!!\n\n");
+				PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
 				server->SetState(false);
 				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 			}

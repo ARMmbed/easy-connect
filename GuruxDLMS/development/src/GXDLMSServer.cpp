@@ -2166,12 +2166,14 @@ int CGXDLMSServer::HandleMethodRequest(
                 //Add parameters error code.
                 bb.SetUInt8(0);
                 GXHelpers::SetData(bb, actionReply.vt, actionReply);
+				printf("\n\nServer: Ready to send action response\n\n\n");
             }
             else
             {
                 // Add parameters error code.
                 error = e->GetError();
                 bb.SetUInt8(0);
+				printf("\n\nServer: Send error\n\n\n");
             }
         }
     }
