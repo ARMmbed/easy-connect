@@ -690,6 +690,7 @@ int CGXDLMS::GetLNPdu(
             p.GetCommand() != DLMS_COMMAND_DATA_NOTIFICATION &&
             (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) == 0)
         {
+			printf("\n\CGXDLMS::GetLNPdu: here10\n\n\n");
             // If multiple blocks.
             if (p.IsMultipleBlocks())
             {
@@ -744,9 +745,11 @@ int CGXDLMS::GetLNPdu(
                 reply.Set(p.GetData(), 0, len);
             }
         }
+		printf("\n\CGXDLMS::GetLNPdu: here11\n\n\n");
         // Add data that fits to one block.
         if (len == 0)
         {
+			printf("\n\CGXDLMS::GetLNPdu: here12\n\n\n");
             // Add status if reply.
             if (p.GetStatus() != 0xFF)
             {
@@ -770,8 +773,10 @@ int CGXDLMS::GetLNPdu(
                 reply.Set(p.GetData(), p.GetData()->GetPosition(), len);
             }
         }
+		printf("\n\CGXDLMS::GetLNPdu: here13\n\n\n");
         if (ciphering)
         {
+			printf("\n\CGXDLMS::GetLNPdu: here14\n\n\n");
             p.GetSettings()->GetCipher()->SetFrameCounter(p.GetSettings()->GetCipher()->GetFrameCounter() + 1);
             CGXByteBuffer tmp;
             unsigned char cmd;
@@ -783,6 +788,7 @@ int CGXDLMS::GetLNPdu(
             {
                 cmd = (unsigned char)DLMS_COMMAND_GENERAL_GLO_CIPHERING;
             }
+			printf("\n\CGXDLMS::GetLNPdu: here15\n\n\n");
             ret = p.GetSettings()->GetCipher()->Encrypt(
                 p.GetSettings()->GetCipher()->GetSecurity(),
                 DLMS_COUNT_TYPE_PACKET,
@@ -790,17 +796,23 @@ int CGXDLMS::GetLNPdu(
                 cmd,
                 p.GetSettings()->GetCipher()->GetSystemTitle(),
                 reply, tmp);
+			
+			printf("\n\CGXDLMS::GetLNPdu: here16\n\n\n");
             if (ret != 0)
             {
                 return ret;
             }
             reply.SetSize(0);
+			printf("\n\CGXDLMS::GetLNPdu: here17\n\n\n");
             if (p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
             {
                 AddLLCBytes(p.GetSettings(), reply);
             }
+			
+			printf("\n\CGXDLMS::GetLNPdu: here18\n\n\n");
             if (p.GetCommand() == DLMS_COMMAND_DATA_NOTIFICATION || (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_PROTECTION) != 0)
             {
+				printf("\n\CGXDLMS::GetLNPdu: here19\n\n\n");
                 // Add command.
                 reply.SetUInt8(tmp.GetData()[0]);
                 // Add system title.
@@ -811,6 +823,7 @@ int CGXDLMS::GetLNPdu(
             }
             else
             {
+				printf("\n\CGXDLMS::GetLNPdu: here20\n\n\n");
                 reply.Set(&tmp, 0, tmp.GetSize());
             }
         }
