@@ -193,6 +193,7 @@ public:
     */
     static int GetLNPdu(
         CGXDLMSLNParameters& p,
+		bool if_ciphering,
         CGXByteBuffer& reply);
 
     /**

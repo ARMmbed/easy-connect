@@ -549,12 +549,14 @@ void MultipleBlocks(
 
 int CGXDLMS::GetLNPdu(
     CGXDLMSLNParameters& p,
+	bool if_ciphering,
     CGXByteBuffer& reply)
 {
     int ret;
-    unsigned char ciphering = p.GetCommand() != DLMS_COMMAND_AARQ && p.GetCommand() != DLMS_COMMAND_AARE
-        && p.GetSettings()->GetCipher() != NULL
-        && p.GetSettings()->GetCipher()->GetSecurity() != DLMS_SECURITY_NONE;
+    unsigned char ciphering = if_ciphering && 
+		(p.GetCommand() != DLMS_COMMAND_AARQ) && (p.GetCommand() != DLMS_COMMAND_AARE)
+        && (p.GetSettings()->GetCipher() != NULL)
+        && (p.GetSettings()->GetCipher()->GetSecurity() != DLMS_SECURITY_NONE);
     int len = 0;
 	printf("\n\CGXDLMS::GetLNPdu: here1\n\n\n");
     if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
@@ -848,7 +850,7 @@ int CGXDLMS::GetLnMessages(
     }
     do
     {
-        if ((ret = GetLNPdu(p, reply)) != 0)
+        if ((ret = GetLNPdu(p, 1, reply)) != 0)
         {
             return ret;
         }
