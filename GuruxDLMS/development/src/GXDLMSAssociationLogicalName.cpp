@@ -605,6 +605,18 @@ static void fill_hls_params(hls_auth_params_t& auth_params, CGXDLMSSettings& set
 	auth_params.mechanism_id = 7;
 }
 
+static void PrintfBuff(unsigned char *ptr, int size)
+{
+	printf("#########################\n");
+	for(int i = 0 ; i < size ; ++i)
+	{
+		printf("%02x ", *ptr++);
+		if((i+1)% 8 == 0) printf("\n");
+	}
+	if(size% 8 != 0) printf("\n");
+	printf("#########################\n\n");
+}
+
 int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e)
 {
     // Check reply_to_HLS_authentication
@@ -616,6 +628,8 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			uint32_t buffer_size = e.GetParameters().GetSize();
 			uint8_t *buffer = e.GetParameters().byteArr;
 			uint8_t is_originator = !settings.IsServer(); // server is never the originator
+
+			PrintfBuff(buffer, buffer_size);
 			hls_auth_params_t auth_params;
 
 			fill_hls_params(auth_params, settings);
