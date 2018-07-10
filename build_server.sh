@@ -21,11 +21,11 @@ if [ ! -d "mbedtls" ]; then
 	cp mbedtls/configs/config-suite-b.h mbedtls/include/mbedtls/config.h
 fi
 
-if [ "$CLEAN" == "-c" ] || [ "$CLEAN" == "-clean" ]; then
+if [ $CLEAN = "-c" ] || [ $CLEAN = "-clean" ]; then
 	rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
 fi
 
-if [[ "$CLEAN" != "-clean" ]]; then
+if [ $CLEAN != "-clean" ]; then
 	cd mbedtls
 	make -j10
 	cd ../security_util
