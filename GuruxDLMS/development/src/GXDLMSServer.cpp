@@ -2071,6 +2071,23 @@ int CGXDLMSServer::HandleCommand(
     return ret;
 }
 
+static void PrintfBuff(unsigned char *ptr, int size)
+{
+	printf("#########################\n");
+	for(int i = 0 ; i < size ; ++i)
+	{
+		printf("%02x ", *ptr++);
+		if((i+1)% 8 == 0) printf("\n");
+	}
+	if(size% 8 != 0) printf("\n");
+	printf("#########################\n\n");
+}
+#define MAX_PACKET_PRINT_1 170
+static void PrintfBuff(CGXByteBuffer *bb)
+{
+	PrintfBuff(bb->GetData(), bb->GetSize() < MAX_PACKET_PRINT_1 ? MAX_PACKET_PRINT_1 : bb->GetSize());
+}
+
 /**
  * Handle action request.
  *
@@ -2167,6 +2184,7 @@ int CGXDLMSServer::HandleMethodRequest(
                 bb.SetUInt8(0);
                 GXHelpers::SetData(bb, actionReply.vt, actionReply);
 				printf("\n\nServer: Ready to send action response\n\n\n");
+				PrintfBuff(&bb);
             }
             else
             {
@@ -2177,8 +2195,11 @@ int CGXDLMSServer::HandleMethodRequest(
             }
         }
     }
+	printf("\n\nServer: here1\n\n\n");
     CGXDLMSLNParameters p(&m_Settings, invokeId, DLMS_COMMAND_METHOD_RESPONSE, 1, NULL, &bb, error);
+	printf("\n\nServer: here2\n\n\n");
     ret = CGXDLMS::GetLNPdu(p, m_ReplyData);
+	printf("\n\nServer: here3\n\n\n");
     // If High level authentication fails.
     if (!m_Settings.IsConnected() && obj->GetObjectType() == DLMS_OBJECT_TYPE_ASSOCIATION_LOGICAL_NAME && id == 1)
     {
