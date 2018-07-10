@@ -199,6 +199,7 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 
 		assert(buffer_size > 2);
 		assert(buffer != NULL);
+		printf("print buffer start: %u \n", buffer[ind]);
 		if (buffer[ind++] == OCTET_STRING_TAG) {
 			sig_size = buffer[ind++];
 			printf("buffer_size %d, sig_size=%d\n",
