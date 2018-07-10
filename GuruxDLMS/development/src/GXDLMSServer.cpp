@@ -688,7 +688,7 @@ int ReportError(CGXDLMSSettings& settings, DLMS_COMMAND command, DLMS_ERROR_CODE
     if (settings.GetUseLogicalNameReferencing())
     {
         CGXDLMSLNParameters p(&settings, 0, cmd, 1, NULL, NULL, error);
-        ret = CGXDLMS::GetLNPdu(p, data);
+        ret = CGXDLMS::GetLNPdu(p, 1, data);
     }
     else
     {
@@ -983,7 +983,7 @@ int CGXDLMSServer::HandleSetRequest(CGXByteBuffer& data)
         m_Settings.ResetBlockIndex();
         p.SetStatus(DLMS_ERROR_CODE_HARDWARE_FAULT);
     }
-    return CGXDLMS::GetLNPdu(p, m_ReplyData);
+    return CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
 }
 
 unsigned short CGXDLMSServer::GetRowsToPdu(CGXDLMSProfileGeneric* pg)
@@ -1128,7 +1128,7 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
     }
     CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 1, NULL, &bb, status);
 
-    ret = CGXDLMS::GetLNPdu(p, m_ReplyData);
+    ret = CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
     if (m_Settings.GetCount() != m_Settings.GetIndex()
         || bb.GetSize() != bb.GetPosition())
     {
@@ -1157,7 +1157,7 @@ int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char in
         CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2,
             NULL, &bb,
             DLMS_ERROR_CODE_DATA_BLOCK_NUMBER_INVALID);
-        return CGXDLMS::GetLNPdu(p, m_ReplyData);
+        return CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
     }
     else
     {
@@ -1208,7 +1208,7 @@ int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char in
                 }
             }
             p.SetMultipleBlocks(true);
-            ret = CGXDLMS::GetLNPdu(p, m_ReplyData);
+            ret = CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
             moreData = m_Settings.GetIndex() != m_Settings.GetCount();
             if (moreData || bb.GetSize() - bb.GetPosition() != 0)
             {
@@ -1329,7 +1329,7 @@ int CGXDLMSServer::GetRequestWithList(CGXByteBuffer& data, unsigned char invokeI
     }
     PostRead(list);
     CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 3, NULL, &bb, 0xFF);
-    return CGXDLMS::GetLNPdu(p, m_ReplyData);
+    return CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
 }
 
 int CGXDLMSServer::HandleGetRequest(
@@ -1379,7 +1379,7 @@ int CGXDLMSServer::HandleGetRequest(
         bb.SetUInt8(DLMS_ERROR_CODE_HARDWARE_FAULT);
         CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE,
             type, NULL, &bb, DLMS_ERROR_CODE_OK);
-        ret = CGXDLMS::GetLNPdu(p, m_ReplyData);
+        ret = CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
     }
     return ret;
 }
@@ -2198,7 +2198,7 @@ int CGXDLMSServer::HandleMethodRequest(
 	printf("\n\nServer: here1\n\n\n");
     CGXDLMSLNParameters p(&m_Settings, invokeId, DLMS_COMMAND_METHOD_RESPONSE, 1, NULL, &bb, error);
 	printf("\n\nServer: here2\n\n\n");
-    ret = CGXDLMS::GetLNPdu(p, m_ReplyData);
+    ret = CGXDLMS::GetLNPdu(p, 0, m_ReplyData);
 	printf("\n\nServer: here3\n\n\n");
     // If High level authentication fails.
     if (!m_Settings.IsConnected() && obj->GetObjectType() == DLMS_OBJECT_TYPE_ASSOCIATION_LOGICAL_NAME && id == 1)
