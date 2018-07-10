@@ -556,18 +556,23 @@ int CGXDLMS::GetLNPdu(
         && p.GetSettings()->GetCipher() != NULL
         && p.GetSettings()->GetCipher()->GetSecurity() != DLMS_SECURITY_NONE;
     int len = 0;
+	printf("\n\CGXDLMS::GetLNPdu: here1\n\n\n");
     if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
     {
         AddLLCBytes(p.GetSettings(), reply);
     }
+	printf("\n\CGXDLMS::GetLNPdu: here2\n\n\n");
     if (p.GetCommand() == DLMS_COMMAND_AARQ)
     {
+		printf("\n\CGXDLMS::GetLNPdu: here3\n\n\n");
         reply.Set(p.GetAttributeDescriptor());
     }
     else
     {
+		printf("\n\CGXDLMS::GetLNPdu: here4\n\n\n");
         if ((p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) != 0)
         {
+			printf("\n\CGXDLMS::GetLNPdu: here5\n\n\n");
             reply.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
             MultipleBlocks(p, reply, ciphering);
             // Is last block
@@ -589,6 +594,7 @@ int CGXDLMS::GetLNPdu(
             // Add Addl fields
             reply.SetUInt8(0);
         }
+		printf("\n\CGXDLMS::GetLNPdu: here6\n\n\n");
         // Add command.
         reply.SetUInt8((unsigned char)p.GetCommand());
 
@@ -597,6 +603,7 @@ int CGXDLMS::GetLNPdu(
             p.GetCommand() == DLMS_COMMAND_ACCESS_REQUEST ||
             p.GetCommand() == DLMS_COMMAND_ACCESS_RESPONSE)
         {
+			printf("\n\CGXDLMS::GetLNPdu: here7\n\n\n");
             // Add Long-Invoke-Id-And-Priority
             if (p.GetCommand() != DLMS_COMMAND_EVENT_NOTIFICATION)
             {
@@ -629,6 +636,7 @@ int CGXDLMS::GetLNPdu(
         }
         else if (p.GetCommand() != DLMS_COMMAND_RELEASE_REQUEST)
         {
+			printf("\n\CGXDLMS::GetLNPdu: here8\n\n\n");
             // Get request size can be bigger than PDU size.
             if (p.GetCommand() != DLMS_COMMAND_GET_REQUEST && p.GetData() != NULL
                 && p.GetData()->GetSize() != 0)
@@ -674,6 +682,7 @@ int CGXDLMS::GetLNPdu(
                 reply.SetUInt8(GetInvokeIDPriority(*p.GetSettings()));
             }
         }
+		printf("\n\CGXDLMS::GetLNPdu: here9\n\n\n");
 
         // Add attribute descriptor.
         reply.Set(p.GetAttributeDescriptor());
