@@ -2182,8 +2182,10 @@ int CGXDLMSServer::HandleMethodRequest(
     // If High level authentication fails.
     if (!m_Settings.IsConnected() && obj->GetObjectType() == DLMS_OBJECT_TYPE_ASSOCIATION_LOGICAL_NAME && id == 1)
     {
+		printf("\n\nServer: InvalidConnection\n\n\n");
         InvalidConnection(connectionInfo);
     }
+	printf("\n\nServer: ret=%d\n\n\n", ret);
     return ret;
 }
 
