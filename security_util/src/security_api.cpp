@@ -186,6 +186,34 @@ int32_t	create_HLS_authentication(hls_auth_params_t *auth_params,
 	return ret;
 }
 
+
+static void PrintfBuffName(const char *name, const unsigned char *ptr, int size)
+{
+	printf("###### %s ####\n", name);
+	for(int i = 0 ; i < size ; ++i)
+	{
+		printf("%02x ", *ptr++);
+		if((i+1)% 8 == 0) printf("\n");
+	}
+	if(size% 8 != 0) printf("\n");
+	printf("#########################\n\n");
+}
+
+static void PrintfAuthParams(hls_auth_params_t *auth_params)
+{
+	PrintfBuffName("originator_sys_title", auth_params->originator_sys_title.buf, auth_params->originator_sys_title.size);
+	PrintfBuffName("originator_challenge", auth_params->originator_challenge.buf, auth_params->originator_challenge.size);
+	PrintfBuffName("recipient_sys_title", auth_params->recipient_sys_title.buf, auth_params->recipient_sys_title.size);
+	PrintfBuffName("recipient_challenge", auth_params->recipient_challenge.buf, auth_params->recipient_challenge.size);
+	PrintfBuffName("public_key", auth_params->public_key, auth_params->public_key_size);
+}
+
+static void PrintfDSParams(ds_int_params_t *ds_params)
+{
+	PrintfBuffName("public_key", ds_params->public_key, ds_params->public_key_size);
+	PrintfBuffName("private_key", ds_params->private_key, ds_params->private_key_size);
+}
+
 /*
  * Verify digital signature using auth_params fields
  * currently supported only Security Suite 1 && MechanismId 7
@@ -225,6 +253,9 @@ int32_t verify_HLS_authentication(hls_auth_params_t *auth_params,
 	else
 		ds_params.private_key = key(&key_size);
 	ds_params.private_key_size = key_size;
+	
+	PrintfAuthParams(auth_params);
+	PrintfDSParams(&ds_params);
 
 	ret = ECDSA_Verify(&ds_params, buffer, buffer_size,
 						message, message_size);
