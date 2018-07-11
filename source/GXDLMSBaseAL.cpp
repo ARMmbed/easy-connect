@@ -130,7 +130,7 @@ static void PrintfBuff(unsigned char *ptr, int size)
 
 static void PrintfBuff(CGXByteBuffer *bb)
 {
-	PrintfBuff(bb->GetData(), bb->GetSize() < MAX_PACKET_PRINT ? MAX_PACKET_PRINT : bb->GetSize());
+	PrintfBuff(bb->GetData(), bb->GetSize() > MAX_PACKET_PRINT ? MAX_PACKET_PRINT : bb->GetSize());
 }
 
 static void ListenerThread(const void* pVoid)

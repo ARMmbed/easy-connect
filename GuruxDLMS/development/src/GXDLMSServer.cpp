@@ -2085,7 +2085,7 @@ static void PrintfBuff(unsigned char *ptr, int size)
 #define MAX_PACKET_PRINT_1 170
 static void PrintfBuff(CGXByteBuffer *bb)
 {
-	PrintfBuff(bb->GetData(), bb->GetSize() < MAX_PACKET_PRINT_1 ? MAX_PACKET_PRINT_1 : bb->GetSize());
+	PrintfBuff(bb->GetData(), bb->GetSize() > MAX_PACKET_PRINT_1 ? MAX_PACKET_PRINT_1 : bb->GetSize());
 }
 
 /**
