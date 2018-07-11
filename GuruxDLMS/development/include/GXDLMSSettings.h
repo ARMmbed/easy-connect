@@ -70,6 +70,8 @@ typedef struct keys
 	unsigned char m_originator_public[PUBLIC_KEY_SIZE];
 }keys_t;
 
+typedef const unsigned char *(*get_private_key_from_settings)(unsigned int *size);
+
 // This class includes DLMS communication Settings.
 class CGXDLMSSettings
 {
@@ -415,8 +417,15 @@ public:
 	void SetPrivateKey(unsigned char *d);
 	void SetOriginatorPublicKey(unsigned char *q);
 	void SetRecipientPublicKey(unsigned char *q);
+	void SetCB(get_private_key_from_settings cb)
+	{
+		get_key_cb = cb;
+	}
 
 	keys_t& GetKey() {return m_keys;}
+
+	public:
+	get_private_key_from_settings get_key_cb;
 };
 
 #endif //GXDLMSSETTINGS_H

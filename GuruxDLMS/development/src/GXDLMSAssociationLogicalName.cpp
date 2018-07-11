@@ -635,7 +635,7 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			fill_hls_params(auth_params, settings);
 
 			// server validate the F(StoC) before creating the F(CtoS)
-			if ((ret = verify_HLS_authentication(&auth_params, buffer, buffer_size, is_originator, NULL)) != 0)
+			if ((ret = verify_HLS_authentication(&auth_params, buffer, buffer_size, is_originator, settings.get_key_cb)) != 0)
 			{
 				settings.SetConnected(false);
 				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
@@ -645,7 +645,7 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			buffer_size = MAX_BUFFER_SIZE;
 			if ((buffer = (uint8_t*)malloc(buffer_size)) == NULL) return 1;
 
-			if ((ret = create_HLS_authentication(&auth_params, buffer, &buffer_size, is_originator, NULL)) != 0)
+			if ((ret = create_HLS_authentication(&auth_params, buffer, &buffer_size, is_originator, settings.get_key_cb)) != 0)
 				return ret;
 
 			CGXByteBuffer F_CtoS;

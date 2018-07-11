@@ -443,6 +443,10 @@ protected:
 
 public:
 	void SetPrivateKey(unsigned char *d);
+	void SetCB(get_private_key_from_settings cb)
+	{
+		m_Settings.SetCB(cb);
+	}
 	void SetServerPublicKey(unsigned char *q);
 	void SetTestCase(TEST_CASE _t) {m_test_case = _t;};
 	TEST_CASE GetTestCase() {return m_test_case;};

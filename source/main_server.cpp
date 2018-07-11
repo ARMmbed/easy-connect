@@ -376,6 +376,15 @@ int kill_server(int argc, char* argv[])
 	return 0;
 }
 
+
+/* stub for secure storage functions */
+static const unsigned char *get_private_key(unsigned int *size)
+{
+	*size = PRIVATE_KEY_SIZE;
+	return keys.m_private;
+}
+
+
 int main_server(int argc, char* argv[])
 {
 	getopt(argc, argv);
@@ -412,6 +421,7 @@ int main_server(int argc, char* argv[])
 	if(s_test_case != BAD_PATH_NO_KEY_IN_SERVER) {
 		server->SetPrivateKey(keys.m_private);
 		server->SetServerPublicKey(keys.m_public);
+		server->SetCB(get_private_key);
 	}
 
 	server->SetTestCase(s_test_case);
