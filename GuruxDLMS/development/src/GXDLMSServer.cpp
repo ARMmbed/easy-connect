@@ -2183,7 +2183,7 @@ int CGXDLMSServer::HandleMethodRequest(
                 //Add parameters error code.
                 bb.SetUInt8(0);
                 GXHelpers::SetData(bb, actionReply.vt, actionReply);
-				printf("\n\nServer: Ready to send action response\n\n\n");
+				printf("Server: Ready to send action response\n\n");
 				PrintfBuff(&bb);
             }
             else
@@ -2191,22 +2191,19 @@ int CGXDLMSServer::HandleMethodRequest(
                 // Add parameters error code.
                 error = e->GetError();
                 bb.SetUInt8(0);
-				printf("\n\nServer: Send error\n\n\n");
+				printf("Server: Send error\n\n");
             }
         }
     }
-	printf("\n\nServer: here1\n\n\n");
     CGXDLMSLNParameters p(&m_Settings, invokeId, DLMS_COMMAND_METHOD_RESPONSE, 1, NULL, &bb, error);
-	printf("\n\nServer: here2\n\n\n");
     ret = CGXDLMS::GetLNPdu(p, 0, m_ReplyData);
-	printf("\n\nServer: here3\n\n\n");
     // If High level authentication fails.
     if (!m_Settings.IsConnected() && obj->GetObjectType() == DLMS_OBJECT_TYPE_ASSOCIATION_LOGICAL_NAME && id == 1)
     {
-		printf("\n\nServer: InvalidConnection\n\n\n");
+		printf("Server: InvalidConnection\n");
         InvalidConnection(connectionInfo);
     }
-	printf("\n\nServer: ret=%d\n\n\n", ret);
+	printf("Server: ret=%d\n\n", ret);
     return ret;
 }
 
