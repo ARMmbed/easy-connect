@@ -13,19 +13,10 @@
 #----------------------------------------------------------------------------
 # source (!) this file while at tree top - DO NOT run it
 
-CLEAN="$1"
+#CLEAN="$1"
 
-
-if [ ! -d "mbedtls" ]; then
-	git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git
-	cp mbedtls/configs/config-suite-b.h mbedtls/include/mbedtls/config.h
-fi
-
-if [ $CLEAN = "-c" ] || [ $CLEAN = "-clean" ]; then
-	rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
-fi
-
-if [ $CLEAN != "-clean" ]; then
+function compile_all 
+{
 	cd mbedtls
 	make -j10
 	cd ../security_util
@@ -58,4 +49,26 @@ if [ $CLEAN != "-clean" ]; then
 	fi
 
 	make -j10
+}
+
+
+if [ ! -d "mbedtls" ]; then
+	git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git
+	cp mbedtls/configs/config-suite-b.h mbedtls/include/mbedtls/config.h
 fi
+
+if [ $1 ]
+then
+	if [ $1 = "-c" ] || [ $1 = "-clean" ]; then
+		rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
+	fi
+	if [ $1 = "-c" ]
+	then
+		compile_all
+	fi
+else
+	compile_all
+fi
+
+
+
