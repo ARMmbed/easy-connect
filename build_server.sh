@@ -15,7 +15,7 @@
 
 #CLEAN="$1"
 
-function compile_all 
+function compile_all()
 {
 	cd mbedtls
 	make -j10
