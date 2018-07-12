@@ -42,6 +42,7 @@
 //no need buffer size larger
 #define MAX_BUFFER_SIZE 72
 
+#if 0
 static unsigned char client_sys_title[] =
 { 0x4D,0x4D,0x4D,0x00,0x00,0xBC,0x61,0x4E };
 
@@ -97,6 +98,8 @@ static unsigned char expected_server_str[] =
 	0x8B,0x85,0xC6,0xA7,0x3E,0x5F,0xD6,0x87,0xF0,0x97,0x73,
 	0xC1,0xF6,0x15,0xAA,0x2A,0x90,0x5E,0xD0,0x57 
 };
+
+#endif
 
 void CGXDLMSAssociationLogicalName::UpdateAccessRights(CGXDLMSObject* pObj, CGXDLMSVariant data)
 {
@@ -616,6 +619,7 @@ static void PrintfBuff(unsigned char *ptr, int size)
 	if(size% 8 != 0) printf("\n");
 	printf("#########################\n\n");
 }
+
 
 int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e)
 {
