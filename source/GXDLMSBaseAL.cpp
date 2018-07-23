@@ -759,7 +759,7 @@ int CGXDLMSBaseAL::CreateObjects()
 	/* HUMIDITY_OBJECT */
 //	CGXDLMSVariant voltage_value = 0;
 	unsigned char test_humidity_val[] = {0xDE, 0xAD, 0xBE, 0xEF};
-	CGXDLMSVariant humidity_value(test_humidity_val, 4, DLMS_DATA_TYPE_FLOAT32);
+	CGXDLMSVariant humidity_value(test_humidity_val, 4, DLMS_DATA_TYPE_OCTET_STRING);
     CGXDLMSData* pDataHumidity = new CGXDLMSData(HUMIDITY_OBJECT);
 	pDataHumidity->SetValue(humidity_value);
     GetItems().push_back(pDataHumidity);
