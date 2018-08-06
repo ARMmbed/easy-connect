@@ -1273,6 +1273,8 @@ DLMS_SOURCE_DIAGNOSTIC CGXDLMSBaseAL::ValidateAuthentication(
 
 DLMS_ACCESS_MODE CGXDLMSBaseAL::GetAttributeAccess(CGXDLMSValueEventArg* arg)
 {
+// TODO - This logic will need to be re-enabled after we add the support for APDU encryption in M6
+#ifdef M6_FUNCTIONALITY
     // Only read is allowed
     if (arg->GetSettings()->GetAuthentication() == DLMS_AUTHENTICATION_NONE)
     {
@@ -1287,6 +1289,7 @@ DLMS_ACCESS_MODE CGXDLMSBaseAL::GetAttributeAccess(CGXDLMSValueEventArg* arg)
         }
         return DLMS_ACCESS_MODE_READ;
     }
+#endif
     // All writes are allowed.
     return DLMS_ACCESS_MODE_READ_WRITE;
 }
