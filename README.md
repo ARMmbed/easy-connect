@@ -41,6 +41,8 @@ the binary file will be in path:
 ./BUILD/K64F/GCC_ARM/e2e-iot-dlms-server.bin
 
 ## command line in cli
+
+## command line in cli
 ### to start the server:
 `start <argument> <argument value>`
 
@@ -51,15 +53,16 @@ the binary file will be in path:
 * `-c           <conformance block (in hexadecimal - can start with 0x)>` - default as Yael requested
 * `-print`      print the received and sent packets - default is not printing
 * `-k`          <key number (1 - 10)> - default is 1
+* `-set <obj>   <obj val>` - <obj> options are detailed below  
 
-### while the server is running:
+### while the server is running (<obj> options are -hum, -cur, -pow):
 `conf <argument> <argument value>`
 
-* `-i    <float number>` - starts with 1
-* `-v    <float number>` - starts with 1
-* `-p    <float number>` - starts with 1
-* `-print`               - print the received and sent packets
-* `-stoprint`            - stop print the received and sent packets
+* `-hum  <val>` - humidity
+* `-cur  <val>` - current
+* `-pow  <val>` - power
+* `-print`      - print the received and sent packets
+* `-stoprint`   - stop print the received and sent packets
 
 ### to end the server:
 `end`

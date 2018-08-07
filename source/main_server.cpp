@@ -75,6 +75,8 @@ DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_GET_OR_READ |
 DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_SET_OR_WRITE | DLMS_CONFORMANCE_BLOCK_TRANSFER_WITH_ACTION |
 DLMS_CONFORMANCE_GET | DLMS_CONFORMANCE_SET |
 DLMS_CONFORMANCE_SELECTIVE_ACCESS | DLMS_CONFORMANCE_ACTION;
+static char **s_set_argv = NULL;
+static int s_set_argc = 0;
 
 static unsigned char server_sys_title[] =
 {
@@ -189,6 +191,16 @@ static int getopt(int argc, char* argv[])
 				test_num = (test_num > 5 || test_num < 1) ? 0 : test_num;
 				s_test_case = (TEST_CASE)test_num;
 				printf("### configuration ###   test case number %d\n", test_num);
+				++i;
+			}
+		}
+
+		if (strcmp(argv[i], "-set") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				s_set_argv = argv + i + 1;
+				s_set_argc = argc - i - 1;
 				++i;
 			}
 		}
@@ -311,7 +323,7 @@ int setObj(int argc, char* argv[])
 			}
 		}
 
-		if (strcmp(argv[i], "-i") == 0)
+		if (strcmp(argv[i], "-cur") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -328,7 +340,7 @@ int setObj(int argc, char* argv[])
 			}
 		}
 
-		if (strcmp(argv[i], "-p") == 0)
+		if (strcmp(argv[i], "-pow") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -337,10 +349,10 @@ int setObj(int argc, char* argv[])
 
 				if(power_object != NULL)
 				{
-					float power = atof(argv[i + 1]);
-					val.fltVal = atof(argv[i + 1]);
+					int power_val =  atoi(argv[i + 1]);
+					val = power_val;
 					((CGXDLMSData*)power_object)->SetValue(val);
-					printf("### set ###   power = %.6f\n", val.fltVal);
+					printf("### set ###   power = %d\n", power_val);
 					++i;
 				}
 			}
@@ -432,6 +444,11 @@ int main_server(int argc, char* argv[])
 	/////////////////////////////////////////////////////////
 
 	server->CreateObjects();
+
+	if (s_set_argc != 0 && s_set_argv != NULL)
+	{
+		setObj(s_set_argc, s_set_argv);
+	}
 
 	server->StartServer(port);
 
