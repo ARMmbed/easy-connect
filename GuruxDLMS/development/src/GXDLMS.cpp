@@ -553,10 +553,15 @@ int CGXDLMS::GetLNPdu(
     CGXByteBuffer& reply)
 {
     int ret;
+	// TODO - This needs to be enabled back again after M6
+#ifdef M6_FUNCTIONALITY
     unsigned char ciphering = if_ciphering && 
 		(p.GetCommand() != DLMS_COMMAND_AARQ) && (p.GetCommand() != DLMS_COMMAND_AARE)
         && (p.GetSettings()->GetCipher() != NULL)
         && (p.GetSettings()->GetCipher()->GetSecurity() != DLMS_SECURITY_NONE);
+#else
+	unsigned char ciphering = 0;
+#endif
     int len = 0;
     if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
     {
