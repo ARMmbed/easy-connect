@@ -9,17 +9,19 @@ CFLAGS   = -c -g -D__LINUX__
 
 LINKER   = g++ -o
 
+BIT_TYPE=64
+
 # linking flags here
-LFLAGS   = -L./GuruxDLMS/development/lib \
-			-L./security_util/lib \
-			-L./mbedtls/library
+LFLAGS   = -L./GuruxDLMS/development/x86/$(BIT_TYPE)/lib \
+			-L./security_util/x86/$(BIT_TYPE)/lib \
+			-L./mbedtls/x86/$(BIT_TYPE)/library
 
 # change these to set the proper directories where each files should be
 #VPATH 	 = src:src/test-device
 
 SRCDIR   = source
-OBJDIR   = obj
-BINDIR   = bin
+OBJDIR   = x86/$(BIT_TYPE)/obj
+BINDIR   = x86/$(BIT_TYPE)/bin
 
 # List of sources
 SOURCES			:= $(wildcard $(addsuffix /*.cpp,$(SRCDIR)))

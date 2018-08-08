@@ -1,0 +1,8 @@
+.cproject
+.project
+.settings/
+GuruxDLMS/development/x86/
+mbedtls/
+security_util/x86/
+x86/
+

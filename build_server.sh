@@ -14,61 +14,85 @@
 # source (!) this file while at tree top - DO NOT run it
 
 #CLEAN="$1"
+bit_type=64
 
+function make_dir()
+{
+        if [ ! -d "$1" ]; then
+                mkdir -p $1
+        fi
+}
 function compile_all()
 {
-	cd mbedtls
+	cd mbedtls/x86/${bit_type}
 	make -j10
-	cd ../security_util
+	cd -
+	##############################
+	cd security_util
 
-	if [ ! -d "obj" ]; then
-	mkdir obj
-	fi
-	if [ ! -d "lib" ]; then
-	mkdir lib
-	fi
+	make_dir x86/${bit_type}/obj
+	make_dir x86/${bit_type}/lib
 
-	make -j10
-	cd ../GuruxDLMS/development
+	make -j10 BIT_TYPE=${bit_type}
+	cd -
+	##############################
+	cd GuruxDLMS/development
 
-	if [ ! -d "obj" ]; then
-	mkdir obj
-	fi
-	if [ ! -d "lib" ]; then
-	mkdir lib
-	fi
+	make_dir x86/${bit_type}/obj
+	make_dir x86/${bit_type}/lib
 
-	make -j10
-	cd ../../
+	make -j10 BIT_TYPE=${bit_type}
+	cd -
+	##############################
 
-	if [ ! -d "obj" ]; then
-	mkdir obj
-	fi
-	if [ ! -d "bin" ]; then
-	mkdir bin
-	fi
+	make_dir x86/${bit_type}/obj
+	make_dir x86/${bit_type}/bin
 
-	make -j10
+	make -j10 BIT_TYPE=${bit_type}
 }
 
+function clone_mbedtls()
+{
+	if [ ! -d "mbedtls/x86/${bit_type}" ]; then
+		mkdir -p mbedtls/x86/${bit_type}
+		mkdir -p mbedtls/include
 
-if [ ! -d "mbedtls" ]; then
-	git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git
-	cp mbedtls/configs/config-suite-b.h mbedtls/include/mbedtls/config.h
-fi
+		git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git mbedtls/x86/${bit_type}
 
-if [ $1 ]
-then
-	if [ $1 = "-c" ] || [ $1 = "-clean" ]; then
-		rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
+		cp  mbedtls/x86/${bit_type}/configs/config-suite-b.h \
+				mbedtls/x86/${bit_type}/include/mbedtls/config.h
+
+		cp  -dpRf mbedtls/x86/${bit_type}/include/mbedtls  \
+                                mbedtls
 	fi
-	if [ $1 = "-c" ]
-	then
-		compile_all
-	fi
-else
-	compile_all
-fi
+}
 
+function clean_artifacts()
+{
+	rm -rf GuruxDLMS/development/x86/${bit_type}
+        rm -rf x86/${bit_type}
+        rm -rf security_util/x86/${bit_type}
+}
 
+while getopts ":b:c" o; do
+        case "${o}" in
+	b)
+		if [ "${OPTARG}" = "64" ]
+		then
+			bit_type=64
+		elif [ "${OPTARG}" = "32" ]
+		then
+			bit_type=32
+		else
+			echo "incorrect bit type (${OPTARG}) , should be 64 or 32"
+			exit 1
+			fi
+			;;
+	c)
+		clean_artifacts
+		;;
+        esac
+done
 
+clone_mbedtls
+compile_all
