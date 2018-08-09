@@ -13,8 +13,8 @@ BIT_TYPE=64
 
 # linking flags here
 LFLAGS   = -L./GuruxDLMS/development/x86/$(BIT_TYPE)/lib \
-			-L./security_util/x86/$(BIT_TYPE)/lib \
-			-L./mbedtls/x86/$(BIT_TYPE)/library
+	   -L./security_util/x86/$(BIT_TYPE)/lib \
+	   -L./tls/x86/$(BIT_TYPE)/lib
 
 # change these to set the proper directories where each files should be
 #VPATH 	 = src:src/test-device
@@ -35,7 +35,7 @@ OBJECTS 	:= $(SOURCES_NO_EXT:%=$(OBJDIR)/%.o)
 rm       = rm -f
 
 $(BINDIR)/$(TARGET): $(OBJECTS)  
-	@$(LINKER) $@ $(LFLAGS) $(OBJECTS) -lpthread -lrt -lgurux_dlms_cpp -lsecurity -lmbedx509 -lmbedtls -lmbedcrypto
+	@$(LINKER) $@ $(LFLAGS) $(OBJECTS) -lpthread -lrt -lgurux_dlms_cpp -lsecurity -lmbedtls
 	@echo "Linking complete!"
 	
 # Compile
@@ -47,11 +47,17 @@ $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 .PHONEY: clean
 clean:
 	@$(rm) $(OBJDIR)/*.o
-	@echo "Cleanup complete!" 
+	@echo "Cleanup complete!"
 
 cleanall:
-	@$(rm) $(OBJDIR)/*.o ../development/lib/* ../development/obj/*  ./lib/*
-	@echo "Cleanup complete!"	
+	$(rm) $(OBJDIR)/*.o
+	$(rm) $(BINDIR)/*
+
+	make -C security_util clean
+	make -C tls/mbedtls/library clean
+	make -C GuruxDLMS/development clean
+
+	@echo "Cleanup complete!"
 
 .PHONEY: remove
 remove: clean

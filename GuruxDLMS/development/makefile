@@ -43,6 +43,7 @@ LINKER   = ar rvs
 LFLAGS   =  
 BIT_TYPE=64
 
+
 # change these to set the proper directories where each files shoould be
 
 SRCDIR   = src
@@ -65,8 +66,8 @@ $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 .PHONEY: clean
 clean:
 	@$(rm) $(OBJECTS)
+	@$(rm) $(LIBDIR)/$(TARGET)
 	@echo "Cleanup complete!" 
-	@echo $(OBJECTS)
 
 .PHONEY: remove
 remove: clean

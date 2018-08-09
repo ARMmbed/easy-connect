@@ -33,15 +33,14 @@ $(LIBDIR)/$(TARGET): $(OBJECTS)
 	@echo "Linking complete!"
 
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
-	@$(CC) $(INC) $(CFLAGS) -c $< -o $@ -lmbedx509 -lmbedtls -lmbedcrypto
+	@$(CC) $(INC) $(CFLAGS) -c $< -o $@ 
 	@echo "Compiled "$<" successfully!"
 
-	# -lmbedx509 -lmbedtls -lmbedcrypto
 .PHONEY: clean
 clean:
 	@$(rm) $(OBJECTS)
+	@$(rm) $(LIBDIR)/$(TARGET)
 	@echo "Cleanup complete!" 
-	@echo $(OBJECTS)
 
 .PHONEY: remove
 remove: clean

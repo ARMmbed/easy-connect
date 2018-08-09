@@ -14,7 +14,7 @@
 # source (!) this file while at tree top - DO NOT run it
 
 #CLEAN="$1"
-bit_type=64
+bit_type=0
 
 function make_dir()
 {
@@ -22,27 +22,23 @@ function make_dir()
                 mkdir -p $1
         fi
 }
+function build_module()
+{
+        cd $1
+
+        make_dir x86/${bit_type}/obj
+        make_dir x86/${bit_type}/lib
+
+        make -j10 BIT_TYPE=${bit_type}
+        cd -
+}
 function compile_all()
 {
-	cd mbedtls/x86/${bit_type}
-	make -j10
-	cd -
-	##############################
-	cd security_util
+	build_module tls
+	build_module security_util
+	build_module GuruxDLMS/development
+	build_module tls
 
-	make_dir x86/${bit_type}/obj
-	make_dir x86/${bit_type}/lib
-
-	make -j10 BIT_TYPE=${bit_type}
-	cd -
-	##############################
-	cd GuruxDLMS/development
-
-	make_dir x86/${bit_type}/obj
-	make_dir x86/${bit_type}/lib
-
-	make -j10 BIT_TYPE=${bit_type}
-	cd -
 	##############################
 
 	make_dir x86/${bit_type}/obj
@@ -53,46 +49,44 @@ function compile_all()
 
 function clone_mbedtls()
 {
-	if [ ! -d "mbedtls/x86/${bit_type}" ]; then
-		mkdir -p mbedtls/x86/${bit_type}
-		mkdir -p mbedtls/include
+	echo "clone mbed tls"
+	cd tls
+	git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git
+	cp   mbedtls/configs/config-suite-b.h  mbedtls/include/mbedtls/config.h
+	cd -
+}
 
-		git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git mbedtls/x86/${bit_type}
+function set_bit_type()
+{
+	is_gcc_32_bit=$(file -L /usr/bin/gcc | grep "ELF 32-bit")
+	is_gcc_64_bit=$(file -L /usr/bin/gcc | grep "ELF 64-bit")
 
-		cp  mbedtls/x86/${bit_type}/configs/config-suite-b.h \
-				mbedtls/x86/${bit_type}/include/mbedtls/config.h
+	if [ ! -z "$is_gcc_64_bit" ]
+	then
+		echo "This is 64 bit native gcc"
+		bit_type=64
+        elif [  ! -z "$is_gcc_32_bit" ]
+        then
+		echo "This is 32 bit native gcc"
+		bit_type=32
+	else
+		echo "Unknown arch type (32 or 64 bit).Aborting!!!"
+        fi
 
-		cp  -dpRf mbedtls/x86/${bit_type}/include/mbedtls  \
-                                mbedtls
+
+}
+
+function clean_all()
+{
+	echo "in cleanall $1="$1
+	if [ "$1" = "-c" ]
+	then
+		echo "clean all objecs and libs"
+		make BIT_TYPE=$bit_type cleanall
 	fi
 }
 
-function clean_artifacts()
-{
-	rm -rf GuruxDLMS/development/x86/${bit_type}
-        rm -rf x86/${bit_type}
-        rm -rf security_util/x86/${bit_type}
-}
-
-while getopts ":b:c" o; do
-        case "${o}" in
-	b)
-		if [ "${OPTARG}" = "64" ]
-		then
-			bit_type=64
-		elif [ "${OPTARG}" = "32" ]
-		then
-			bit_type=32
-		else
-			echo "incorrect bit type (${OPTARG}) , should be 64 or 32"
-			exit 1
-			fi
-			;;
-	c)
-		clean_artifacts
-		;;
-        esac
-done
-
+set_bit_type
+clean_all $1
 clone_mbedtls
 compile_all
