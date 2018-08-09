@@ -1,0 +1,48 @@
+TARGET=libmbedtls.a
+CC=gcc
+AR=ar -cr
+# compiling flags here
+
+CFLAGS   = -c -g -D__LINUX__ -D_FILE_OFFSET_BITS=64
+
+
+BIT_TYPE=64
+
+SRCDIR   = .
+OBJDIR   = ../../../tls/x86/$(BIT_TYPE)/obj
+LIBDIR   = ../../../tls/x86/$(BIT_TYPE)/lib
+
+# List of sources
+SOURCES	:= $(wildcard $(addsuffix /*.c,$(SRCDIR)))
+SOURCES_NO_EXT := $(notdir $(basename $(SOURCES)))
+
+INC= -I../include
+
+# List of objects
+OBJECTS := $(SOURCES_NO_EXT:%=$(OBJDIR)/%.o)
+rm       = rm -f
+
+# Compile
+$(OBJDIR)/%.o : $(SRCDIR)/%.c
+	@$(CC) $(CFLAGS) $(INC) -c $< -o $@
+	@echo "Compiled "$<" successfully!"
+
+$(LIBDIR)/$(TARGET): $(OBJECTS)
+	@$(AR) $@ $(OBJECTS)  $(LFLAGS)
+	echo "  AR   $(MODULE)   $(TARGET)"
+
+.PHONEY: clean
+clean:
+	@$(rm) $(OBJDIR)/*
+	@$(rm) $(LIBDIR)/*
+	@echo "Cleanup complete!" 
+
+cleanall:
+	@$(rm) $(OBJDIR)/*
+	@$(rm) $(LIBDIR)/*
+	@echo "Cleanup complete!"	
+
+.PHONEY: remove
+remove: clean
+	@$(rm) $(BINDIR)/$(TARGET)
+	@echo "Executable removed!"

@@ -14,61 +14,79 @@
 # source (!) this file while at tree top - DO NOT run it
 
 #CLEAN="$1"
+bit_type=0
 
+function make_dir()
+{
+        if [ ! -d "$1" ]; then
+                mkdir -p $1
+        fi
+}
+function build_module()
+{
+        cd $1
+
+        make_dir x86/${bit_type}/obj
+        make_dir x86/${bit_type}/lib
+
+        make -j10 BIT_TYPE=${bit_type}
+        cd -
+}
 function compile_all()
 {
-	cd mbedtls
-	make -j10
-	cd ../security_util
+	build_module tls
+	build_module security_util
+	build_module GuruxDLMS/development
+	build_module tls
 
-	if [ ! -d "obj" ]; then
-	mkdir obj
-	fi
-	if [ ! -d "lib" ]; then
-	mkdir lib
-	fi
+	##############################
 
-	make -j10
-	cd ../GuruxDLMS/development
+	make_dir x86/${bit_type}/obj
+	make_dir x86/${bit_type}/bin
 
-	if [ ! -d "obj" ]; then
-	mkdir obj
-	fi
-	if [ ! -d "lib" ]; then
-	mkdir lib
-	fi
-
-	make -j10
-	cd ../../
-
-	if [ ! -d "obj" ]; then
-	mkdir obj
-	fi
-	if [ ! -d "bin" ]; then
-	mkdir bin
-	fi
-
-	make -j10
+	make -j10 BIT_TYPE=${bit_type}
 }
 
-
-if [ ! -d "mbedtls" ]; then
+function clone_mbedtls()
+{
+	echo "clone mbed tls"
+	cd tls
 	git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git
-	cp mbedtls/configs/config-suite-b.h mbedtls/include/mbedtls/config.h
-fi
+	cp   mbedtls/configs/config-suite-b.h  mbedtls/include/mbedtls/config.h
+	cd -
+}
 
-if [ $1 ]
-then
-	if [ $1 = "-c" ] || [ $1 = "-clean" ]; then
-		rm -rf GuruxDLMS/development/obj GuruxDLMS/development/lib ./obj ./bin security_util/lib security_util/obj
-	fi
-	if [ $1 = "-c" ]
+function set_bit_type()
+{
+	is_gcc_32_bit=$(file -L /usr/bin/gcc | grep "ELF 32-bit")
+	is_gcc_64_bit=$(file -L /usr/bin/gcc | grep "ELF 64-bit")
+
+	if [ ! -z "$is_gcc_64_bit" ]
 	then
-		compile_all
+		echo "This is 64 bit native gcc"
+		bit_type=64
+        elif [  ! -z "$is_gcc_32_bit" ]
+        then
+		echo "This is 32 bit native gcc"
+		bit_type=32
+	else
+		echo "Unknown arch type (32 or 64 bit).Aborting!!!"
+        fi
+
+
+}
+
+function clean_all()
+{
+	echo "in cleanall $1="$1
+	if [ "$1" = "-c" ]
+	then
+		echo "clean all objecs and libs"
+		make BIT_TYPE=$bit_type cleanall
 	fi
-else
-	compile_all
-fi
+}
 
-
-
+set_bit_type
+clean_all $1
+clone_mbedtls
+compile_all

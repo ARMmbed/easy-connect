@@ -41,12 +41,14 @@ LINKER   = ar rvs
 
 # linking flags here
 LFLAGS   =  
+BIT_TYPE=64
+
 
 # change these to set the proper directories where each files shoould be
 
 SRCDIR   = src
-OBJDIR   = obj
-LIBDIR   = lib
+OBJDIR   = x86/$(BIT_TYPE)/obj
+LIBDIR   = x86/$(BIT_TYPE)/lib
 
 SOURCES  := $(wildcard $(SRCDIR)/*.cpp)
 INCLUDES := $(wildcard $(SRCDIR)/*.h)
@@ -64,8 +66,8 @@ $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 .PHONEY: clean
 clean:
 	@$(rm) $(OBJECTS)
+	@$(rm) $(LIBDIR)/$(TARGET)
 	@echo "Cleanup complete!" 
-	@echo $(OBJECTS)
 
 .PHONEY: remove
 remove: clean
