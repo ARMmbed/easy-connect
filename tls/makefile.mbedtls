@@ -7,10 +7,11 @@ CFLAGS   = -c -g -D__LINUX__ -D_FILE_OFFSET_BITS=64
 
 
 BIT_TYPE=64
+ARCH=x86
 
 SRCDIR   = .
-OBJDIR   = ../../../tls/x86/$(BIT_TYPE)/obj
-LIBDIR   = ../../../tls/x86/$(BIT_TYPE)/lib
+OBJDIR   = ../../../tls/arch/$(ARCH)/$(BIT_TYPE)/obj
+LIBDIR   = ../../../tls/arch/$(ARCH)/$(BIT_TYPE)/lib
 
 # List of sources
 SOURCES	:= $(wildcard $(addsuffix /*.c,$(SRCDIR)))
@@ -24,7 +25,7 @@ rm       = rm -f
 
 # Compile
 $(OBJDIR)/%.o : $(SRCDIR)/%.c
-	@$(CC) $(CFLAGS) $(INC) -c $< -o $@
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 	@echo "Compiled "$<" successfully!"
 
 $(LIBDIR)/$(TARGET): $(OBJECTS)

@@ -2,9 +2,9 @@
 TARGET = libsecurity.a
 
 INC			=	-I./include \
-				-I../mbedtls \
-				-I../mbedtls/configs \
-				-L../mbedtls/library
+				-I../tls/mbedtls/include \
+				-I../tls/mbedtls/configs \
+				-L../tls/mbedtls/library
 
 
 CC       = g++
@@ -16,12 +16,13 @@ LINKER   = ar rvs
 # linking flags here
 LFLAGS   = 
 BIT_TYPE=64
+ARCH=x86
 
 # change these to set the proper directories where each files shoould be
 
 SRCDIR   = src
-OBJDIR   = x86/$(BIT_TYPE)/obj
-LIBDIR   = x86/$(BIT_TYPE)/lib
+OBJDIR   = arch/$(ARCH)/$(BIT_TYPE)/obj
+LIBDIR   = arch/$(ARCH)/$(BIT_TYPE)/lib
 
 SOURCES  := $(wildcard $(SRCDIR)/*.cpp)
 INCLUDES := $(wildcard $(SRCDIR)/*.h)
