@@ -10,18 +10,19 @@ CFLAGS   = -c -g -D__LINUX__
 LINKER   = g++ -o
 
 BIT_TYPE=64
+ARCH=x86
 
 # linking flags here
-LFLAGS   = -L./GuruxDLMS/development/x86/$(BIT_TYPE)/lib \
-	   -L./security_util/x86/$(BIT_TYPE)/lib \
-	   -L./tls/x86/$(BIT_TYPE)/lib
+LFLAGS   = -L./GuruxDLMS/development/arch/$(ARCH)/$(BIT_TYPE)/lib \
+	   -L./security_util/arch/$(ARCH)/$(BIT_TYPE)/lib \
+	   -L./tls/arch/$(ARCH)/$(BIT_TYPE)/lib
 
 # change these to set the proper directories where each files should be
 #VPATH 	 = src:src/test-device
 
 SRCDIR   = source
-OBJDIR   = x86/$(BIT_TYPE)/obj
-BINDIR   = x86/$(BIT_TYPE)/bin
+OBJDIR   = arch/$(ARCH)/$(BIT_TYPE)/obj
+BINDIR   = arch/$(ARCH)/$(BIT_TYPE)/bin
 
 # List of sources
 SOURCES			:= $(wildcard $(addsuffix /*.cpp,$(SRCDIR)))

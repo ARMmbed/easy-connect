@@ -14,7 +14,8 @@
 # source (!) this file while at tree top - DO NOT run it
 
 #CLEAN="$1"
-bit_type=0
+bit_type=32
+arch=x86
 
 function make_dir()
 {
@@ -26,10 +27,10 @@ function build_module()
 {
         cd $1
 
-        make_dir x86/${bit_type}/obj
-        make_dir x86/${bit_type}/lib
+        make_dir arch/$arch/${bit_type}/obj
+        make_dir arch/$arch/${bit_type}/lib
 
-        make -j10 BIT_TYPE=${bit_type}
+        make -j10 ARCH=$arch BIT_TYPE=$bit_type
         cd -
 }
 function compile_all()
@@ -41,10 +42,10 @@ function compile_all()
 
 	##############################
 
-	make_dir x86/${bit_type}/obj
-	make_dir x86/${bit_type}/bin
+	make_dir arch/$arch/${bit_type}/obj
+	make_dir arch/$arch/${bit_type}/bin
 
-	make -j10 BIT_TYPE=${bit_type}
+	make -j10 ARCH=$arch BIT_TYPE=$bit_type
 }
 
 function clone_mbedtls()
@@ -61,17 +62,32 @@ function set_bit_type()
 	is_gcc_32_bit=$(file -L /usr/bin/gcc | grep "ELF 32-bit")
 	is_gcc_64_bit=$(file -L /usr/bin/gcc | grep "ELF 64-bit")
 
+	is_gcc_arm_v7=$(file -L /usr/bin/gcc | grep "ARM, EABI5")
+	is_gcc_x86=$(file -L /usr/bin/gcc | grep "x86-64")
+
 	if [ ! -z "$is_gcc_64_bit" ]
 	then
-		echo "This is 64 bit native gcc"
 		bit_type=64
         elif [  ! -z "$is_gcc_32_bit" ]
         then
-		echo "This is 32 bit native gcc"
 		bit_type=32
 	else
-		echo "Unknown arch type (32 or 64 bit).Aborting!!!"
+		echo "Unknown bit type (32 or 64 bit).Aborting!!!"
+		exit
         fi
+
+	if [ ! -z "$is_gcc_arm_v7" ]
+	then
+		arch=arm-v7
+        elif [  ! -z "$is_gcc_x86" ]
+        then
+		arch=x86
+	else
+		echo "Unknown arch type (x86 or arm-v7.Aborting!!!"
+		exit
+        fi
+
+	echo "This is $arch $bit_type native gcc"
 
 
 }
