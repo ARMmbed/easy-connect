@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #----------------------------------------------------------------------------
 #   The confidential and proprietary information contained in this file may
 #   only be used by a person authorised under and to the extent permitted
@@ -16,6 +18,8 @@
 #CLEAN="$1"
 bit_type=32
 arch=x86
+
+set -x
 
 function make_dir()
 {
