@@ -67,6 +67,7 @@ function set_bit_type()
 	is_gcc_64_bit=$(file -L /usr/bin/gcc | grep "ELF 64-bit")
 
 	is_gcc_arm_v7=$(file -L /usr/bin/gcc | grep "ARM, EABI5")
+	is_gcc_arm_v8=$(file -L /usr/bin/gcc | grep "ARM aarch64")
 	is_gcc_x86=$(file -L /usr/bin/gcc | grep -e "x86-64"  -e "Intel 80386")
 
 	if [ ! -z "$is_gcc_64_bit" ]
@@ -83,13 +84,16 @@ function set_bit_type()
 	if [ ! -z "$is_gcc_arm_v7" ]
 	then
 		arch=arm-v7
-        elif [  ! -z "$is_gcc_x86" ]
-        then
+	elif [  ! -z "$is_gcc_arm_v8" ]
+	then
+		arch=arm-v8
+    elif [  ! -z "$is_gcc_x86" ]
+    then
 		arch=x86
 	else
-		echo "Unknown arch type (x86 or arm-v7).Aborting!!!"
+		echo "Unknown arch type (x86 or arm-v7/arm-v8).Aborting!!!"
 		exit
-        fi
+    fi
 
 	echo "This is $arch $bit_type native gcc"
 
