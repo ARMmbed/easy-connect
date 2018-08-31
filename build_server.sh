@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 #----------------------------------------------------------------------------
@@ -23,19 +24,19 @@ set -x
 
 function make_dir()
 {
-        if [ ! -d "$1" ]; then
-                mkdir -p $1
-        fi
+	if [ ! -d "$1" ]; then
+			mkdir -p $1
+	fi
 }
 function build_module()
 {
-        cd $1
-
-        make_dir arch/$arch/${bit_type}/obj
-        make_dir arch/$arch/${bit_type}/lib
-
-        make -j10 ARCH=$arch BIT_TYPE=$bit_type
-        cd -
+	cd $1
+	
+	make_dir arch/$arch/${bit_type}/obj
+	make_dir arch/$arch/${bit_type}/lib
+	
+	make -j10 ARCH=$arch BIT_TYPE=$bit_type
+	cd -
 }
 function compile_all()
 {
@@ -102,15 +103,46 @@ function set_bit_type()
 
 function clean_all()
 {
-	echo "in cleanall $1="$1
-	if [ "$1" = "-c" ]
-	then
-		echo "clean all objecs and libs"
-		make BIT_TYPE=$bit_type cleanall
-	fi
+	echo "Clean all arch=$arch BIT_TYPE=$bit_type"
+	make BIT_TYPE=$bit_type cleanall
+	
 }
 
-set_bit_type
-clean_all $1
+while getopts ":a:b:c" o; do
+case "${o}" in
+	b)
+		if [ "${OPTARG}" = "64" ]
+		then
+			bit_type=64
+		elif [ "${OPTARG}" = "32" ]
+		then
+			bit_type=32
+		else
+			echo "incorrect bit type (${OPTARG}) , should be 64 or 32"
+			exit 1
+		fi
+		;;
+	a)
+		if [ "${OPTARG}" = "x86" ]
+		then
+			arch=x86
+		elif [ "${OPTARG}" = "arm-v7" ]
+		then
+			arch=arm-v7
+		elif [ "${OPTARG}" = "arm-v8" ]
+		then
+			arch=arm-v8
+		else
+			echo "incorrect arch (${OPTARG}) , should be x86 or arm-v7/arm-v8"
+			exit 1
+		fi
+		;;
+	c)
+		clean_all
+		;;
+	esac
+done
+
+#set_bit_type
 clone_mbedtls
 compile_all
