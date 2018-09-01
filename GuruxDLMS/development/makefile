@@ -33,11 +33,11 @@
 #---------------------------------------------------------------------------
 # Generate STATIC library.
 TARGET   = libgurux_dlms_cpp.a
-CC       = g++
+
 # compiling flags here
 CFLAGS   = -O3 -Wall -fPIC 
 
-LINKER   = ar rvs
+ARCHIVE=$(AR) -cr
 
 # linking flags here
 LFLAGS   =  
@@ -56,11 +56,11 @@ OBJECTS  := $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 rm       = rm -f
 
 $(LIBDIR)/$(TARGET): $(OBJECTS)
-	@$(LINKER) $@ $(LFLAGS) $(OBJECTS)
-	@echo "Linking complete!"
+	@$(ARCHIVE) $@ $(LFLAGS) $(OBJECTS)
+	@echo "Archive complete!"
 
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(CXX) $(CFLAGS) -c $< -o $@
 	@echo "Compiled "$<" successfully!"
 
 .PHONEY: clean

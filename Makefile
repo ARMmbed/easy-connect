@@ -1,13 +1,11 @@
 # project name (generate executable with this name)
 TARGET   = dlms-sim-server
 
-CC       = g++
-
 # compiling flags here
 
 CFLAGS   = -c -g -D__LINUX__
 
-LINKER   = g++ -o
+LINKER   = $(CXX) -o
 
 BIT_TYPE=64
 ARCH=x86
@@ -42,7 +40,7 @@ $(BINDIR)/$(TARGET): $(OBJECTS)
 # Compile
 $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 	@echo $(OBJECTS)
-	$(CC) $(CFLAGS) $(INC) -c $< -o $@ 
+	$(CXX) $(CFLAGS) $(INC) -c $< -o $@ 
 	@echo "Compiled "$<" successfully!"
 
 .PHONEY: clean

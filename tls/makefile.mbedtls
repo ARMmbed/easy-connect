@@ -1,6 +1,6 @@
 TARGET=libmbedtls.a
-CC=gcc
-AR=ar -cr
+
+ARCHIVE=$(AR) -cr
 # compiling flags here
 
 CFLAGS   = -c -g -D__LINUX__ -D_FILE_OFFSET_BITS=64
@@ -29,7 +29,7 @@ $(OBJDIR)/%.o : $(SRCDIR)/%.c
 	@echo "Compiled "$<" successfully!"
 
 $(LIBDIR)/$(TARGET): $(OBJECTS)
-	@$(AR) $@ $(OBJECTS)  $(LFLAGS)
+	@$(ARCHIVE) $@ $(OBJECTS)  $(LFLAGS)
 	echo "  AR   $(MODULE)   $(TARGET)"
 
 .PHONEY: clean
