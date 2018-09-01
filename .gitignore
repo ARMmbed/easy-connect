@@ -2,7 +2,7 @@
 .project
 .settings/
 GuruxDLMS/development/arch/*
-mbedtls/arch/*
+tls/arch/*
 security_util/arch/*
 arch/*
 

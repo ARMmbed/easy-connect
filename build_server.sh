@@ -57,8 +57,8 @@ function clone_mbedtls()
 {
 	echo "clone mbed tls"
 	cd tls
-	git clone -b mbedtls-2.7 git@github.com:ARMmbed/mbedtls.git
-	cp   mbedtls/configs/config-suite-b.h  mbedtls/include/mbedtls/config.h
+	git checkout mbedtls-2.7
+	cp mbedtls/configs/config-suite-b.h  mbedtls/include/mbedtls/config.h
 	cd -
 }
 
@@ -104,7 +104,7 @@ function set_bit_type()
 function clean_all()
 {
 	echo "Clean all arch=$arch BIT_TYPE=$bit_type"
-	make BIT_TYPE=$bit_type cleanall
+	make ARCH=$arch BIT_TYPE=$bit_type cleanall
 	
 }
 
