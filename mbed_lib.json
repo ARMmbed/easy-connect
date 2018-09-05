@@ -13,6 +13,14 @@
             "help": "Enable debug logs for (ESP8266)",
             "value": false
         },
+        "wifi-esp8266-rts": {
+            "help": "RTS output pin for serial connection to external device (ESP8266)",
+            "value": null
+        },
+        "wifi-esp8266-cts": {
+            "help": "CTS input pin from serial connection to external device (ESP8266)",
+            "value": null
+        },
         "wifi-idw01m1-tx": {
             "help": "TX pin for serial connection to external device (X-NUCLEO-IDW01M1)",
             "value": "PA_9"
