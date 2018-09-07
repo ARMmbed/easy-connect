@@ -10,7 +10,7 @@ Add the following to your `mbed_app.json` file:
 {
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, WIFI_WIZFI310, WIFI_ISM43362, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, WIFI_WIZFI310, WIFI_ISM43362, WIFI_ESP32, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "ETHERNET"
         }
     },
@@ -48,12 +48,12 @@ With Mbed OS 5.9, the EMAC SW was refactored and a default network selector is u
 
 ### Other WiFi stacks
 
-If you select `WIFI_ESP8266`, `WIFI_IDW0XX1`, `WIFI_ODIN` or `WIFI_RTW`, `WIFI_WIZFI310` you also need to add the WiFi SSID and password:
+If you select `WIFI_ESP8266`, `WIFI_IDW0XX1`, `WIFI_ODIN`, `WIFI_RTW`, `WIFI_WIZFI310` or `WIFI_ESP32` you also need to add the WiFi SSID and password:
 
 ```json
     "config": {
         "network-interface":{
-            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, WIFI_WIZFI310, WIFI_ISM43362, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
+            "help": "options are ETHERNET, WIFI_ESP8266, WIFI_IDW0XX1, WIFI_ODIN, WIFI_RTW, WIFI_WIZFI310, WIFI_ISM43362, WIFI_ESP32, MESH_LOWPAN_ND, MESH_THREAD, CELLULAR_ONBOARD",
             "value": "WIFI_ESP8266"
         },
         "wifi-ssid": {

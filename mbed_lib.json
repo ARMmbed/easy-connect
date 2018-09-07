@@ -40,6 +40,34 @@
         "wifi-wizfi310-debug": {
             "help": "Enable debug logs for (WizFi310)",
             "value": false
+        },
+        "wifi-esp32-en": {
+            "help": "EN pin of external device (ESP32)",
+            "value": "NC"
+        },
+        "wifi-esp32-io0": {
+            "help": "IO0 pin of external device (ESP32)",
+            "value": "NC"
+        },
+        "wifi-esp32-tx": {
+            "help": "TX pin for serial connection to external device (ESP32)",
+            "value": "D1"
+        },
+        "wifi-esp32-rx": {
+            "help": "RX pin for serial connection to external device (ESP32)",
+            "value": "D0"
+        },
+        "wifi-esp32-rts": {
+            "help": "RTS pin for serial connection to external device (ESP32)",
+            "value": "NC"
+        },
+        "wifi-esp32-cts": {
+            "help": "CTS pin for serial connection to external device (ESP32)",
+            "value": "NC"
+        },
+        "wifi-esp32-baud-rate": {
+            "help": "Baud rate for ESP32",
+            "value": 115200
         }
     },
     "target_overrides": {
@@ -57,6 +85,22 @@
         "NUCLEO_F411RE": {
             "wifi-esp8266-tx": "D8",
             "wifi-esp8266-rx": "D2"
+        },
+        "RZ_A1H": {
+            "wifi-esp32-en" : "P3_10",
+            "wifi-esp32-io0": "P3_9",
+            "wifi-esp32-tx" : "P2_14",
+            "wifi-esp32-rx" : "P2_15",
+            "wifi-esp32-baud-rate" : 230400
+        },
+        "GR_LYCHEE": {
+            "wifi-esp32-en"  : "P5_3",
+            "wifi-esp32-io0" : "P3_14",
+            "wifi-esp32-tx"  : "P7_1",
+            "wifi-esp32-rx"  : "P0_1",
+            "wifi-esp32-rts" : "P7_7",
+            "wifi-esp32-cts" : "P7_6",
+            "wifi-esp32-baud-rate" : 230400
         }
      }
 }
