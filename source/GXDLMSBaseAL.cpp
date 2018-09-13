@@ -343,7 +343,7 @@ static void temprature_thread(void const *pVoid)
 }
 #endif
 
-int CGXDLMSBaseAL::Connect(int port)
+int CGXDLMSBaseAL::Connect(char *ip_address, int port)
 {
 	NETADD_INFO interfaceInfo = { 0 };
 
@@ -362,13 +362,18 @@ int CGXDLMSBaseAL::Connect(int port)
 	if (setsockopt(m_ServerSocket, SOL_SOCKET, SO_REUSEADDR, &fFlag, sizeof(fFlag)) == -1) return -1;
 
 	interfaceInfo.sin_port = htons(port);
-	interfaceInfo.sin_addr.s_addr = htonl(INADDR_ANY);
+	if(NULL == ip_address) {
+		interfaceInfo.sin_addr.s_addr = htonl(INADDR_ANY);
+	}
+	else {
+		//inet_aton("127.0.0.1", &interfaceInfo.sin_addr.s_addr);
+		interfaceInfo.sin_addr.s_addr = inet_addr(ip_address);
+	}
 	interfaceInfo.sin_family = AF_INET;
 
 	printf("port = %d\n", port);
 
 	if ((::bind(m_ServerSocket, (sockaddr*)&interfaceInfo, sizeof(interfaceInfo))) == -1) return -1;
-
 #else // MBED
 	if (pal_setSocketOptions(m_ServerSocket, PAL_SO_REUSEADDR, (char *)&fFlag, sizeof(fFlag)) == -1) return -1;
 
@@ -390,7 +395,7 @@ int CGXDLMSBaseAL::Connect(int port)
     return 0;
 }
 
-int CGXDLMSBaseAL::StartServer(const char* pPort)
+int CGXDLMSBaseAL::StartServer(char *ip_address, const char* pPort)
 {
     int ret = 0;
 
@@ -399,7 +404,7 @@ int CGXDLMSBaseAL::StartServer(const char* pPort)
         return ret;
     }
 
-    if ((ret = ConnectPort(pPort)) != 0)
+    if ((ret = ConnectPort(ip_address, pPort)) != 0)
     {
     	printf("Failed to open port\n");
         return ret;
@@ -901,7 +906,7 @@ int CGXDLMSBaseAL::CreateObjects()
 int CGXDLMSBaseAL::Init(const char* pPort)
 {
     int ret;
-    if ((ret = StartServer(pPort)) != 0)
+    if ((ret = StartServer(NULL, pPort)) != 0)
     {
         return ret;
     }
@@ -1427,11 +1432,11 @@ STATUS CGXDLMSUdp::Accept(SOCKET *dummy0, SOCKADDR *dummy1, SOCKLEN *dummy2)
 	return SUCCESS;
 }
 
-int CGXDLMSUdp::ConnectPort(const char* pPort)
+int CGXDLMSUdp::ConnectPort(char *ip_address, const char* pPort)
 {
 	int ret = 0;
 	int port = atoi(pPort);
-	if ((ret = Connect(port)) != 0)
+	if ((ret = Connect(ip_address,port)) != 0)
 	{
 		printf("Failed to connect port\n");
 		return ret;
@@ -1510,11 +1515,11 @@ STATUS CGXDLMSTcp::Accept(SOCKET *client_sock, SOCKADDR *client_sock_addr, SOCKL
 #endif
 }
 
-int CGXDLMSTcp::ConnectPort(const char* pPort)
+int CGXDLMSTcp::ConnectPort(char *ip_address,const char* pPort)
 {
 	int ret = 0;
 	int port = atoi(pPort);
-	if ((ret = Connect(port)) != 0)
+	if ((ret = Connect(ip_address,port)) != 0)
 	{
 		printf("Failed to connect port\n");
 		return ret;

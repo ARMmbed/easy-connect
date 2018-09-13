@@ -131,9 +131,9 @@ public:
 
     virtual STATUS CloseSocket(SOCKET socket) = 0;
 
-    virtual int ConnectPort(const char* pPort) = 0;
+    virtual int ConnectPort(char *ip_address, const char* pPort) = 0;
 
-    int StartServer(const char* pPort);
+    int StartServer(char *address,const char* pPort);
 
     int StopServer();
     int KillThread();
@@ -141,7 +141,7 @@ public:
     int Init(const char* pPort);
     int CreateObjects();
 
-    int Connect(int port);
+    int Connect(char* ip_address,int port);
 
     CGXDLMSObject* FindObject(
         DLMS_OBJECT_TYPE objectType,
@@ -271,7 +271,7 @@ public:
 
 	STATUS Accept(SOCKET *dummy0, SOCKADDR *dummy1, SOCKLEN *dummy2);
 	 
-	int ConnectPort(const char* pPort);
+	int ConnectPort(char *ip_address, const char* pPort);
 
 	STATUS CloseSocket(SOCKET dummy);
 };
@@ -295,7 +295,7 @@ public:
 
 	STATUS Accept(SOCKET *client_sock, SOCKADDR *client_sock_addr, SOCKLEN *client_sock_addr_len);
 
-	int ConnectPort(const char* pPort);
+	int ConnectPort(char *ip_address,const char* pPort);
 
 	STATUS CloseSocket(SOCKET socket);
 };
