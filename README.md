@@ -1,4 +1,75 @@
-# Easy Connect - Easily add all supported connectivity methods to your mbed OS project
+# Easy Connect - Easily add all supported connectivity methods to your Mbed OS project
+
+## Deprecation note
+
+Please note that starting with [Mbed OS 5.10](https://github.com/ARMmbed/mbed-os/tree/mbed-os-5.10) onwards the network driver can be instantiated using `get_default_instance()`. 
+
+**This repository will not be maintained going onwards, as the work will be done using the official Mbed OS repository.**
+
+### Use get_default_instance()
+
+You can use the boards default network interface as illustrated in the example below.
+
+```C
+    network_interface = NetworkInterface::get_default_instance();
+    if(network_interface == NULL) {
+        printf("ERROR: No NetworkInterface found!\n");
+        return -1;
+    }
+```
+
+More information will be available in the Mbed OS Handbook under Network interfaces and configuration. There are also [examples](https://github.com/search?q=mbed-os-example&type=Repositories) available.
+
+### Override get_default_instance()
+
+The default network interface can be overridden via `mbed_app.json` file with
+`            "target.network-default-interface-type" : "XXXX",`
+where `XXXX` matches the network stack to be used (for example WIFI).
+
+You can then define for example ESP8266 to be the new default with pins D0 and D1.
+
+```json
+    "target_overrides": {
+            "esp8266.rx"                : "D0",
+            "esp8266.tx"                : "D1",
+            "esp8266.provide-default"   : true,
+    }
+```
+
+The esp8266.provide-default activates a macro, which will override the weak `get_default_interface()` with the one [defined for ESP8266](https://github.com/ARMmbed/mbed-os/blob/mbed-os-5.10/components/wifi/esp8266-driver/ESP8266Interface.cpp#L579-L586).
+
+### Manual instantiation of a network driver
+
+Not all network drivers support yet the default instantiation so alternatively you can pull in any external network driver and  instantiate the instance of that driver directly, as is done currently by `easy-connect` itself. Add the network driver repository 1st, for example wifi-ism43362.
+
+```
+mbed add wifi-ism43362
+```
+
+After which you can instantiate the driver by 1st including its header.
+
+```C
+#include "ISM43362Interface.h"
+...
+
+ISM43362Interface wifi(PC_12, PC_11, PC_10, PE_0, PE_8, PE_1, PB_12, false);
+...
+
+int connect_status;
+
+connect_status = wifi.connect(SSID, PASSWORD,NSAPI_SECURITY_WPA_WPA2);
+if (connect_status == 0 ) {
+    // Connected succesfully
+    ...
+}
+
+```
+
+# Deprecated content
+
+Information below is for historial reference and is valid only if you are using easy-connect with Mbed OS 5.9 and earlier.
+
+## Introduction
 
 You may want to give the users of your application the possibility to switch between connectivity methods. The `NetworkInterface` API makes this easy, but you still need a mechanism for the user to chooce the method,  and perhaps throw in some `#define`'s. Easy Connect handles all of this for you. Just declare the desired connectivity method in your `mbed_app.json` file and call `easy_connect()` from your application.
 
