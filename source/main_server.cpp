@@ -65,8 +65,10 @@ static DLMS_INTERFACE_TYPE interfaceType = DLMS_INTERFACE_TYPE_WRAPPER;
 static DLMS_SERVICE_TYPE protocolType = DLMS_SERVICE_TYPE_UDP;
 static int max_pdu_size = 1024;
 static int key_number = 0;
+static char server_ip[32];
 key_pair_t keys;
-static char *port = LN_SERVER_PORT_STR;
+static char *port = NULL;
+
 static bool is_print_packets = false;
 static int conformance = DLMS_CONFORMANCE_GENERAL_PROTECTION |
 // remove until milestone 5 - GBT support
@@ -86,6 +88,9 @@ static unsigned char server_sys_title[] =
 
 static int getopt(int argc, char* argv[])
 {
+	//no specific IP use localhost
+	server_ip[0] = '\0';
+
 	for (int i = 0; i < argc; ++i)
 	{
 		if (strcmp(argv[i], "-i") == 0)
@@ -152,6 +157,16 @@ static int getopt(int argc, char* argv[])
 			{
 				max_pdu_size = atoi(argv[i + 1]);
 				printf("### configuration ###   max_pdu_size = %d\n", max_pdu_size);
+				++i;
+			}
+		}
+
+		else if (strcmp(argv[i], "-ip") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				strcpy(server_ip,argv[i + 1]);
+				printf("### configuration ###   server_ip = %s\n", server_ip);
 				++i;
 			}
 		}
@@ -399,8 +414,12 @@ static const unsigned char *get_private_key(unsigned int *size)
 
 int main_server(int argc, char* argv[])
 {
+	char* ip_address = NULL;
+	char default_port[10];
+
 	getopt(argc, argv);
 	handle_test_params();
+
 
 #ifdef __MBED__
 	uint32_t _net_iface;
@@ -450,7 +469,19 @@ int main_server(int argc, char* argv[])
 		setObj(s_set_argc, s_set_argv);
 	}
 
-	server->StartServer(port);
+
+	if(port == NULL) {
+		strcpy(default_port,LN_SERVER_PORT_STR);
+		port = default_port;
+	}
+
+
+	if(strlen(server_ip) != 0) {
+		server->StartServer(server_ip,port);
+	} else {
+		server->StartServer(NULL,port);
+	}
+
 
     return 0;
 }
