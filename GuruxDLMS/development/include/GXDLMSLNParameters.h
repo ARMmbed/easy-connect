@@ -88,6 +88,19 @@ private:
     * Invoke ID.
     */
     unsigned long m_InvokeId;
+    /**
+     * Block number acknowledged in GBT.
+     */
+    unsigned short m_BlockNumberAck;
+    /**
+     * GBT window size.
+     */
+    unsigned char m_WindowSize;
+    /**
+     * Is GBT streaming used.
+     */
+    bool m_Streaming;
+
 public:
     /**
      * Constructor.
@@ -120,6 +133,12 @@ public:
      * @return DLMS command.
      */
     DLMS_COMMAND GetCommand();
+
+    /**
+     * @param value
+     *            the command to set
+      */
+     void SetCommand(DLMS_COMMAND value);
 
     /**
      * @return Request type.
@@ -209,6 +228,44 @@ public:
     *            Management.
     */
     void SetInvokeId(unsigned long value);
+
+
+    /**
+    * @return the Block number acknowledged in GBT. This is used for GBT handling
+    *         Management.
+    */
+    unsigned short GetBlockNumberAck();
+
+    /**
+    * @param value
+    *            Set the Block number acknowledged in GBT. This is used for GBT handling.
+    */
+    void SetBlockNumberAck(unsigned short value);
+
+
+    /**
+    * @return the GBT window size. This is used for GBT handling
+    */
+    unsigned char GetWindowSize();
+
+    /**
+    * @param value
+    *            Set the GBT window size. This is used for GBT handling.
+    */
+    void SetWindowSize(unsigned short value);
+
+    /**
+    * @return the GBT Streaming parameter. This is used for GBT handling
+    */
+    bool GetStreaming();
+
+    /**
+    * @param value
+    *            Set the GBT Streaming parameter. This is used for GBT handling.
+    */
+    void SetStreaming(bool value);
+
+
 };
 
 #endif //GXDLMSLNPARAMETERS_H

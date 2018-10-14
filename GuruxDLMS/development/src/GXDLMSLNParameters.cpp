@@ -45,6 +45,8 @@ CGXDLMSLNParameters::CGXDLMSLNParameters(
 {
     m_Settings = settings;
     m_BlockIndex = settings->GetBlockIndex();
+    m_BlockNumberAck = settings->GetBlockNumberAck();
+    m_WindowSize = 1;
     m_Command = command;
     m_RequestType = commandType;
     m_AttributeDescriptor = attributeDescriptor;
@@ -64,6 +66,11 @@ CGXDLMSSettings* CGXDLMSLNParameters::GetSettings()
 DLMS_COMMAND CGXDLMSLNParameters::GetCommand()
 {
     return m_Command;
+}
+
+void SetCommand(DLMS_COMMAND value)
+{
+	m_Command = value;
 }
 
 int CGXDLMSLNParameters::GetRequestType()
@@ -142,4 +149,28 @@ unsigned long CGXDLMSLNParameters::GetInvokeId() {
 
 void CGXDLMSLNParameters::SetInvokeId(unsigned long value) {
     m_InvokeId = value;
+}
+
+unsigned short CGXDLMSLNParameters::GetBlockNumberAck() {
+    return m_InvokeId;
+}
+
+void CGXDLMSLNParameters::SetBlockNumberAck(unsigned short value) {
+    m_BlockNumberAck = value;
+}
+
+unsigned char CGXDLMSLNParameters::GetWindowSize() {
+    return m_WindowSize;
+}
+
+void CGXDLMSLNParameters::SetWindowSize(unsigned char value) {
+	m_WindowSize = value;
+}
+
+bool CGXDLMSLNParameters::GetStreaming() {
+    return m_WindowSize;
+}
+
+void CGXDLMSLNParameters::SetStreaming(bool value) {
+	m_Streaming = value;
 }
