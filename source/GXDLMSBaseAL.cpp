@@ -95,6 +95,7 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "GXDLMSPushSetup.h"
 #include "GXDLMSAssociationLogicalName.h"
 #include "GXDLMSAssociationShortName.h"
+#include "GXServerReply.h"
 
 #define MAX_PACKET_PRINT 170
 
@@ -135,7 +136,6 @@ static void PrintfBuff(CGXByteBuffer *bb)
 
 static void ListenerThread(const void* pVoid)
 {
-    CGXByteBuffer reply;
 	STATUS result = SUCCESS;
     CGXDLMSBaseAL* server = (CGXDLMSBaseAL*)pVoid;
     int ret;
@@ -204,13 +204,43 @@ static void ListenerThread(const void* pVoid)
 
 			bb.SetSize(bb.GetSize() + len);
 
-			if (server->HandleRequest(bb, reply) != 0)
-			{
-				printf("\n\nServer: Error!!!\n\n");
-				PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
-				server->SetState(false);
-				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-			}
+            CGXServerReply sr(bb);
+            do {
+    			if (server->HandleRequest(sr) != 0)
+    			{
+    				printf("\n\nServer: Error!!!\n\n");
+    				PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
+    				server->SetState(false);
+    				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+    				break;
+    			}
+
+                // Reply is null if we do not want to send any data to the
+                // client.
+                // This is done if client try to make connection with wrong
+                // server or client address.
+                if (sr.GetReply().GetData() != null) {
+    				if(server->m_print)
+    				{
+    					printf("packet sent\n");
+    					PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
+    				}
+
+    				ret = server->Write(client_sock, reply, &len);
+
+    				if (ret == -1)
+    				{
+    					//If error has occured
+    					server->Reset();
+    					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+    				}
+
+    				server->SetState(true);
+                  	sr.GetData().Clear();
+                }
+            } while (sr.IsStreaming());
+
+
 			bb.SetSize(0);
 
 			if (reply.GetSize() != 0)

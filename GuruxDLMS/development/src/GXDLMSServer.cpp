@@ -43,6 +43,7 @@
 #include "../include/GXSecure.h"
 #include "../include/GXDLMSValueEventCollection.h"
 #include "../include/GXDLMSSettings.h"
+#include "../GXServerReply.h"
 
 CGXDLMSServer::CGXDLMSServer(bool logicalNameReferencing,
     DLMS_INTERFACE_TYPE type) : m_Transaction(NULL), m_Settings(true)
@@ -2002,7 +2003,7 @@ int CGXDLMSServer::HandleReleaseRequest(CGXByteBuffer& data)
 }
 
 int CGXDLMSServer::HandleCommand(
-    CGXDLMSConnectionEventArgs& connectionInfo,
+	CGXServerReply& sr,
     DLMS_COMMAND cmd,
     CGXByteBuffer& data,
     CGXByteBuffer& reply)
@@ -2027,14 +2028,14 @@ int CGXDLMSServer::HandleCommand(
         ret = HandleReadRequest(data);
         break;
     case DLMS_COMMAND_METHOD_REQUEST:
-        ret = HandleMethodRequest(data, connectionInfo);
+        ret = HandleMethodRequest(data, sr.GetConnectionInfo());
         break;
     case DLMS_COMMAND_SNRM:
         ret = HandleSnrmRequest(m_Settings, data, m_ReplyData);
         frame = DLMS_COMMAND_UA;
         break;
     case DLMS_COMMAND_AARQ:
-        ret = HandleAarqRequest(data, connectionInfo);
+        ret = HandleAarqRequest(data, sr.GetConnectionInfo());
         break;
     case DLMS_COMMAND_RELEASE_REQUEST:
         ret = HandleReleaseRequest(data);
@@ -2042,8 +2043,15 @@ int CGXDLMSServer::HandleCommand(
     case DLMS_COMMAND_DISC:
         ret = GenerateDisconnectRequest(m_Settings, m_ReplyData);
         m_Settings.SetConnected(false);
-        Disconnected(connectionInfo);
+        Disconnected(sr.GetConnectionInfo());
         frame = DLMS_COMMAND_UA;
+        break;
+    case DLMS_COMMAND_GENERAL_BLOCK_TRANSFER:
+    	ret = handleGeneralBlockTransfer(data, sr);
+        if (!ret)
+        {
+            return ret;
+        }
         break;
     case DLMS_COMMAND_NONE:
         //Get next frame.
@@ -2069,6 +2077,90 @@ int CGXDLMSServer::HandleCommand(
         Reset();
     }
     return ret;
+}
+
+
+private boolean handleGeneralBlockTransfer(final GXByteBuffer data,
+		final GXServerReply sr) throws Exception {
+	if (transaction != null) {
+		if (transaction.getCommand() == Command.GET_REQUEST) {
+			// Get request for next data block
+			if (sr.getCount() == 0) {
+				settings.setBlockNumberAck(
+						settings.getBlockNumberAck() + 1);
+				sr.setCount(settings.getWindowSize());
+			}
+			GXDLMSLNCommandHandler.getRequestNextDataBlock(settings, 0,
+					this, data, replyData, null, true);
+			if (sr.getCount() != 0) {
+				sr.setCount(sr.getCount() - 1);
+			}
+			if (this.transaction == null) {
+				sr.setCount(0);
+			}
+		} else {
+			// BlockControl
+			short bc = data.getUInt8();
+			// Block number.
+			int blockNumber = data.getUInt16();
+			// Block number acknowledged.
+			int blockNumberAck = data.getUInt16();
+			int len = GXCommon.getObjectCount(data);
+			if (len > data.size() - data.position()) {
+				replyData.set(generateConfirmedServiceError(
+						ConfirmedServiceError.INITIATE_ERROR,
+						ServiceError.SERVICE,
+						Service.UNSUPPORTED.getValue()));
+			} else {
+				transaction.getData().set(data);
+				// Send ACK.
+				boolean igonoreAck = (bc & 0x40) != 0
+						&& (blockNumberAck * settings.getWindowSize())
+								+ 1 > blockNumber;
+				int windowSize = settings.getWindowSize();
+				int bn = settings.getBlockIndex();
+				if ((bc & 0x80) != 0) {
+					handleCommand(transaction.getCommand(),
+							transaction.getData(), sr);
+					transaction = null;
+					igonoreAck = false;
+					windowSize = 1;
+				}
+				if (igonoreAck) {
+					return false;
+				}
+				replyData.setUInt8(Command.GENERAL_BLOCK_TRANSFER);
+				replyData.setUInt8((byte) (0x80 | windowSize));
+				settings.setBlockIndex(settings.getBlockIndex() + 1);
+				replyData.setUInt16(bn);
+				replyData.setUInt16(blockNumber);
+				replyData.setUInt8(0);
+			}
+		}
+	} else {
+		// BlockControl
+		short bc = data.getUInt8();
+		// Block number.
+		int blockNumber = data.getUInt16();
+		// Block number acknowledged.
+		int blockNumberAck = data.getUInt16();
+		int len = GXCommon.getObjectCount(data);
+		if (len > data.size() - data.position()) {
+			replyData.set(generateConfirmedServiceError(
+					ConfirmedServiceError.INITIATE_ERROR,
+					ServiceError.SERVICE, Service.UNSUPPORTED.getValue()));
+		} else {
+			transaction =
+					new GXDLMSLongTransaction(null, data.getUInt8(), data);
+			replyData.setUInt8(Command.GENERAL_BLOCK_TRANSFER);
+			replyData.setUInt8((0x80 | settings.getWindowSize()));
+			replyData.setUInt16(blockNumber);
+			++blockNumberAck;
+			replyData.setUInt16(blockNumberAck);
+			replyData.setUInt8(0);
+		}
+	}
+	return true;
 }
 
 static void PrintfBuff(unsigned char *ptr, int size)
@@ -2207,6 +2299,7 @@ int CGXDLMSServer::HandleMethodRequest(
     return ret;
 }
 
+#if 0
 int CGXDLMSServer::HandleRequest(
     CGXByteBuffer& data,
     CGXByteBuffer& reply)
@@ -2216,6 +2309,8 @@ int CGXDLMSServer::HandleRequest(
         (unsigned short)(data.GetSize() - data.GetPosition()),
         reply);
 }
+
+#endif
 
 int CGXDLMSServer::HandleRequest(
     CGXDLMSConnectionEventArgs& connectionInfo,
@@ -2229,6 +2324,7 @@ int CGXDLMSServer::HandleRequest(
         reply);
 }
 
+#if 0
 int CGXDLMSServer::HandleRequest(
     unsigned char* buff,
     unsigned short size,
@@ -2237,97 +2333,110 @@ int CGXDLMSServer::HandleRequest(
     CGXDLMSConnectionEventArgs connectionInfo;
     return HandleRequest(connectionInfo, buff, size, reply);
 }
+#endif
+
 
 int CGXDLMSServer::HandleRequest(
     CGXDLMSConnectionEventArgs& connectionInfo,
     unsigned char* buff,
     unsigned short size,
-    CGXByteBuffer& reply)
+    CGXByteBuffer& reply,
+	CGXServerReply &sr)
 {
     int ret;
-    reply.Clear();
-    if (buff == NULL || size == 0)
-    {
-        return 0;
-    }
+
+    if (!sr.IsStreaming()
+             && (sr.GetData().GetData() == null || sr.GetData().GetSize() == 0)) {
+         return 0;
+     }
+
     if (!m_Initialized)
     {
         //Server not Initialized.
         return DLMS_ERROR_CODE_NOT_INITIALIZED;
     }
-    m_ReceivedData.Set(buff, size);
-    bool first = m_Settings.GetServerAddress() == 0
-        && m_Settings.GetClientAddress() == 0;
-    if ((ret = CGXDLMS::GetData(m_Settings, m_ReceivedData, m_Info)) != 0)
-    {
-        //If all data is not received yet.
-        if (ret == DLMS_ERROR_CODE_FALSE)
-        {
-            ret = 0;
-        }
-        return ret;
-    }
-    // If all data is not received yet.
-    if (!m_Info.IsComplete())
-    {
-        return 0;
-    }
-    m_ReceivedData.Clear();
 
-    if (first || m_Info.GetCommand() == DLMS_COMMAND_SNRM ||
-        (m_Settings.GetInterfaceType() == DLMS_INTERFACE_TYPE_WRAPPER && m_Info.GetCommand() == DLMS_COMMAND_AARQ))
-    {
-        // Check is data send to this server.
-        if (!IsTarget(m_Settings.GetServerAddress(), m_Settings.GetClientAddress()))
-        {
-            m_Info.Clear();
-            return 0;
-        }
+    if (!sr.isStreaming()) {
+
+    	m_ReceivedData.Set(sr.GetData().GetData(), sr.GetData().GetSize());
+		bool first = m_Settings.GetServerAddress() == 0
+			&& m_Settings.GetClientAddress() == 0;
+		if ((ret = CGXDLMS::GetData(m_Settings, m_ReceivedData, m_Info)) != 0)
+		{
+			//If all data is not received yet.
+			if (ret == DLMS_ERROR_CODE_FALSE)
+			{
+				ret = 0;
+			}
+			return ret;
+		}
+		// If all data is not received yet.
+		if (!m_Info.IsComplete())
+		{
+			return 0;
+		}
+		m_ReceivedData.Clear();
+
+		if (first || m_Info.GetCommand() == DLMS_COMMAND_SNRM ||
+			(m_Settings.GetInterfaceType() == DLMS_INTERFACE_TYPE_WRAPPER && m_Info.GetCommand() == DLMS_COMMAND_AARQ))
+		{
+			// Check is data send to this server.
+			if (!IsTarget(m_Settings.GetServerAddress(), m_Settings.GetClientAddress()))
+			{
+				m_Info.Clear();
+				return 0;
+			}
+		}
+
+		// If client want next frame.
+		if ((m_Info.GetMoreData() & DLMS_DATA_REQUEST_TYPES_FRAME) == DLMS_DATA_REQUEST_TYPES_FRAME)
+		{
+			m_DataReceived = (long)time(NULL);
+			return CGXDLMS::GetHdlcFrame(m_Settings, m_Settings.GetReceiverReady(), &m_ReplyData, reply);
+		}
+		// Update command if m_Transaction and next frame is asked.
+		if (m_Info.GetCommand() == DLMS_COMMAND_NONE)
+		{
+			if (m_Transaction != NULL)
+			{
+				m_Info.SetCommand(m_Transaction->GetCommand());
+			}
+		}
+		// Check inactivity time out.
+		if (m_Hdlc != NULL && m_Hdlc->GetInactivityTimeout() != 0)
+		{
+			if (m_Info.GetCommand() != DLMS_COMMAND_SNRM)
+			{
+				long elapsed = (long)(time(NULL) - m_DataReceived);
+				// If inactivity time out is elapsed.
+				if (elapsed >= m_Hdlc->GetInactivityTimeout())
+				{
+					Reset();
+					m_DataReceived = 0;
+					return 0;
+				}
+			}
+		}
+		else if (m_Wrapper != NULL && m_Wrapper->GetInactivityTimeout() != 0)
+		{
+			if (m_Info.GetCommand() != DLMS_COMMAND_AARQ)
+			{
+				long elapsed = (long)(time(NULL) - m_DataReceived);
+				// If inactivity time out is elapsed.
+				if (elapsed >= m_Wrapper->GetInactivityTimeout())
+				{
+					Reset();
+					m_DataReceived = 0;
+					return 0;
+				}
+			}
+		}
     }
-    // If client want next frame.
-    if ((m_Info.GetMoreData() & DLMS_DATA_REQUEST_TYPES_FRAME) == DLMS_DATA_REQUEST_TYPES_FRAME)
+    else
     {
-        m_DataReceived = (long)time(NULL);
-        return CGXDLMS::GetHdlcFrame(m_Settings, m_Settings.GetReceiverReady(), &m_ReplyData, reply);
+    	m_Info.SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
     }
-    // Update command if m_Transaction and next frame is asked.
-    if (m_Info.GetCommand() == DLMS_COMMAND_NONE)
-    {
-        if (m_Transaction != NULL)
-        {
-            m_Info.SetCommand(m_Transaction->GetCommand());
-        }
-    }
-    // Check inactivity time out.
-    if (m_Hdlc != NULL && m_Hdlc->GetInactivityTimeout() != 0)
-    {
-        if (m_Info.GetCommand() != DLMS_COMMAND_SNRM)
-        {
-            long elapsed = (long)(time(NULL) - m_DataReceived);
-            // If inactivity time out is elapsed.
-            if (elapsed >= m_Hdlc->GetInactivityTimeout())
-            {
-                Reset();
-                m_DataReceived = 0;
-                return 0;
-            }
-        }
-    }
-    else if (m_Wrapper != NULL && m_Wrapper->GetInactivityTimeout() != 0)
-    {
-        if (m_Info.GetCommand() != DLMS_COMMAND_AARQ)
-        {
-            long elapsed = (long)(time(NULL) - m_DataReceived);
-            // If inactivity time out is elapsed.
-            if (elapsed >= m_Wrapper->GetInactivityTimeout())
-            {
-                Reset();
-                m_DataReceived = 0;
-                return 0;
-            }
-        }
-    }
-    ret = HandleCommand(connectionInfo, m_Info.GetCommand(), m_Info.GetData(), reply);
+    ret = sr.setReply(HandleCommand(connectionInfo, m_Info.GetCommand(), m_Info.GetData(), sr));
     m_Info.Clear();
     m_DataReceived = (long)time(NULL);
     return ret;

@@ -1786,67 +1786,39 @@ int CGXDLMS::HandleSetResponse(
 int CGXDLMS::HandleGbt(CGXDLMSSettings& settings, CGXReplyData& data)
 {
     int ret;
-    unsigned char ch, bn, bna;
-    data.SetGbt(true);
+    unsigned char ch, bc;
+    unsigned short bn, bna;
+
     int index = data.GetData().GetPosition() - 1;
-    if ((ret = data.GetData().GetUInt8(&ch)) != 0)
-    {
-        return ret;
-    }
+    data.SetWindowSize(settings.GetWindowSize());
+    // BlockControl
+    if ((ret = data.GetData().GetUInt8(&bc)) != 0)
+     {
+         return ret;
+     }
     // Is streaming active.
-    //TODO: bool streaming = (ch & 0x40) == 1;
-    unsigned char window = (ch & 0x3F);
-    // Block number.
-    if ((ret = data.GetData().GetUInt8(&bn)) != 0)
+    data.SetStreaming((bc & 0x40) != 0);
+     // GBT Window size.
+     unsigned char windowSize = (unsigned char) (bc & 0x3F);
+     // Block number.
+     if ((ret = data.GetData().GetUInt16(&bn)) != 0)
     {
         return ret;
     }
-    // Block number acknowledged.
-    if ((ret = data.GetData().GetUInt8(&bna)) != 0)
+     data.SetBlockNumber(bn);
+    if ((ret = data.GetData().GetUInt16(&bna)) != 0)
     {
         return ret;
     }
-    // Get APU tag.
-    if ((ret = data.GetData().GetUInt8(&ch)) != 0)
-    {
-        return ret;
-    }
-    if (ch != 0)
-    {
-        //Invalid APU.
-        return DLMS_ERROR_CODE_INVALID_TAG;
-    }
-    // Get Addl tag.
-    if ((ret = data.GetData().GetUInt8(&ch)) != 0)
-    {
-        return ret;
-    }
-    if (ch != 0)
-    {
-        //Invalid APU.
-        return DLMS_ERROR_CODE_INVALID_TAG;
-    }
-    if ((ret = data.GetData().GetUInt8(&ch)) != 0)
-    {
-        return ret;
-    }
-    if (ch != 0)
-    {
-        return DLMS_ERROR_CODE_INVALID_TAG;
-    }
+
+    data.SetBlockNumberAck(bna);
+    settings.SetBlockNumberAck(data.GetBlockNumber());
     data.SetCommand(DLMS_COMMAND_NONE);
-    if (window != 0)
+    int len = GXHelpers.GetObjectCount(data.GetData());
+    if (len > data.GetData().GetSize() - data.GetData().GetPosition())
     {
-        unsigned long len;
-        if ((ret = GXHelpers::GetObjectCount(data.GetData(), len)) != 0)
-        {
-            return ret;
-        }
-        if (len != (unsigned long)(data.GetData().GetSize() - data.GetData().GetPosition()))
-        {
-            data.SetComplete(false);
-            return 0;
-        }
+        data.SetComplete(false);
+        return DLMS_ERROR_CODE_INVALID_TAG;
     }
 
     if ((ret = GetDataFromBlock(data.GetData(), index)) != 0 ||
@@ -1855,23 +1827,29 @@ int CGXDLMS::HandleGbt(CGXDLMSSettings& settings, CGXReplyData& data)
         return ret;
     }
     // Is Last block,
-    if ((ch & 0x80) == 0)
+    if ((bc & 0x80) == 0)
     {
         data.SetMoreData((DLMS_DATA_REQUEST_TYPES)(data.GetMoreData() | DLMS_DATA_REQUEST_TYPES_BLOCK));
     }
     else
     {
         data.SetMoreData((DLMS_DATA_REQUEST_TYPES)(data.GetMoreData() & ~DLMS_DATA_REQUEST_TYPES_BLOCK));
-    }
-    // Get data if all data is read or we want to peek data.
-    if (data.GetData().GetPosition() != data.GetData().GetSize()
-        && (data.GetCommand() == DLMS_COMMAND_READ_RESPONSE
-            || data.GetCommand() == DLMS_COMMAND_GET_RESPONSE)
-        && (data.GetMoreData() == DLMS_DATA_REQUEST_TYPES_NONE
-            || data.GetPeek()))
-    {
-        data.GetData().SetPosition(0);
-        ret = CGXDLMS::GetValueFromData(settings, data);
+        if (data.GetData().GetSize()() != 0)
+        {
+             data.GetData().SetPosition(0);
+             GetPdu(settings, data);
+         }
+         // Get data if all data is read or we want to peek data.
+         if (data.GetData().GetPosition() != data.GetData().GetSize()
+                 && (data.GetCommand() == DLMS_COMMAND_READ_RESPONSE
+                         || data.GetCommand() == DLMS_COMMAND_GET_RESPONSE)
+                 && (data.GetMoreData() == DLMS_DATA_REQUEST_TYPES_NONE
+                         || data.GetPeek()))
+         {
+             data.GetData().SetPosition(0);
+             GetValueFromData(settings, data);
+         }
+
     }
     return ret;
 }
@@ -1944,7 +1922,7 @@ int CGXDLMS::GetPdu(
     DLMS_COMMAND cmd = data.GetCommand();
 
 	// If header is not read yet or GBT message.
-    if (cmd == DLMS_COMMAND_NONE || data.GetGbt())
+    if (cmd == DLMS_COMMAND_NONE)
     {
         // If PDU is missing.
         if (data.GetData().GetSize() - data.GetData().GetPosition() == 0)
@@ -1993,7 +1971,12 @@ int CGXDLMS::GetPdu(
             ret = HandleMethodResponse(settings, data);
             break;
         case DLMS_COMMAND_GENERAL_BLOCK_TRANSFER:
-            ret = HandleGbt(settings, data);
+            if ((!settings.IsServer()
+                    && (data.GetMoreData().GetValue()
+                            & DLMS_DATA_REQUEST_TYPES_FRAME) == 0)) {
+            	ret = HandleGbt(settings, data);
+            }
+
             break;
         case DLMS_COMMAND_AARQ:
         case DLMS_COMMAND_AARE:
@@ -2121,12 +2104,28 @@ int CGXDLMS::GetPdu(
             {
                 data.GetData().SetPosition(1);
             }
-            settings.ResetBlockIndex();
+
+            //TODO: below line probably need to be removed
+            //settings.ResetBlockIndex();
         }
         // Get command if operating as a server.
+#if 0
         if (settings.IsServer())
         {
-            // Ciphered messages are handled after whole PDU is received.
+#endif
+        if (cmd == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
+        {
+        	if (!data.IsMoreData())
+        	{
+        		HandleGbt(settings, data);
+        	}
+
+        	data.SetCommand(DLMS_COMMAND_NONE);
+        }
+        else if (settings.IsServer())
+        {
+            // Get command if operating as a server.
+        	// Ciphered messages are handled after whole PDU is received.
             switch (cmd)
             {
             case DLMS_COMMAND_GLO_READ_REQUEST:
@@ -2172,8 +2171,9 @@ int CGXDLMS::GetPdu(
 
     // Get data if all data is read or we want to peek data.
     if (data.GetData().GetPosition() != data.GetData().GetSize()
-        && (cmd == DLMS_COMMAND_READ_RESPONSE || cmd == DLMS_COMMAND_GET_RESPONSE)
-        && (data.GetMoreData() == DLMS_DATA_REQUEST_TYPES_NONE
+        && (cmd == DLMS_COMMAND_READ_RESPONSE || cmd == DLMS_COMMAND_GET_RESPONSE ||
+        		cmd == DLMS_COMMAND_METHOD_RESPONSE ||cmd == DLMS_COMMAND_DATA_NOTIFICATION) &&
+				(data.GetMoreData() == DLMS_DATA_REQUEST_TYPES_NONE
             || data.GetPeek()))
     {
         ret = GetValueFromData(settings, data);

@@ -608,5 +608,16 @@ public:
     static int  GetServerAddress(unsigned long logicalAddress,
         unsigned long physicalAddress,
         unsigned char addressSize = 0);
+
+    /**
+     * @return GBT window size.
+     */
+    unsigned char GetWindowSize();
+
+     /**
+     * @param value
+     *            GBT window size.
+     */
+    void SetWindowSize(unsigned char value);
 };
 #endif //GXDLMSCLIENT_H

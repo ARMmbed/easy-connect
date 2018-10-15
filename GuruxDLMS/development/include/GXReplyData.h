@@ -98,14 +98,27 @@ private:
     unsigned short m_CipherIndex;
 
     /**
-    * Is received message General Block Transfer message.
-    */
-    bool m_Gbt;
-
-    /**
      * Data notification date time.
      */
     struct tm* m_Time;
+
+    /**
+     * GBT block number.
+     */
+    unsigned short m_BlockNumber;
+    /**
+     * GBT block number ACK.
+     */
+    unsigned short m_BlockNumberAck;
+    /**
+     * Is GBT streaming in use.
+     */
+    bool m_Streaming;
+    /**
+     * GBT Window size. This is for internal use.
+     */
+    unsigned char m_WindowSize;
+
 
 public:
     /**
@@ -250,18 +263,7 @@ public:
      */
     void SetCipherIndex(unsigned short value);
 
-    /**
-     * @return Is received message General Block Transfer message.
-     */
-    bool GetGbt();
-
-    /**
-     * @param Is
-     *            received message General Block Transfer message.
-     */
-    void SetGbt(bool value);
-
-    /**
+     /**
      * @return Data notification date time.
      */
     struct tm* GetTime();
@@ -272,6 +274,56 @@ public:
      *            Data notification date time.
      */
     void SetTime(struct tm* value);
+
+
+    /**
+     * @return GBT block number.
+     */
+    unsigned short GetBlockNumber();
+
+     /**
+     * @param value
+     *            GBT block number.
+     */
+    void SetBlockNumber(unsigned short value);
+
+     /**
+     * @return GBT block number ACK.
+     */
+    unsigned short int GetBlockNumberAck();
+
+     /**
+     * @param value
+     *            GBT block number ACK.
+     */
+    void SetBlockNumberAck(unsigned short value);
+
+     /**
+     * @return Is GBT streaming in use.
+     */
+    bool GetStreaming();
+
+     /**
+     * @param value
+     *            Is GBT streaming in use.
+     */
+     void SetStreaming(bool value);
+
+     /**
+     * @return GBT Window size. This is for internal use.
+     */
+     unsigned char GetWindowSize();
+
+     /**
+     * @param value
+     *            GBT Window size. This is for internal use.
+     */
+    void SetWindowSize(nsigned char value);
+
+     /**
+     * @return Is GBT streaming.
+     */
+    bool IsStreaming();
 };
 
 #endif //GXREPLYDATA_H
