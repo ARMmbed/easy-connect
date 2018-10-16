@@ -252,7 +252,7 @@ public:
     * @param value
     *            Set the GBT window size. This is used for GBT handling.
     */
-    void SetWindowSize(unsigned short value);
+    void SetWindowSize(unsigned char value);
 
     /**
     * @return the GBT Streaming parameter. This is used for GBT handling

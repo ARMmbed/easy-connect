@@ -542,7 +542,7 @@ void MultipleBlocks(
 {
     // Check is all data fit to one message if data is given.
     int len = 0;
-    if (p.GetData() != null) {
+    if (p.GetData() != NULL) {
         len = p.GetData()->GetSize() - p.GetData()->GetPosition();
     }
 
@@ -761,9 +761,9 @@ int CGXDLMS::GetLNPdu(
 			}
 
 			// Block size.
-			if (p.GetData() != null)
+			if (p.GetData() != NULL)
 			{
-				len = p.GetData()->GetSize()() - p.GetData()->GetPosition()();
+				len = p.GetData()->GetSize() - p.GetData()->GetPosition();
 			}
 			else
 			{
@@ -813,7 +813,7 @@ int CGXDLMS::GetLNPdu(
 				{
 					if (7 + len + reply.GetSize() > p.GetSettings()->GetMaxPduSize())
 					{
-						len = p.GetSettings()->getMaxPduSize() - reply.size() - 7;
+						len = p.GetSettings()->GetMaxPduSize() - reply.GetSize() - 7;
 					}
 				}
 				else if (p.GetCommand() != DLMS_COMMAND_GET_REQUEST && len
@@ -878,7 +878,7 @@ int CGXDLMS::GetLNPdu(
     		p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_PROTECTION))
     {
         CGXByteBuffer bb;
-        bb.Set(reply);
+        bb.Set(reply.GetData(),reply.GetSize());
         reply.Clear();
         reply.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
         int value = 0;
@@ -891,7 +891,7 @@ int CGXDLMS::GetLNPdu(
         value |= p.GetWindowSize();
         reply.SetUInt8(value);
         // Set block number sent.
-        reply.setUInt16(p.GetBlockIndex());
+        reply.SetUInt16(p.GetBlockIndex());
         p.SetBlockIndex(p.GetBlockIndex() + 1);
         if (p.GetCommand() != DLMS_COMMAND_DATA_NOTIFICATION &&
         		p.GetBlockNumberAck() != 0)
@@ -908,7 +908,7 @@ int CGXDLMS::GetLNPdu(
 
         // Add data length.
         GXHelpers::SetObjectCount(bb.GetSize(), reply);
-        reply.Set(bb);
+        reply.Set(bb.GetData(),bb.GetSize());
         if (p.GetCommand() != DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) {
             p.SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
             p.SetBlockNumberAck(p.GetBlockNumberAck()+1);
@@ -1786,10 +1786,11 @@ int CGXDLMS::HandleSetResponse(
 int CGXDLMS::HandleGbt(CGXDLMSSettings& settings, CGXReplyData& data)
 {
     int ret;
-    unsigned char ch, bc;
+    unsigned char bc;
     unsigned short bn, bna;
 
     int index = data.GetData().GetPosition() - 1;
+    // GBT Window size.
     data.SetWindowSize(settings.GetWindowSize());
     // BlockControl
     if ((ret = data.GetData().GetUInt8(&bc)) != 0)
@@ -1798,8 +1799,6 @@ int CGXDLMS::HandleGbt(CGXDLMSSettings& settings, CGXReplyData& data)
      }
     // Is streaming active.
     data.SetStreaming((bc & 0x40) != 0);
-     // GBT Window size.
-     unsigned char windowSize = (unsigned char) (bc & 0x3F);
      // Block number.
      if ((ret = data.GetData().GetUInt16(&bn)) != 0)
     {
@@ -1814,7 +1813,8 @@ int CGXDLMS::HandleGbt(CGXDLMSSettings& settings, CGXReplyData& data)
     data.SetBlockNumberAck(bna);
     settings.SetBlockNumberAck(data.GetBlockNumber());
     data.SetCommand(DLMS_COMMAND_NONE);
-    int len = GXHelpers.GetObjectCount(data.GetData());
+    unsigned long len;
+    GXHelpers::GetObjectCount(data.GetData(),len);
     if (len > data.GetData().GetSize() - data.GetData().GetPosition())
     {
         data.SetComplete(false);
@@ -1834,7 +1834,7 @@ int CGXDLMS::HandleGbt(CGXDLMSSettings& settings, CGXReplyData& data)
     else
     {
         data.SetMoreData((DLMS_DATA_REQUEST_TYPES)(data.GetMoreData() & ~DLMS_DATA_REQUEST_TYPES_BLOCK));
-        if (data.GetData().GetSize()() != 0)
+        if (data.GetData().GetSize() != 0)
         {
              data.GetData().SetPosition(0);
              GetPdu(settings, data);
@@ -1972,7 +1972,7 @@ int CGXDLMS::GetPdu(
             break;
         case DLMS_COMMAND_GENERAL_BLOCK_TRANSFER:
             if ((!settings.IsServer()
-                    && (data.GetMoreData().GetValue()
+                    && (data.GetMoreData()
                             & DLMS_DATA_REQUEST_TYPES_FRAME) == 0)) {
             	ret = HandleGbt(settings, data);
             }
@@ -2751,7 +2751,7 @@ int CGXDLMS::GetValueFromData(CGXDLMSSettings& settings, CGXReplyData& reply)
     else if (info.IsCompleate()
         && reply.GetCommand() == DLMS_COMMAND_DATA_NOTIFICATION)
     {
-        // If last item is null. This is a special case.
+        // If last item is NULL. This is a special case.
         reply.SetReadPosition(reply.GetData().GetPosition());
     }
     reply.GetData().SetPosition(index);

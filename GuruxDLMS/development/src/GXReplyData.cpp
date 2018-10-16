@@ -232,7 +232,7 @@ void CGXReplyData::SetTime(struct tm* value)
 }
 
 
-int CGXReplyData::GetBlockNumber()
+unsigned short CGXReplyData::GetBlockNumber()
 {
 	return m_BlockNumber;
 }
@@ -242,7 +242,7 @@ void CGXReplyData::SetBlockNumber(unsigned short value)
 	m_BlockNumber = value;
 }
 
-int CGXReplyData::GetBlockNumberAck()
+unsigned short CGXReplyData::GetBlockNumberAck()
 {
 	return m_BlockNumberAck;
 }
@@ -265,7 +265,7 @@ void CGXReplyData::SetStreaming(bool value)
 
 unsigned char CGXReplyData::GetWindowSize()
 {
-	return m_SindowSize;
+	return m_WindowSize;
 }
 
 void CGXReplyData::SetWindowSize(unsigned char  value)

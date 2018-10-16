@@ -1200,7 +1200,7 @@ int CGXDLMSClient::Write(
                 DLMS_COMMAND_SET_REQUEST, DLMS_SET_COMMAND_TYPE_NORMAL,
                 &bb, &data, 0xff);
             p.SetBlockIndex(m_Settings.GetBlockIndex());
-            p.SetBlockNumberAck(m_Settings.GetBlockNumberAck())
+            p.SetBlockNumberAck(m_Settings.GetBlockNumberAck());
             p.SetStreaming(false);
 
             ret = CGXDLMS::GetLnMessages(p, reply);

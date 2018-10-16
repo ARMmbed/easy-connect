@@ -219,14 +219,14 @@ static void ListenerThread(const void* pVoid)
                 // client.
                 // This is done if client try to make connection with wrong
                 // server or client address.
-                if (sr.GetReply().GetData() != null) {
+                if (sr.GetReply().GetData() != NULL) {
     				if(server->m_print)
     				{
     					printf("packet sent\n");
     					PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
     				}
 
-    				ret = server->Write(client_sock, reply, &len);
+    				ret = server->Write(client_sock, sr.GetReply(), &len);
 
     				if (ret == -1)
     				{
@@ -243,15 +243,15 @@ static void ListenerThread(const void* pVoid)
 
 			bb.SetSize(0);
 
-			if (reply.GetSize() != 0)
+			if (sr.GetReply().GetSize() != 0)
 			{
 				if(server->m_print)
 				{
 					printf("packet sent\n");
-					PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+					PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
 				}
 
-				ret = server->Write(client_sock, reply, &len);
+				ret = server->Write(client_sock, sr.GetReply(), &len);
 
 				if (ret == -1)
 				{
@@ -261,7 +261,7 @@ static void ListenerThread(const void* pVoid)
 				}
 
 				server->SetState(true);
-				reply.Clear();
+				sr.GetReply().Clear();
 			}
 #ifdef __linux__
 			sleep(1);

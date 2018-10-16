@@ -43,7 +43,7 @@
 #include "../include/GXSecure.h"
 #include "../include/GXDLMSValueEventCollection.h"
 #include "../include/GXDLMSSettings.h"
-#include "../GXServerReply.h"
+#include "../include/GXServerReply.h"
 
 CGXDLMSServer::CGXDLMSServer(bool logicalNameReferencing,
     DLMS_INTERFACE_TYPE type) : m_Transaction(NULL), m_Settings(true)
@@ -1143,27 +1143,45 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
     return ret;
 }
 
-int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char invokeID)
+int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char invokeID, bool streaming)
 {
     CGXByteBuffer bb;
     int ret;
     unsigned long index;
     // Get block index.
-    if ((ret = data.GetUInt32(&index)) != 0)
+    if (!streaming)
     {
-        return ret;
+		if ((ret = data.GetUInt32(&index)) != 0)
+		{
+			return ret;
+		}
+		if (index != m_Settings.GetBlockIndex())
+		{
+			CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2,
+				0, &bb,
+				DLMS_ERROR_CODE_DATA_BLOCK_NUMBER_INVALID);
+			return CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
+		}
     }
-    if (index != m_Settings.GetBlockIndex())
-    {
-        CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2,
-            NULL, &bb,
-            DLMS_ERROR_CODE_DATA_BLOCK_NUMBER_INVALID);
-        return CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
-    }
+
+    m_Settings.IncreaseBlockIndex();
+	CGXDLMSLNParameters p(&m_Settings, invokeID,
+		 streaming ? DLMS_COMMAND_GENERAL_BLOCK_TRANSFER
+				 : DLMS_COMMAND_GET_RESPONSE,
+		 2, 0, &bb, DLMS_ERROR_CODE_OK);
+	p.SetStreaming(streaming);
+	p.SetWindowSize(m_Settings.GetWindowSize());
+
+	// If transaction is not in progress.
+	if (m_Transaction == NULL)
+	{
+		p.SetStatus(DLMS_ERROR_CODE_NO_LONG_GET_OR_READ_IN_PROGRESS);
+	}
     else
     {
+
         m_Settings.IncreaseBlockIndex();
-        CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2, NULL, &bb, DLMS_ERROR_CODE_OK);
+        CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2, 0, &bb, DLMS_ERROR_CODE_OK);
         // If m_Transaction is not in progress.
         if (m_Transaction == NULL)
         {
@@ -1172,53 +1190,79 @@ int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char in
         else
         {
             bb.Set(&m_Transaction->GetData());
-            unsigned char moreData = m_Settings.GetIndex() != m_Settings.GetCount();
-            if (moreData)
-            {
-                // If there is multiple blocks on the buffer.
-                // This might happen when Max PDU size is very small.
-                if (bb.GetSize() < m_Settings.GetMaxPduSize())
-                {
-                    CGXDLMSVariant value;
-                    for (std::vector<CGXDLMSValueEventArg*>::iterator arg = m_Transaction->GetTargets().begin();
-                        arg != m_Transaction->GetTargets().end(); ++arg)
-                    {
-                        PreRead(m_Transaction->GetTargets());
-                        if (!(*arg)->GetHandled())
-                        {
-                            if ((ret = (*arg)->GetTarget()->GetValue(m_Settings, *(*arg))) != 0)
-                            {
-                                return ret;
-                            }
-                            std::vector<CGXDLMSValueEventArg*> arr;
-                            arr.push_back(*arg);
-                            PostRead(arr);
-                        }
-                        value = (*arg)->GetValue();
-                        // Add data.
-                        if ((*arg)->IsByteArray() && value.vt == DLMS_DATA_TYPE_OCTET_STRING)
-                        {
-                            // If byte array is added do not add type.
-                            bb.Set(value.byteArr, value.GetSize());
-                        }
-                        else if ((ret = CGXDLMS::AppendData((*arg)->GetTarget(), (*arg)->GetIndex(), bb, value)) != 0)
-                        {
-                            return DLMS_ERROR_CODE_HARDWARE_FAULT;
-                        }
-                    }
-                }
-            }
-            p.SetMultipleBlocks(true);
-            ret = CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
-            moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+            bool moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+			if (moreData) {
+			 // If there is multiple blocks on the buffer.
+			 // This might happen when Max PDU size is very small.
+			 if (bb.GetSize() < m_Settings.GetMaxPduSize())
+			 {
+
+                 CGXDLMSVariant value;
+                  for (std::vector<CGXDLMSValueEventArg*>::iterator arg = m_Transaction->GetTargets().begin();
+                      arg != m_Transaction->GetTargets().end(); ++arg)
+                  {
+                      PreRead(m_Transaction->GetTargets());
+                      if (!(*arg)->GetHandled())
+                      {
+                          if ((ret = (*arg)->GetTarget()->GetValue(m_Settings, *(*arg))) != 0)
+                          {
+                              return ret;
+                          }
+                          std::vector<CGXDLMSValueEventArg*> arr;
+                          arr.push_back(*arg);
+                          PostRead(arr);
+                      }
+                      value = (*arg)->GetValue();
+                      // Add data.
+                      if ((*arg)->IsByteArray() && value.vt == DLMS_DATA_TYPE_OCTET_STRING)
+                      {
+                          // If byte array is added do not add type.
+                          bb.Set(value.byteArr, value.GetSize());
+                      }
+                      else if ((ret = CGXDLMS::AppendData((*arg)->GetTarget(), (*arg)->GetIndex(), bb, value)) != 0)
+                      {
+                          return DLMS_ERROR_CODE_HARDWARE_FAULT;
+                      }
+
+                  }
+
+#if 0 //TODO: we might need to change above for loop code with below lines
+				 Object value;
+				 for (ValueEventArgs arg : server.getTransaction()
+						 .getTargets()) {
+					 arg.setInvokeId(p.getInvokeId());
+					 server.notifyRead(new ValueEventArgs[] { arg });
+					 if (arg.getHandled()) {
+						 value = arg.getValue();
+					 } else {
+						 value = arg.getTarget().getValue(settings, arg);
+					 }
+					 p.setInvokeId(arg.getInvokeId());
+					 // Add data.
+					 if (arg.isByteArray()) {
+						 bb.set((byte[]) value);
+					 } else {
+						 GXDLMS.appendData(arg.getTarget(), arg.getIndex(),
+								 bb, value);
+					 }
+				 }
+#endif
+				 moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+			 }
+
+
+			}
+
+			p.SetMultipleBlocks(true);
+			CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
             if (moreData || bb.GetSize() - bb.GetPosition() != 0)
             {
-                m_Transaction->SetData(bb);
+            	m_Transaction->SetData(bb);
             }
             else
             {
-                delete m_Transaction;
-                m_Transaction = NULL;
+            	delete m_Transaction;
+            	m_Transaction = NULL;
                 m_Settings.ResetBlockIndex();
             }
         }
@@ -1365,7 +1409,7 @@ int CGXDLMSServer::HandleGetRequest(
     else if (type == DLMS_GET_COMMAND_TYPE_NEXT_DATA_BLOCK)
     {
         // Get request for next data block
-        ret = GetRequestNextDataBlock(data, invokeID);
+        ret = GetRequestNextDataBlock(data, invokeID,false);
     }
     else if (type == DLMS_GET_COMMAND_TYPE_WITH_LIST)
     {
@@ -2003,10 +2047,10 @@ int CGXDLMSServer::HandleReleaseRequest(CGXByteBuffer& data)
 }
 
 int CGXDLMSServer::HandleCommand(
-	CGXServerReply& sr,
     DLMS_COMMAND cmd,
     CGXByteBuffer& data,
-    CGXByteBuffer& reply)
+	CGXByteBuffer& reply,
+	CGXServerReply& sr)
 {
     int ret = 0;
     unsigned char frame = 0;
@@ -2047,7 +2091,7 @@ int CGXDLMSServer::HandleCommand(
         frame = DLMS_COMMAND_UA;
         break;
     case DLMS_COMMAND_GENERAL_BLOCK_TRANSFER:
-    	ret = handleGeneralBlockTransfer(data, sr);
+    	ret = HandleGeneralBlockTransfer(data, sr);
         if (!ret)
         {
             return ret;
@@ -2080,87 +2124,134 @@ int CGXDLMSServer::HandleCommand(
 }
 
 
-private boolean handleGeneralBlockTransfer(final GXByteBuffer data,
-		final GXServerReply sr) throws Exception {
-	if (transaction != null) {
-		if (transaction.getCommand() == Command.GET_REQUEST) {
+int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerReply& sr)
+{
+	int ret;
+
+	if (m_Transaction != NULL) {
+		if (m_Transaction->GetCommand() == DLMS_COMMAND_GET_REQUEST) {
 			// Get request for next data block
-			if (sr.getCount() == 0) {
-				settings.setBlockNumberAck(
-						settings.getBlockNumberAck() + 1);
-				sr.setCount(settings.getWindowSize());
+			if (sr.GetCount() == 0) {
+				m_Settings.SetBlockNumberAck(
+						m_Settings.GetBlockNumberAck() + 1);
+				sr.SetCount(m_Settings.GetWindowSize());
 			}
-			GXDLMSLNCommandHandler.getRequestNextDataBlock(settings, 0,
-					this, data, replyData, null, true);
-			if (sr.getCount() != 0) {
-				sr.setCount(sr.getCount() - 1);
+
+			GetRequestNextDataBlock(data, 0, true);
+			if (sr.GetCount() != 0) {
+				sr.SetCount(sr.GetCount() - 1);
 			}
-			if (this.transaction == null) {
-				sr.setCount(0);
+			if (m_Transaction == NULL) {
+				sr.SetCount(0);
 			}
 		} else {
 			// BlockControl
-			short bc = data.getUInt8();
+			unsigned char bc;
+		    if ((ret = data.GetUInt8(&bc)) != 0)
+		    {
+		        return ret;
+		    }
+
 			// Block number.
-			int blockNumber = data.getUInt16();
+			unsigned short blockNumber;
+		    if ((ret = data.GetUInt16(&blockNumber)) != 0)
+		    {
+		        return ret;
+		    }
+
 			// Block number acknowledged.
-			int blockNumberAck = data.getUInt16();
-			int len = GXCommon.getObjectCount(data);
-			if (len > data.size() - data.position()) {
-				replyData.set(generateConfirmedServiceError(
-						ConfirmedServiceError.INITIATE_ERROR,
-						ServiceError.SERVICE,
-						Service.UNSUPPORTED.getValue()));
-			} else {
-				transaction.getData().set(data);
+			unsigned short blockNumberAck;
+		    if ((ret = data.GetUInt16(&blockNumberAck)) != 0)
+		    {
+		        return ret;
+		    }
+
+			unsigned long len;
+			GXHelpers::GetObjectCount(data,len);
+			if (len > data.GetSize() - data.GetPosition())
+			{
+				GenerateConfirmedServiceError(
+						DLMS_CONFIRMED_SERVICE_ERROR_INITIATE_ERROR,
+						DLMS_SERVICE_ERROR_SERVICE,
+						DLMS_SERVICE_UNSUPPORTED,m_ReplyData);
+			}
+			else
+			{
+				m_Transaction->GetData().Set(data.GetData(),data.GetSize());
 				// Send ACK.
-				boolean igonoreAck = (bc & 0x40) != 0
-						&& (blockNumberAck * settings.getWindowSize())
+				bool igonoreAck = (bc & 0x40) != 0
+						&& (blockNumberAck * m_Settings.GetWindowSize())
 								+ 1 > blockNumber;
-				int windowSize = settings.getWindowSize();
-				int bn = settings.getBlockIndex();
+				int windowSize = m_Settings.GetWindowSize();
+				int bn = m_Settings.GetBlockIndex();
 				if ((bc & 0x80) != 0) {
-					handleCommand(transaction.getCommand(),
-							transaction.getData(), sr);
-					transaction = null;
+					HandleCommand(m_Transaction->GetCommand(),
+							m_Transaction->GetData(),sr.GetReply(), sr);
+					m_Transaction = NULL;
 					igonoreAck = false;
 					windowSize = 1;
 				}
 				if (igonoreAck) {
 					return false;
 				}
-				replyData.setUInt8(Command.GENERAL_BLOCK_TRANSFER);
-				replyData.setUInt8((byte) (0x80 | windowSize));
-				settings.setBlockIndex(settings.getBlockIndex() + 1);
-				replyData.setUInt16(bn);
-				replyData.setUInt16(blockNumber);
-				replyData.setUInt8(0);
+				m_ReplyData.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+				m_ReplyData.SetUInt8((unsigned char) (0x80 | windowSize));
+				m_Settings.SetBlockIndex(m_Settings.GetBlockIndex() + 1);
+				m_ReplyData.SetUInt16(bn);
+				m_ReplyData.SetUInt16(blockNumber);
+				m_ReplyData.SetUInt8(0);
 			}
 		}
 	} else {
 		// BlockControl
-		short bc = data.getUInt8();
+		unsigned char bc;
+	    if ((ret = data.GetUInt8(&bc)) != 0)
+	    {
+	        return ret;
+	    }
+
 		// Block number.
-		int blockNumber = data.getUInt16();
+		unsigned short blockNumber;
+	    if ((ret = data.GetUInt16(&blockNumber)) != 0)
+	    {
+	        return ret;
+	    }
+
 		// Block number acknowledged.
-		int blockNumberAck = data.getUInt16();
-		int len = GXCommon.getObjectCount(data);
-		if (len > data.size() - data.position()) {
-			replyData.set(generateConfirmedServiceError(
-					ConfirmedServiceError.INITIATE_ERROR,
-					ServiceError.SERVICE, Service.UNSUPPORTED.getValue()));
-		} else {
-			transaction =
-					new GXDLMSLongTransaction(null, data.getUInt8(), data);
-			replyData.setUInt8(Command.GENERAL_BLOCK_TRANSFER);
-			replyData.setUInt8((0x80 | settings.getWindowSize()));
-			replyData.setUInt16(blockNumber);
+		unsigned short blockNumberAck;
+	    if ((ret = data.GetUInt16(&blockNumberAck)) != 0)
+	    {
+	        return ret;
+	    }
+
+		unsigned long len;
+		GXHelpers::GetObjectCount(data,len);
+		if (len > data.GetSize() - data.GetPosition())
+		{
+			GenerateConfirmedServiceError(
+					DLMS_CONFIRMED_SERVICE_ERROR_INITIATE_ERROR,
+					DLMS_SERVICE_ERROR_SERVICE,
+					DLMS_SERVICE_UNSUPPORTED,m_ReplyData);
+		}
+		else
+		{
+			unsigned char ch;
+		    if ((ret = data.GetUInt8(&bc)) != 0)
+		    {
+		        return ret;
+		    }
+		    CGXDLMSValueEventCollection tmp;
+			m_Transaction =
+					new CGXDLMSLongTransaction(tmp, (DLMS_COMMAND)ch, data);
+			m_ReplyData.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+			m_ReplyData.SetUInt8((0x80 | m_Settings.GetWindowSize()));
+			m_ReplyData.SetUInt16(blockNumber);
 			++blockNumberAck;
-			replyData.setUInt16(blockNumberAck);
-			replyData.setUInt8(0);
+			m_ReplyData.SetUInt16(blockNumberAck);
+			m_ReplyData.SetUInt8(0);
 		}
 	}
-	return true;
+	return 0;
 }
 
 static void PrintfBuff(unsigned char *ptr, int size)
@@ -2317,11 +2408,12 @@ int CGXDLMSServer::HandleRequest(
     CGXByteBuffer& data,
     CGXByteBuffer& reply)
 {
-    return HandleRequest(
-        connectionInfo,
-        data.GetData(),
-        (unsigned short)(data.GetSize() - data.GetPosition()),
-        reply);
+	int ret;
+    CGXServerReply sr(data);
+    sr.SetConnectionInfo(connectionInfo);
+    ret = HandleRequest(sr);
+    reply = sr.GetReply();
+    return ret;
 }
 
 #if 0
@@ -2336,17 +2428,12 @@ int CGXDLMSServer::HandleRequest(
 #endif
 
 
-int CGXDLMSServer::HandleRequest(
-    CGXDLMSConnectionEventArgs& connectionInfo,
-    unsigned char* buff,
-    unsigned short size,
-    CGXByteBuffer& reply,
-	CGXServerReply &sr)
+int CGXDLMSServer::HandleRequest(CGXServerReply &sr)
 {
     int ret;
 
     if (!sr.IsStreaming()
-             && (sr.GetData().GetData() == null || sr.GetData().GetSize() == 0)) {
+             && (sr.GetData().GetData() == NULL || sr.GetData().GetSize() == 0)) {
          return 0;
      }
 
@@ -2356,7 +2443,7 @@ int CGXDLMSServer::HandleRequest(
         return DLMS_ERROR_CODE_NOT_INITIALIZED;
     }
 
-    if (!sr.isStreaming()) {
+    if (!sr.IsStreaming()) {
 
     	m_ReceivedData.Set(sr.GetData().GetData(), sr.GetData().GetSize());
 		bool first = m_Settings.GetServerAddress() == 0
@@ -2392,7 +2479,7 @@ int CGXDLMSServer::HandleRequest(
 		if ((m_Info.GetMoreData() & DLMS_DATA_REQUEST_TYPES_FRAME) == DLMS_DATA_REQUEST_TYPES_FRAME)
 		{
 			m_DataReceived = (long)time(NULL);
-			return CGXDLMS::GetHdlcFrame(m_Settings, m_Settings.GetReceiverReady(), &m_ReplyData, reply);
+			return CGXDLMS::GetHdlcFrame(m_Settings, m_Settings.GetReceiverReady(), &m_ReplyData, sr.GetReply());
 		}
 		// Update command if m_Transaction and next frame is asked.
 		if (m_Info.GetCommand() == DLMS_COMMAND_NONE)
@@ -2436,7 +2523,8 @@ int CGXDLMSServer::HandleRequest(
     {
     	m_Info.SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
     }
-    ret = sr.setReply(HandleCommand(connectionInfo, m_Info.GetCommand(), m_Info.GetData(), sr));
+    ret = HandleCommand( m_Info.GetCommand(),
+    					m_Info.GetData(), sr.GetReply(),sr);
     m_Info.Clear();
     m_DataReceived = (long)time(NULL);
     return ret;

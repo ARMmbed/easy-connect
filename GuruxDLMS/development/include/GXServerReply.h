@@ -36,7 +36,8 @@
 #define GXSERVERREPLY_H
 
 #include "GXDLMSConnectionEventArgs.h"
-#include "GXByteBuffer.h"
+#include "GXBytebuffer.h"
+#include "GXServerReply.h"
 
 class CGXServerReply {
 
@@ -77,7 +78,7 @@ public:
     /**
      * @return the data
      */
-    CGXByteBuffer GetData()
+    CGXByteBuffer& GetData()
     {
         return m_data;
     }
@@ -94,7 +95,7 @@ public:
     /**
      * @return The reply message.
      */
-    CGXByteBuffer GetReply()
+    CGXByteBuffer& GetReply()
     {
         return m_reply;
     }
@@ -111,7 +112,7 @@ public:
     /**
      * @return Connection info.
      */
-    CGXDLMSConnectionEventArgs GetConnectionInfo()
+    CGXDLMSConnectionEventArgs& GetConnectionInfo()
     {
         return connectionInfo;
     }

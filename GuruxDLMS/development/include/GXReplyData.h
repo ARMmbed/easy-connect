@@ -318,7 +318,7 @@ public:
      * @param value
      *            GBT Window size. This is for internal use.
      */
-    void SetWindowSize(nsigned char value);
+    void SetWindowSize(unsigned char value);
 
      /**
      * @return Is GBT streaming.

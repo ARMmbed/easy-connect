@@ -448,17 +448,13 @@ public:
     /**
      * @return GBT window size.
      */
-    unsigned char GetWindowSize() {
-        return m_WindowSize;
-    }
+    unsigned char GetWindowSize();
 
     /**
      * @param value
      *            GBT window size.
      */
-    void SetWindowSize(unsigned char value) {
-        m_WindowSize = value;
-    }
+    void SetWindowSize(unsigned char value);
 
 	public:
 	get_private_key_from_settings get_key_cb;

@@ -68,7 +68,7 @@ DLMS_COMMAND CGXDLMSLNParameters::GetCommand()
     return m_Command;
 }
 
-void SetCommand(DLMS_COMMAND value)
+void CGXDLMSLNParameters::SetCommand(DLMS_COMMAND value)
 {
 	m_Command = value;
 }
