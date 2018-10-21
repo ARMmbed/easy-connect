@@ -45,6 +45,11 @@
 #include "../include/GXDLMSSettings.h"
 #include "../include/GXServerReply.h"
 
+#define DLMS_WRAPPER_FRAME_LENGTH 8
+#define DLMS_DATA_LENGTH_OFFSET 6
+
+static void PrintfBuff(CGXByteBuffer *bb);
+
 CGXDLMSServer::CGXDLMSServer(bool logicalNameReferencing,
     DLMS_INTERFACE_TYPE type) : m_Transaction(NULL), m_Settings(true)
 {
@@ -2053,7 +2058,11 @@ int CGXDLMSServer::HandleCommand(
 	CGXServerReply& sr)
 {
     int ret = 0;
-    unsigned char frame = 0;
+    unsigned char frame = 0, *tmpPtr;
+    bool bHandlingGbtFirsttime = false;
+	CGXByteBuffer intermediateReply,savedReplyDaya;
+	unsigned short intermediateLen;
+
     switch (cmd)
     {
     case DLMS_COMMAND_SET_REQUEST:
@@ -2091,11 +2100,30 @@ int CGXDLMSServer::HandleCommand(
         frame = DLMS_COMMAND_UA;
         break;
     case DLMS_COMMAND_GENERAL_BLOCK_TRANSFER:
+    	bHandlingGbtFirsttime = true;
     	ret = HandleGeneralBlockTransfer(data, sr);
-        if (!ret)
-        {
-            return ret;
-        }
+    	if(sr.GetReplyingToGbt() == false)
+    	{
+			savedReplyDaya = m_ReplyData;
+			m_ReplyData.Clear();
+			ret = HandleCommand(m_Transaction->GetCommand(),m_Transaction->GetData(),intermediateReply, sr);
+			m_ReplyData = savedReplyDaya;
+
+			//get the lenght of teh intermediate reply
+			intermediateReply.GetUInt16(DLMS_DATA_LENGTH_OFFSET,&intermediateLen);
+			tmpPtr = intermediateReply.GetData();
+
+			GXHelpers::SetObjectCount(intermediateLen,m_ReplyData);
+			m_ReplyData.Set(&intermediateReply,DLMS_WRAPPER_FRAME_LENGTH,intermediateReply.GetSize()-DLMS_WRAPPER_FRAME_LENGTH);
+
+			sr.SetReplyingToGbt(true);
+    	}
+    	else
+    	{
+    		//we already have the reply and we are currently handling the transfering of teh blockes to teh client
+    		return ret;
+    	}
+
         break;
     case DLMS_COMMAND_NONE:
         //Get next frame.
@@ -2126,7 +2154,7 @@ int CGXDLMSServer::HandleCommand(
 
 int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerReply& sr)
 {
-	int ret;
+	int ret = 0;
 
 	if (m_Transaction != NULL) {
 		if (m_Transaction->GetCommand() == DLMS_COMMAND_GET_REQUEST) {
@@ -2236,7 +2264,12 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 		else
 		{
 			unsigned char ch;
-		    if ((ret = data.GetUInt8(&bc)) != 0)
+
+			sr.SetClientBlockNumAcked(blockNumberAck);
+			sr.SetClientBlockNum(blockNumber);
+			sr.SetClientWindowSize(bc & 0x3f);
+
+			if ((ret = data.GetUInt8(&ch)) != 0)
 		    {
 		        return ret;
 		    }
@@ -2248,10 +2281,14 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 			m_ReplyData.SetUInt16(blockNumber);
 			++blockNumberAck;
 			m_ReplyData.SetUInt16(blockNumberAck);
-			m_ReplyData.SetUInt8(0);
+
+			//TODO:need to check if this byte needed
+			//m_ReplyData.SetUInt8(0);
+
+
 		}
 	}
-	return 0;
+	return ret;
 }
 
 static void PrintfBuff(unsigned char *ptr, int size)
@@ -2631,3 +2668,15 @@ void CGXDLMSServer::SetServerPublicKey(unsigned char *q)
 {
 	memcpy(m_Settings.GetKey().m_recipient_public, q, PUBLIC_KEY_SIZE);
 }
+
+unsigned long CGXDLMSServer::GetServerAddress()
+{
+    return m_Settings.GetServerAddress();
+}
+
+unsigned long CGXDLMSServer::GetClientAddress()
+{
+    return m_Settings.GetClientAddress();
+}
+
+

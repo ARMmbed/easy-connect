@@ -37,7 +37,7 @@
 
 #include "GXDLMSConnectionEventArgs.h"
 #include "GXBytebuffer.h"
-#include "GXServerReply.h"
+#include "GXDLMSSettings.h"
 
 class CGXServerReply {
 
@@ -61,7 +61,42 @@ class CGXServerReply {
      */
     int m_count;
 
+    /**
+     * is replying to GBT comand
+     */
+    bool m_ReplyingToGbt;
+
+    /**
+      * the current server block number
+      */
+     unsigned short m_serverBlockNum;
+
+
+    /**
+     * the current client block number
+     */
+    unsigned short m_clientBlockNum;
+
+    /**
+      * the current block number acknowledged
+      */
+
+    unsigned short m_clientBlockNumAcked;
+
+    /**
+      * the current client window size
+      */
+    unsigned char m_clientWindowSize;
+
+    bool m_replyExist;
+
 public:
+
+    /**
+     * Constructor.
+     *
+     */
+    CGXServerReply();
     /**
      * Constructor.
      *
@@ -69,12 +104,14 @@ public:
      *            Received data.
      */
 
-    CGXServerReply(CGXByteBuffer value)
-	{
-        m_data = value;
-        m_count = 0;
-    }
+    CGXServerReply(CGXByteBuffer value);
 
+    /**
+      * reset the DB.
+      *
+      */
+
+    void Reset();
     /**
      * @return the data
      */
@@ -87,7 +124,7 @@ public:
      * @param value
      *            The data to set.
      */
-    void SetData(CGXByteBuffer value)
+    void SetData(CGXByteBuffer& value)
     {
         m_data = value;
     }
@@ -104,7 +141,7 @@ public:
      * @param value
      *            the replyMessages to set
      */
-    void SetReply(CGXByteBuffer value)
+    void SetReply(CGXByteBuffer& value)
     {
         m_reply = value;
     }
@@ -150,6 +187,84 @@ public:
     {
         m_count = value;
     }
+
+
+
+   /**
+	 * @return replying to GBT command.
+	 */
+	bool GetReplyingToGbt()
+	{
+		return m_ReplyingToGbt;
+	}
+
+	/**
+	 * @param value
+	 *             the replying to GBT command.
+	 */
+	void SetReplyingToGbt(bool value)
+	{
+		m_ReplyingToGbt = value;
+	}
+
+    /**
+ 	 * @return the current client block number received by the server.
+ 	 */
+    unsigned short GetClientBlockNum()
+ 	{
+ 		return m_clientBlockNum;
+ 	}
+
+ 	/**
+ 	 * @param value
+ 	 *             the current client block number received by the server.
+ 	 */
+ 	void SetClientBlockNum(unsigned short value)
+ 	{
+ 		m_clientBlockNum = value;
+ 	}
+
+     /**
+  	 * @return the current client block number acknowledged.
+  	 */
+     unsigned short GetClientBlockNumAcked()
+  	{
+  		return m_clientBlockNumAcked;
+  	}
+
+  	/**
+  	 * @param value
+  	 *             the current client block number acknowledged.
+  	 */
+  	void SetClientBlockNumAcked(unsigned short value)
+  	{
+  		m_clientBlockNumAcked = value;
+  	}
+
+    /**
+ 	 * @return the current block number acknowledged.
+ 	 */
+    unsigned char GetClientWindowSize()
+ 	{
+ 		return m_clientWindowSize;
+ 	}
+
+ 	/**
+ 	 * @param value
+ 	 *             the current block number acknowledged.
+ 	 */
+ 	void SetClientWindowSize(unsigned char value)
+ 	{
+ 		m_clientWindowSize = value;
+ 	}
+
+
+ 	int GetBlock(unsigned short serverAddress, unsigned short clientAddress, unsigned short maxPduSize,CGXByteBuffer& block,unsigned short blockNum, bool& isLastBlock);
+
+ 	void IncreaseserverBlockNum()
+ 	{
+ 		m_serverBlockNum++;
+ 	}
 };
 
 

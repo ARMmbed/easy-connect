@@ -145,6 +145,7 @@ static void ListenerThread(const void* pVoid)
 	SOCKADDR client_sock_addr = { 0 };
 	SOCKLEN client_sock_addr_len;
 	bool first_packet = true;
+    CGXServerReply sr;
 
     while (server->IsConnected())
     {
@@ -204,65 +205,101 @@ static void ListenerThread(const void* pVoid)
 
 			bb.SetSize(bb.GetSize() + len);
 
-            CGXServerReply sr(bb);
+   			sr.SetData(bb);
+
             do {
-    			if (server->HandleRequest(sr) != 0)
-    			{
-    				printf("\n\nServer: Error!!!\n\n");
-    				PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
-    				server->SetState(false);
-    				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-    				break;
-    			}
 
-                // Reply is null if we do not want to send any data to the
-                // client.
-                // This is done if client try to make connection with wrong
-                // server or client address.
-                if (sr.GetReply().GetData() != NULL) {
-    				if(server->m_print)
-    				{
-    					printf("packet sent\n");
-    					PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
-    				}
+				if (server->HandleRequest(sr) != 0)
+				{
+					printf("\n\nServer: Error!!!\n\n");
+					PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
+					server->SetState(false);
+					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+					break;
+				}
 
-    				ret = server->Write(client_sock, sr.GetReply(), &len);
+            	//in case we are replying to GBT we need to build a different answer
+            	if(sr.GetReplyingToGbt() == true)
+            	{
+            		unsigned char sentBlocks = 0;
+            		CGXByteBuffer tmpBlock;
+            		unsigned short baseBlock = sr.GetClientBlockNumAcked();
+            		bool isLastBlock;
+            		unsigned char windowCnt;
 
-    				if (ret == -1)
-    				{
-    					//If error has occured
-    					server->Reset();
-    					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-    				}
+            		//if this is not the first GBT transaction then need to raise the block number acked by
+            		//1 to get the next needed block
+            		if(0 != baseBlock)
+            		{
+            			baseBlock++;
+            		}
 
-    				server->SetState(true);
-                  	sr.GetData().Clear();
-                }
+            		for(windowCnt = 0; windowCnt < sr.GetClientWindowSize() ; windowCnt++, baseBlock++)
+            		{
+
+            			ret = sr.GetBlock((unsigned short)server->GetServerAddress(),(unsigned short)server->GetClientAddress(),
+            								server->GetMaxReceivePDUSize(), tmpBlock,baseBlock, isLastBlock);
+						if (ret != 0)
+						{
+							//If error has occured
+							server->Reset();
+							server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+							break;
+						}
+
+						ret = server->Write(client_sock, tmpBlock, &len);
+
+						if (ret == -1)
+						{
+							//If error has occured
+							server->Reset();
+							server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+							break;
+						}
+
+						sr.IncreaseserverBlockNum();
+
+            			if(isLastBlock)
+            			{
+            				break;
+            			}
+
+            		}
+            	}
+            	else //normal reply no need for GBT handling just send the reply
+            	{
+					// Reply is null if we do not want to send any data to the
+					// client.
+					// This is done if client try to make connection with wrong
+					// server or client address.
+					if (sr.GetReply().GetData() != NULL) {
+
+
+						if(server->m_print)
+						{
+							printf("server packet sent\n");
+							PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
+						}
+
+						ret = server->Write(client_sock, sr.GetReply(), &len);
+
+						if (ret == -1)
+						{
+							//If error has occured
+							server->Reset();
+							server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+						}
+
+					}
+            	}
+
             } while (sr.IsStreaming());
 
 
 			bb.SetSize(0);
+			server->SetState(true);
+            sr.Reset();
 
-			if (sr.GetReply().GetSize() != 0)
-			{
-				if(server->m_print)
-				{
-					printf("packet sent\n");
-					PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
-				}
-
-				ret = server->Write(client_sock, sr.GetReply(), &len);
-
-				if (ret == -1)
-				{
-					//If error has occured
-					server->Reset();
-					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-				}
-
-				server->SetState(true);
-				sr.GetReply().Clear();
-			}
 #ifdef __linux__
 			sleep(1);
 #else

@@ -457,6 +457,11 @@ public:
 	void SetTestCase(TEST_CASE _t) {m_test_case = _t;};
 	TEST_CASE GetTestCase() {return m_test_case;};
 
+	unsigned long GetServerAddress();
+
+	unsigned long GetClientAddress();
+
+
     /**
     * @return HDLC settings.
     */
