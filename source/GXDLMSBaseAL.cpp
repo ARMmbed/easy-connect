@@ -133,6 +133,50 @@ static void PrintfBuff(CGXByteBuffer *bb)
 	PrintfBuff(bb->GetData(), bb->GetSize() > MAX_PACKET_PRINT ? MAX_PACKET_PRINT : bb->GetSize());
 }
 
+static bool DropRec(CGXDLMSBaseAL *server)
+{
+	bool ret = false;
+
+	if(server->m_drop_receive != NULL)
+	{
+		char *drop_receive = server->m_drop_receive;
+		// 'counter' represents the packet number. first packet is index '0'
+		int counter = server->m_receive_counter;
+		int arr_i = counter / 8;
+
+		if(arr_i < server->m_drop_receive_size)
+		{
+			ret = (drop_receive[arr_i] >> (counter % 8)) & 0x1;
+		}
+	}
+
+	++server->m_receive_counter;
+
+	return ret;
+}
+
+static bool DropSend(CGXDLMSBaseAL *server)
+{
+	bool ret = false;
+
+	if(server->m_drop_send != NULL)
+	{
+		char *drop_send = server->m_drop_send;
+		// 'counter' represents the packet number. first packet is index '0'
+		int counter = server->m_send_counter;
+		int arr_i = counter / 8;
+
+		if(arr_i < server->m_drop_send_size)
+		{
+			ret = (drop_send[arr_i] >> (counter % 8)) & 0x1;
+		}
+	}
+
+	++server->m_send_counter;
+
+	return ret;
+}
+
 static void ListenerThread(const void* pVoid)
 {
     CGXByteBuffer reply;
@@ -177,68 +221,94 @@ static void ListenerThread(const void* pVoid)
 				first_packet = false;
 			}
 
-			if(server->m_print)
+			if(DropRec(server) == true)
 			{
-				printf("packet received\n");
-				PrintfBuff(bb.GetData(), len);
+				printf("drop received packet %d\n", server->m_receive_counter);
+
+				if(server->m_print)
+				{
+					PrintfBuff(bb.GetData(), len);
+				}
 			}
 
-			if ( ret == 0 && len == 0 )
-			{
-				server->SetState(false);
-				//Notify error.
-				server->Reset();
-				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-				break;
-			}
-
-			//If client is closed the connection.
-			if (ret != SUCCESS)
-			{
-				server->SetState(false);
-				server->Reset();
-				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-				printf("PAL_ERR_SOCKET_CONNECTION_CLOSED, close socket\n");
-				break;
-			}
-
-			bb.SetSize(bb.GetSize() + len);
-
-			if (server->HandleRequest(bb, reply) != 0)
-			{
-				printf("\n\nServer: Error!!!\n\n");
-				PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
-				server->SetState(false);
-				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-			}
-			bb.SetSize(0);
-
-			if (reply.GetSize() != 0)
+			else
 			{
 				if(server->m_print)
 				{
-					printf("packet sent\n");
-					PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+					printf("packet received\n");
+					PrintfBuff(bb.GetData(), len);
 				}
 
-				ret = server->Write(client_sock, reply, &len);
-
-				if (ret == -1)
+				if ( ret == 0 && len == 0 )
 				{
-					//If error has occured
+					server->SetState(false);
+					//Notify error.
 					server->Reset();
 					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+					break;
 				}
 
-				server->SetState(true);
-				reply.Clear();
+				//If client is closed the connection.
+				if (ret != SUCCESS)
+				{
+					server->SetState(false);
+					server->Reset();
+					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+					printf("PAL_ERR_SOCKET_CONNECTION_CLOSED, close socket\n");
+					break;
+				}
+
+				bb.SetSize(bb.GetSize() + len);
+
+				if (server->HandleRequest(bb, reply) != 0)
+				{
+					printf("\n\nServer: Error!!!\n\n");
+					PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+					server->SetState(false);
+					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+				}
+				bb.SetSize(0);
+
+				if (reply.GetSize() != 0)
+				{
+					if(DropSend(server) == true)
+					{
+						printf("drop sent packet %d\n", server->m_send_counter);
+
+						if(server->m_print)
+						{
+							PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+						}
+					}
+
+					else
+					{
+						if(server->m_print)
+						{
+							printf("packet sent\n");
+							PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+						}
+
+						ret = server->Write(client_sock, reply, &len);
+
+						if (ret == -1)
+						{
+							//If error has occured
+							server->Reset();
+							server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+						}
+					}
+
+					server->SetState(true);
+					reply.Clear();
+				}
+	#ifdef __linux__
+				sleep(1);
+	#else
+				osThreadYield();
+				pal_osDelay(5000);
+	#endif
 			}
-#ifdef __linux__
-			sleep(1);
-#else
-			osThreadYield();
-			pal_osDelay(5000);
-#endif
 
 		}
 		server->SetState(false);
