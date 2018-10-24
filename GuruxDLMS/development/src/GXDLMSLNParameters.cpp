@@ -152,7 +152,7 @@ void CGXDLMSLNParameters::SetInvokeId(unsigned long value) {
 }
 
 unsigned short CGXDLMSLNParameters::GetBlockNumberAck() {
-    return m_InvokeId;
+    return m_BlockNumberAck;
 }
 
 void CGXDLMSLNParameters::SetBlockNumberAck(unsigned short value) {

@@ -259,8 +259,6 @@ public:
  	}
 
 
- 	int GetBlock(unsigned short serverAddress, unsigned short clientAddress, unsigned short maxPduSize,CGXByteBuffer& block,unsigned short blockNum, bool& isLastBlock);
-
  	void IncreaseserverBlockNum()
  	{
  		m_serverBlockNum++;

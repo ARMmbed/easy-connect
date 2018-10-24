@@ -587,47 +587,12 @@ int CGXDLMS::GetLNPdu(
 	unsigned char ciphering = 0;
 #endif
     int len = 0;
-#if 0 // ophir
-    if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
-    {
-        AddLLCBytes(p.GetSettings(), reply);
-    }
-#endif
     if (p.GetCommand() == DLMS_COMMAND_AARQ)
     {
         reply.Set(p.GetAttributeDescriptor());
     }
     else
     {
-#if 0 // ophir
-        if (if_ciphering && 
-		((p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) != 0))
-        {
-            reply.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
-            MultipleBlocks(p, reply, ciphering);
-            // Is last block
-            if (!p.IsLastBlock())
-            {
-                reply.SetUInt8(0);
-            }
-            else
-            {
-                reply.SetUInt8(0x80);
-            }
-            // Set block number sent.
-            reply.SetUInt8(0);
-            // Set block number acknowledged
-            reply.SetUInt8((unsigned char)p.GetBlockIndex());
-            p.SetBlockIndex(p.GetBlockIndex() + 1);
-            // Add APU tag.
-            reply.SetUInt8(0);
-            // Add Addl fields
-            reply.SetUInt8(0);
-        }
-
-        // Add command.
-        reply.SetUInt8((unsigned char)p.GetCommand());
-#endif
         // Add command.
         if (p.GetCommand() != DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) {
             reply.SetUInt8((unsigned char)p.GetCommand());
@@ -811,9 +776,9 @@ int CGXDLMS::GetLNPdu(
                 // Get request size can be bigger than PDU size.
 				if (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER)
 				{
-					if (7 + len + reply.GetSize() > p.GetSettings()->GetMaxPduSize())
+					if (10 + len + reply.GetSize() > p.GetSettings()->GetMaxPduSize())
 					{
-						len = p.GetSettings()->GetMaxPduSize() - reply.GetSize() - 7;
+						len = p.GetSettings()->GetMaxPduSize() - reply.GetSize() - 10;
 					}
 				}
 				else if (p.GetCommand() != DLMS_COMMAND_GET_REQUEST && len

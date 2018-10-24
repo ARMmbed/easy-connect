@@ -1185,92 +1185,82 @@ int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char in
     else
     {
 
-        m_Settings.IncreaseBlockIndex();
-        CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2, 0, &bb, DLMS_ERROR_CODE_OK);
-        // If m_Transaction is not in progress.
-        if (m_Transaction == NULL)
-        {
-            p.SetStatus(DLMS_ERROR_CODE_NO_LONG_GET_OR_READ_IN_PROGRESS);
-        }
-        else
-        {
-            bb.Set(&m_Transaction->GetData());
-            bool moreData = m_Settings.GetIndex() != m_Settings.GetCount();
-			if (moreData) {
-			 // If there is multiple blocks on the buffer.
-			 // This might happen when Max PDU size is very small.
-			 if (bb.GetSize() < m_Settings.GetMaxPduSize())
-			 {
+		bb.Set(&m_Transaction->GetData());
+		bool moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+		if (moreData) {
+		 // If there is multiple blocks on the buffer.
+		 // This might happen when Max PDU size is very small.
+		 if (bb.GetSize() < m_Settings.GetMaxPduSize())
+		 {
 
-                 CGXDLMSVariant value;
-                  for (std::vector<CGXDLMSValueEventArg*>::iterator arg = m_Transaction->GetTargets().begin();
-                      arg != m_Transaction->GetTargets().end(); ++arg)
-                  {
-                      PreRead(m_Transaction->GetTargets());
-                      if (!(*arg)->GetHandled())
-                      {
-                          if ((ret = (*arg)->GetTarget()->GetValue(m_Settings, *(*arg))) != 0)
-                          {
-                              return ret;
-                          }
-                          std::vector<CGXDLMSValueEventArg*> arr;
-                          arr.push_back(*arg);
-                          PostRead(arr);
-                      }
-                      value = (*arg)->GetValue();
-                      // Add data.
-                      if ((*arg)->IsByteArray() && value.vt == DLMS_DATA_TYPE_OCTET_STRING)
-                      {
-                          // If byte array is added do not add type.
-                          bb.Set(value.byteArr, value.GetSize());
-                      }
-                      else if ((ret = CGXDLMS::AppendData((*arg)->GetTarget(), (*arg)->GetIndex(), bb, value)) != 0)
-                      {
-                          return DLMS_ERROR_CODE_HARDWARE_FAULT;
-                      }
+			 CGXDLMSVariant value;
+			  for (std::vector<CGXDLMSValueEventArg*>::iterator arg = m_Transaction->GetTargets().begin();
+				  arg != m_Transaction->GetTargets().end(); ++arg)
+			  {
+				  PreRead(m_Transaction->GetTargets());
+				  if (!(*arg)->GetHandled())
+				  {
+					  if ((ret = (*arg)->GetTarget()->GetValue(m_Settings, *(*arg))) != 0)
+					  {
+						  return ret;
+					  }
+					  std::vector<CGXDLMSValueEventArg*> arr;
+					  arr.push_back(*arg);
+					  PostRead(arr);
+				  }
+				  value = (*arg)->GetValue();
+				  // Add data.
+				  if ((*arg)->IsByteArray() && value.vt == DLMS_DATA_TYPE_OCTET_STRING)
+				  {
+					  // If byte array is added do not add type.
+					  bb.Set(value.byteArr, value.GetSize());
+				  }
+				  else if ((ret = CGXDLMS::AppendData((*arg)->GetTarget(), (*arg)->GetIndex(), bb, value)) != 0)
+				  {
+					  return DLMS_ERROR_CODE_HARDWARE_FAULT;
+				  }
 
-                  }
+			  }
 
 #if 0 //TODO: we might need to change above for loop code with below lines
-				 Object value;
-				 for (ValueEventArgs arg : server.getTransaction()
-						 .getTargets()) {
-					 arg.setInvokeId(p.getInvokeId());
-					 server.notifyRead(new ValueEventArgs[] { arg });
-					 if (arg.getHandled()) {
-						 value = arg.getValue();
-					 } else {
-						 value = arg.getTarget().getValue(settings, arg);
-					 }
-					 p.setInvokeId(arg.getInvokeId());
-					 // Add data.
-					 if (arg.isByteArray()) {
-						 bb.set((byte[]) value);
-					 } else {
-						 GXDLMS.appendData(arg.getTarget(), arg.getIndex(),
-								 bb, value);
-					 }
+			 Object value;
+			 for (ValueEventArgs arg : server.getTransaction()
+					 .getTargets()) {
+				 arg.setInvokeId(p.getInvokeId());
+				 server.notifyRead(new ValueEventArgs[] { arg });
+				 if (arg.getHandled()) {
+					 value = arg.getValue();
+				 } else {
+					 value = arg.getTarget().getValue(settings, arg);
 				 }
-#endif
-				 moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+				 p.setInvokeId(arg.getInvokeId());
+				 // Add data.
+				 if (arg.isByteArray()) {
+					 bb.set((byte[]) value);
+				 } else {
+					 GXDLMS.appendData(arg.getTarget(), arg.getIndex(),
+							 bb, value);
+				 }
 			 }
+#endif
+			 moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+		 }
 
 
-			}
+		}
 
-			p.SetMultipleBlocks(true);
-			CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
-            if (moreData || bb.GetSize() - bb.GetPosition() != 0)
-            {
-            	m_Transaction->SetData(bb);
-            }
-            else
-            {
-            	delete m_Transaction;
-            	m_Transaction = NULL;
-                m_Settings.ResetBlockIndex();
-            }
-        }
+		p.SetMultipleBlocks(true);
+		CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
+		if (moreData || bb.GetSize() - bb.GetPosition() != 0)
+		{
+			m_Transaction->SetData(bb);
+		}
+		else
+		{
+			delete m_Transaction;
+			m_Transaction = NULL;
+			m_Settings.ResetBlockIndex();
+		}
     }
     return ret;
 }
@@ -2058,7 +2048,7 @@ int CGXDLMSServer::HandleCommand(
 	CGXServerReply& sr)
 {
     int ret = 0;
-    unsigned char frame = 0, *tmpPtr;
+    unsigned char frame = 0, *tmpPtr, ch = 0;
     bool bHandlingGbtFirsttime = false;
 	CGXByteBuffer intermediateReply,savedReplyDaya;
 	unsigned short intermediateLen;
@@ -2100,30 +2090,55 @@ int CGXDLMSServer::HandleCommand(
         frame = DLMS_COMMAND_UA;
         break;
     case DLMS_COMMAND_GENERAL_BLOCK_TRANSFER:
-    	bHandlingGbtFirsttime = true;
     	ret = HandleGeneralBlockTransfer(data, sr);
     	if(sr.GetReplyingToGbt() == false)
     	{
 			savedReplyDaya = m_ReplyData;
 			m_ReplyData.Clear();
 			ret = HandleCommand(m_Transaction->GetCommand(),m_Transaction->GetData(),intermediateReply, sr);
-			m_ReplyData = savedReplyDaya;
+
 
 			//get the lenght of teh intermediate reply
 			intermediateReply.GetUInt16(DLMS_DATA_LENGTH_OFFSET,&intermediateLen);
+			//check if the intermediate reply was in GBT
+			intermediateReply.GetUInt8(DLMS_WRAPPER_FRAME_LENGTH,&ch);
+
 			tmpPtr = intermediateReply.GetData();
 
-			GXHelpers::SetObjectCount(intermediateLen,m_ReplyData);
-			m_ReplyData.Set(&intermediateReply,DLMS_WRAPPER_FRAME_LENGTH,intermediateReply.GetSize()-DLMS_WRAPPER_FRAME_LENGTH);
 
-			sr.SetReplyingToGbt(true);
-    	}
-    	else
-    	{
-    		//we already have the reply and we are currently handling the transfering of teh blockes to teh client
-    		return ret;
-    	}
 
+			//the reply data is more than max PDU
+			//copy the whole message including the GBT header we got from the reply
+			if(ch == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
+			{
+				//since this is the first time we are handling the GBT then need to set the block acked to 1
+				if((NULL != tmpPtr) && (intermediateReply.GetSize() >= DLMS_WRAPPER_FRAME_LENGTH +5))
+				{
+					tmpPtr[DLMS_WRAPPER_FRAME_LENGTH + 5] = 1;
+				}
+
+				m_Settings.SetBlockNumberAck(1);
+				sr.SetCount(m_Settings.GetWindowSize());
+
+				reply.Set(&intermediateReply,0,intermediateReply.GetSize());
+				sr.SetReplyingToGbt(true);
+				//we got the complete reply including teh wrapper frame
+				//nothing else to do so return
+				return ret;
+			}
+			else
+			{
+				m_ReplyData = savedReplyDaya;
+				//get the lenght of teh intermediate reply
+				intermediateReply.GetUInt16(DLMS_DATA_LENGTH_OFFSET,&intermediateLen);
+
+				GXHelpers::SetObjectCount(intermediateLen,m_ReplyData);
+				m_ReplyData.Set(&intermediateReply,DLMS_WRAPPER_FRAME_LENGTH,intermediateReply.GetSize()-DLMS_WRAPPER_FRAME_LENGTH);
+
+				printf("##406 %d %d %d %x\n",ret,intermediateReply.GetSize(),intermediateReply.GetPosition(),*(intermediateReply.GetData()));
+				sr.SetReplyingToGbt(true);
+			}
+    	}
         break;
     case DLMS_COMMAND_NONE:
         //Get next frame.
@@ -2136,7 +2151,7 @@ int CGXDLMSServer::HandleCommand(
     {
         if (m_Settings.GetInterfaceType() == DLMS_INTERFACE_TYPE_WRAPPER)
         {
-            ret = CGXDLMS::GetWrapperFrame(m_Settings, m_ReplyData, reply);
+        	ret = CGXDLMS::GetWrapperFrame(m_Settings, m_ReplyData, reply);
         }
         else
         {
@@ -2164,7 +2179,6 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 						m_Settings.GetBlockNumberAck() + 1);
 				sr.SetCount(m_Settings.GetWindowSize());
 			}
-
 			GetRequestNextDataBlock(data, 0, true);
 			if (sr.GetCount() != 0) {
 				sr.SetCount(sr.GetCount() - 1);
