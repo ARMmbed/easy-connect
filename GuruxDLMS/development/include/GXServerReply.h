@@ -90,6 +90,15 @@ class CGXServerReply {
 
     bool m_replyExist;
 
+    /**
+      * the current client window size
+      */
+
+    /**
+      * Is this the last block of a GBT session
+      */
+    bool m_IsLastBlock;
+
 public:
 
     /**
@@ -263,6 +272,25 @@ public:
  	{
  		m_serverBlockNum++;
  	}
+
+
+    /**
+ 	 * @return is this the last block of a GBT session.
+ 	 */
+    bool GetIsLastBlock()
+ 	{
+ 		return m_IsLastBlock;
+ 	}
+
+ 	/**
+ 	 * @param value
+ 	 *             the last block of a GBT session.
+ 	 */
+ 	void SetIsLastBlock(bool value)
+ 	{
+ 		m_IsLastBlock = value;
+ 	}
+
 };
 
 

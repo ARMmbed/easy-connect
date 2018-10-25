@@ -26,5 +26,6 @@ void CGXServerReply::Reset()
 	m_clientWindowSize = 1;
 	m_replyExist = false;
 	m_serverBlockNum = 1;
+	m_IsLastBlock = true;
 }
 

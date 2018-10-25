@@ -57,6 +57,8 @@ CGXDLMSSettings::CGXDLMSSettings(bool isServer)
     m_Count = 0;
     m_ProposedConformance = m_NegotiatedConformance = (DLMS_CONFORMANCE)0;
     m_WindowSize = 1;
+    m_ClientWindowSize = 1;
+    m_ClientBlockNumberAck = 0;
 }
 
 //Destructor.
@@ -544,4 +546,25 @@ unsigned char CGXDLMSSettings::GetWindowSize()
 void CGXDLMSSettings::SetWindowSize(unsigned char value)
 {
 	m_WindowSize = value;
+}
+
+
+unsigned char CGXDLMSSettings::GetClientWindowSize()
+{
+	return m_ClientWindowSize;
+}
+
+void CGXDLMSSettings::SetClientWindowSize(unsigned char value)
+{
+	m_ClientWindowSize = value;
+}
+
+unsigned short CGXDLMSSettings::GeClientBlockNumberAck()
+{
+	return m_ClientBlockNumberAck;
+}
+
+void CGXDLMSSettings::SetClientBlockNumberAck(unsigned short value)
+{
+	m_ClientBlockNumberAck = value;
 }

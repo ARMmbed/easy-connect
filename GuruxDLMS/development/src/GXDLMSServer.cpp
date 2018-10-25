@@ -2118,10 +2118,12 @@ int CGXDLMSServer::HandleCommand(
 				}
 
 				m_Settings.SetBlockNumberAck(1);
-				sr.SetCount(m_Settings.GetWindowSize());
-
+				//we decrease from teh count the current block we got
+				sr.SetCount(sr.GetClientWindowSize()-1);
 				reply.Set(&intermediateReply,0,intermediateReply.GetSize());
 				sr.SetReplyingToGbt(true);
+				//if transaction is NULL ift means that all data was received and this is teh last balock
+				sr.SetIsLastBlock(m_Transaction == NULL);
 				//we got the complete reply including teh wrapper frame
 				//nothing else to do so return
 				return ret;
@@ -2129,7 +2131,7 @@ int CGXDLMSServer::HandleCommand(
 			else
 			{
 				m_ReplyData = savedReplyDaya;
-				//get the lenght of teh intermediate reply
+				//get the length of the intermediate reply
 				intermediateReply.GetUInt16(DLMS_DATA_LENGTH_OFFSET,&intermediateLen);
 
 				GXHelpers::SetObjectCount(intermediateLen,m_ReplyData);
@@ -2172,7 +2174,44 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 	int ret = 0;
 
 	if (m_Transaction != NULL) {
-		if (m_Transaction->GetCommand() == DLMS_COMMAND_GET_REQUEST) {
+		if ((m_Transaction->GetCommand() == DLMS_COMMAND_GET_REQUEST)||
+			(m_Transaction->GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)) {
+
+			//parse the ack received from teh client and only then continue with teh execution
+			if(m_Transaction->GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) {
+				// BlockControl
+				unsigned char bc;
+			    if ((ret = data.GetUInt8(&bc)) != 0)
+			    {
+			        return ret;
+			    }
+
+				// Block number.
+				unsigned short blockNumber;
+			    if ((ret = data.GetUInt16(&blockNumber)) != 0)
+			    {
+			        return ret;
+			    }
+				// Block number acknowledged.
+				unsigned short blockNumberAck;
+			    if ((ret = data.GetUInt16(&blockNumberAck)) != 0)
+			    {
+			        return ret;
+			    }
+
+
+				sr.SetClientBlockNumAcked(blockNumberAck);
+				sr.SetClientBlockNum(blockNumber);
+				sr.SetClientWindowSize(bc & 0x3f);
+		    	m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
+		    	sr.SetCount(sr.GetClientWindowSize());
+		    	m_Settings.SetBlockNumberAck(blockNumber);
+		    	m_Settings.SetClientBlockNumberAck(blockNumberAck);
+		    	sr.SetIsLastBlock(false);
+		    	m_Transaction->SetCommand(DLMS_COMMAND_GET_REQUEST);
+
+			}
+
 			// Get request for next data block
 			if (sr.GetCount() == 0) {
 				m_Settings.SetBlockNumberAck(
@@ -2185,6 +2224,14 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 			}
 			if (m_Transaction == NULL) {
 				sr.SetCount(0);
+				sr.SetIsLastBlock(true);
+			}
+			else if(sr.GetCount() == 0)
+			{
+				//in case this is the last block in the window we need to mark
+				//in the transaction that we will need to parse client reply after the
+				//next confirmation
+				m_Transaction->SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
 			}
 		} else {
 			// BlockControl
@@ -2193,6 +2240,9 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 		    {
 		        return ret;
 		    }
+
+			sr.SetClientWindowSize(bc & 0x3f);
+	    	m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
 
 			// Block number.
 			unsigned short blockNumber;
@@ -2282,6 +2332,7 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 			sr.SetClientBlockNumAcked(blockNumberAck);
 			sr.SetClientBlockNum(blockNumber);
 			sr.SetClientWindowSize(bc & 0x3f);
+	    	m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
 
 			if ((ret = data.GetUInt8(&ch)) != 0)
 		    {
@@ -2295,7 +2346,7 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 			m_ReplyData.SetUInt16(blockNumber);
 			++blockNumberAck;
 			m_ReplyData.SetUInt16(blockNumberAck);
-
+			sr.SetIsLastBlock(false);
 			//TODO:need to check if this byte needed
 			//m_ReplyData.SetUInt8(0);
 

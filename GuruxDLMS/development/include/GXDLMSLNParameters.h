@@ -265,7 +265,16 @@ public:
     */
     void SetStreaming(bool value);
 
+    /**
+    * @return the client GBT window size. This is used for GBT handling
+    */
+    unsigned char GetClientWindowSize();
 
+    /**
+    * @return the client Block number acknowledged in GBT. This is used for GBT handling
+    *         Management.
+    */
+    unsigned short GetClientBlockNumberAck();
 };
 
 #endif //GXDLMSLNPARAMETERS_H

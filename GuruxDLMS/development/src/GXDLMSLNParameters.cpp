@@ -174,3 +174,11 @@ bool CGXDLMSLNParameters::GetStreaming() {
 void CGXDLMSLNParameters::SetStreaming(bool value) {
 	m_Streaming = value;
 }
+
+unsigned char CGXDLMSLNParameters::GetClientWindowSize() {
+    return m_Settings->GetClientWindowSize();
+}
+
+unsigned short CGXDLMSLNParameters::GetClientBlockNumberAck() {
+    return m_Settings->GeClientBlockNumberAck();
+}

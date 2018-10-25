@@ -249,7 +249,11 @@ static void ListenerThread(const void* pVoid)
 
 			bb.SetSize(0);
 			server->SetState(true);
-            sr.Reset();
+			//we will reset the server reply only if we are not in the middle of a GBT session
+			if(sr.GetIsLastBlock())
+			{
+				sr.Reset();
+			}
 
 #ifdef __linux__
 			sleep(1);

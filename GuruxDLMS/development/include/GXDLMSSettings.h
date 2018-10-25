@@ -186,6 +186,16 @@ class CGXDLMSSettings
      */
     unsigned char m_WindowSize;
 
+    /**
+    *  the client window size.
+    */
+    unsigned short m_ClientWindowSize;
+
+    /**
+     * Client Block number acknowledged in GBT.
+     */
+    unsigned short m_ClientBlockNumberAck;
+
 
 public:
     // Constructor.
@@ -455,6 +465,28 @@ public:
      *            GBT window size.
      */
     void SetWindowSize(unsigned char value);
+
+    /**
+     * @return client GBT window size.
+     */
+    unsigned char GetClientWindowSize();
+
+    /**
+     * @param value
+     *           the client GBT window size.
+     */
+    void SetClientWindowSize(unsigned char value);
+
+    /**
+     * @return Client Block number acknowledged in GBT.
+     */
+    unsigned short GeClientBlockNumberAck();
+
+     /**
+     * @param value
+     *            Client Block number acknowledged in GBT.
+     */
+    void SetClientBlockNumberAck(unsigned short value);
 
 	public:
 	get_private_key_from_settings get_key_cb;

@@ -851,7 +851,11 @@ int CGXDLMS::GetLNPdu(
         if (p.IsLastBlock()) {
             value = 0x80;
         } else if (p.GetStreaming()) {
-            value |= 0x40;
+        	//if current block is the last block in teh window we need to turn off the STR bit
+        	if(p.GetBlockIndex() < p.GetClientBlockNumberAck() + p.GetClientWindowSize())
+        	{
+        		value |= 0x40;
+        	}
         }
         value |= p.GetWindowSize();
         reply.SetUInt8(value);
