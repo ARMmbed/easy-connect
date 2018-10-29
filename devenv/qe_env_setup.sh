@@ -15,7 +15,7 @@
 #----------------------------------------------------------------------------
 # source (!) this file while at tree top - DO NOT run it
 export QE_ROOT=`pwd`
-QE_PLATS="K64F_MBEDOS_ARMCC K64F_MBEDOS_GNUC K64F_FreeRTOS_GNUC K64F_FreeRTOS_ARMCC PC_Linux_GNUC"
+QE_PLATS="K64F_MBEDOS_ARMCC K64F_MBEDOS_GNUC K64F_FreeRTOS_GNUC K64F_FreeRTOS_ARMCC PC_Linux_GNUC UBLOX_EVK_ODIN_W2_MBEDOS_GNUC"
 
 PLAT="$1"
 OS="$2"
@@ -29,8 +29,8 @@ export QE_PLAT=$PLATFORM_ARG
 cp devenv/mbed_app.json ./
 rm -f makefile
 cp devenv/makefile ./
-echo "util/*" > e2eIoT-test-device/.mbedignore
-echo "source/base64.cpp" >> e2eIoT-test-device/.mbedignore
+echo "e2eIoT-test-device/*" > .mbedignore
+echo "wifi/*" > mbed-os/components/.mbedignore
 echo "unity/*" > mbed-os/features/frameworks/.mbedignore
 echo "utest/*" >> mbed-os/features/frameworks/.mbedignore
 echo "i2c_eeprom_asynch/*" > mbed-os/features/unsupported/tests/utest/.mbedignore
@@ -165,6 +165,7 @@ spv_set_MbedOS_env() {
 	rm -rf __x86_x64_NativeLinux_mbedtls
 	echo "FreeRTOS/*" >> e2eIoT-test-device/qe-device-infra/os_specific_source/.mbedignore
     echo "Linux/*" >> e2eIoT-test-device/qe-device-infra/os_specific_source/.mbedignore
+    sed -i -e 's/NSAPI_SECURITY_WPA_WPA2/NSAPI_SECURITY_NONE/g' ./easy-connect/easy-connect.h
 }
 
 case "$QE_PLAT" in
@@ -190,6 +191,11 @@ K64F_FreeRTOS_ARMCC )
 PC_Linux_GNUC )
 	spv_set_Linux_env
 ;;
+UBLOX_EVK_ODIN_W2_MBEDOS_GNUC ) 
+	spv_set_MbedOS_env
+	spv_config_mbed_os
+	spv_set_toolchain_arm_gcc_6
+	;;
 *)
 	echo "Unknown platform: \"$QE_PLAT\". Known platforms: $QE_PLATS"
 	return 1
@@ -201,16 +207,20 @@ if [[ "$PLAT" == "K64F" ]]; then
 	# Enable mbed-os local PROTOCOL
 	mbed config PROTOCOL ssh
 fi
+if [[ "$PLAT" == "UBLOX_EVK_ODIN_W2" ]]; then
+	mbed config root .
+	# Enable mbed-os local PROTOCOL
+	mbed config PROTOCOL ssh
+fi
 
 echo "easy-connect/atmel-rf-driver/*
 easy-connect/mcr20a-rf-driver/*
 easy-connect/stm-spirit1-rf-driver/*
 pal-platform/*
 platform/linux/*
-e2eIoT-test-device/e2e-unity/*
-e2eIoT-test-device/qe-device-infra/source/qe_setup.cpp
-e2eIoT-test-device/qe-device-infra/os-specific-source/mbedOS/FileSystemInit.cpp
-mbed-cloud-client/mbed-client-pal/Source/Port/Reference-Impl/OS_Specific/mbedOS/FileSystem/pal_plat_fileSystem.cpp" > .mbedignore
+mbed-cloud-client/mbed-client-pal/Source/Port/Reference-Impl/OS_Specific/mbedOS/FileSystem/pal_plat_fileSystem.cpp
+platform/mbed-os/TARGET_UBLOX_EVK_ODIN_W2/pal_insecure_ROT.cpp
+mbed-os/features/mbedtls/*" > .mbedignore
 
 # JAVA 8 is needed for all targets -
 # (Placed here to make sure this is first in the PATH).

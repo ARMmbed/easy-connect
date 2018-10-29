@@ -14,10 +14,10 @@
 
 #ifdef __MBED__
 #include "source/setup.h"
-#include "mbed-os/features/FEATURE_LWIP/lwip-interface/EthernetInterface.h"
+//#include "mbed-os/features/FEATURE_LWIP/lwip-interface/EthernetInterface.h"
 #endif
 
-#if defined(CLI_MODE) || defined(__MBED__)
+#if defined(CLI_MODE) // || defined(__MBED__)
 #include "init_plat.h"
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
@@ -110,7 +110,7 @@ static void print_buf(char *s, int size)
 	}
 }
 
-static int getopt(int argc, char* argv[])
+static void getopt(int argc, char* argv[])
 {
 	//no specific IP use localhost
 	server_ip[0] = '\0';
@@ -274,7 +274,7 @@ static int getopt(int argc, char* argv[])
 	}
 }
 
-static int handle_test_params()
+static void handle_test_params()
 {
 	if(key_number == 0)
 		key_number = 1;
@@ -522,7 +522,7 @@ int kill_server(int argc, char* argv[])
 
 
 /* stub for secure storage functions */
-static const unsigned char *get_private_key(unsigned int *size)
+static const unsigned char *get_private_key(uint32_t *size)
 {
 	*size = PRIVATE_KEY_SIZE;
 	return keys.m_private;
@@ -531,7 +531,6 @@ static const unsigned char *get_private_key(unsigned int *size)
 
 int main_server(int argc, char* argv[])
 {
-	char* ip_address = NULL;
 	char default_port[10];
 
 	getopt(argc, argv);
@@ -540,7 +539,6 @@ int main_server(int argc, char* argv[])
 
 #ifdef __MBED__
 	uint32_t _net_iface;
-	EthernetInterface *netInterface;
 
 	if(initPlatform() != 0) {
 	   printf("ERROR - initPlatform() failed!\n");
@@ -549,15 +547,13 @@ int main_server(int argc, char* argv[])
 
 	init_connection();
 
-    if((protocolType == DLMS_SERVICE_TYPE_UDP) || (protocolType == DLMS_SERVICE_TYPE_TCP))
-    {
-			netInterface = new EthernetInterface();
-
-			if(PAL_SUCCESS != pal_registerNetworkInterface(netInterface, &_net_iface)) {
-				printf("Interface registration failed.");
-				assert(0);
-			}
-    }
+	if((protocolType == DLMS_SERVICE_TYPE_UDP) || (protocolType == DLMS_SERVICE_TYPE_TCP))
+	{
+		if(PAL_SUCCESS != pal_registerNetworkInterface(get_network_interface(), &_net_iface)) {
+			printf("Interface registration failed.");
+			assert(0);
+		}
+	}
 #endif
 
 	server = CGXDLMSServerFactory::getCGXDLMSServer(true, interfaceType, protocolType);

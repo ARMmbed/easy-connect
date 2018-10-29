@@ -53,11 +53,14 @@ int initPlatform() {
     int sd_ret;
 
     init_screen();
+#if MBED_CONF_APP_NETWORK_INTERFACE == WIFI_ODIN
+#else
     sd_ret = sd.init();
     if(sd_ret != BD_ERROR_OK) {
         tr_error("initPlatform() - sd.init() failed with %d\n", sd_ret);
         return -1;
     }
+#endif
     tr_debug("initPlatform() - SD card init OK.\n");
 
     return 0;

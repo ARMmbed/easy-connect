@@ -18,15 +18,20 @@
 #include <cstdio>
 #endif // __linux__
 
-#if defined(CLI_MODE) || defined(__MBED__)
+#if defined(__MBED__)
+#include <stdio.h>
+#include "mbed-trace/mbed_trace.h"
+#include "mbed-trace-helper.h"
+#include "setup.h"
+#if defined(CLI_MODE)
 #include "init_plat.h"
 #include "cmd_unity.h"
-#endif // defined(CLI_MODE) || defined(__MBED__)
+#endif // defined(CLI_MODE)
+#endif //defined(__MBED__)
 
-
-#if defined(CLI_MODE) || defined(__MBED__)
+#if defined(CLI_MODE) && defined(__linux__)
 extern void init_signals();
-#endif // defined(CLI_MODE) || defined(__MBED__)
+#endif // defined(CLI_MODE)
 
 extern int setObj(int argc, char* argv[]);
 extern int main_server(int argc, char* argv[]);
@@ -34,7 +39,7 @@ extern int kill_server(int argc, char* argv[]);
 
 int trace_cnt_i=0;
 
-#if defined(CLI_MODE) || defined(__MBED__)
+#if defined(CLI_MODE)
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -98,7 +103,7 @@ void pal_destroy_caller()
 
 int main(int argc, char* argv[])
 {
-#if defined(CLI_MODE) || defined(__MBED__)
+#if defined(CLI_MODE)
 	int ret = 0;
 	palStatus_t pal_status;
 #ifdef __MBED__

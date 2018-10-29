@@ -101,7 +101,7 @@ int32_t ECDSA_Sign(ds_int_params_t	*params,
 
 	ret = init_mbedtls_context(&mbedTls_ctx, params);
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
-		printf(" failed! init_mbedtls_context returned %d\n", ret);
+		printf(" failed! init_mbedtls_context returned %d\n", (int)ret);
 		mbedtls_ecdsa_free(&mbedTls_ctx);
 		return ret;
 	}
@@ -112,7 +112,7 @@ int32_t ECDSA_Sign(ds_int_params_t	*params,
 	ret = mbedtls_sha256_ret(message, message_size, hash, 0);
 
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
-		printf(" failed! mbedtls_sha256_ret returned %d\n", ret);
+		printf(" failed! mbedtls_sha256_ret returned %d\n", (int)ret);
 	} else {
 
 		ret = mbedtls_ecdsa_sign
@@ -148,7 +148,7 @@ int32_t ECDSA_Sign(ds_int_params_t	*params,
 
 		if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 			printf
-			("mbedtls_ecdsa_write_signature returned %d\n", ret);
+			("mbedtls_ecdsa_write_signature returned %d\n", (int)ret);
 		} else {
 //			uint32_t ind = 0;
 
@@ -194,7 +194,7 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 
 	ret = mbedtls_sha256_ret(message, message_size, hash, 0);
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
-		printf(" failed! mbedtls_sha256_ret returned %d\n", ret);
+		printf(" failed! mbedtls_sha256_ret returned %d\n", (int)ret);
 	} else {
 //		uint32_t ind = 0;
 		size_t sig_size;
@@ -216,7 +216,7 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 					(&r, buffer, sig_size/2);
 			if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 				printf
-				("read of r failed %d\n", ret);
+				("read of r failed %d\n", (int)ret);
 			} else {
 //				ret = mbedtls_mpi_read_binary
 //					(&s, buffer + ind + sig_size/2,
@@ -226,7 +226,7 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 					sig_size/2);
 				if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 					printf
-					("read of s failed %d\n", ret);
+					("read of s failed %d\n", (int)ret);
 				} else {
 					ret = mbedtls_ecdsa_verify
 						(&mbedTls_ctx.grp,
@@ -235,7 +235,7 @@ int32_t ECDSA_Verify(ds_int_params_t	*params,
 					if (ret !=
 						SECURITY_UTIL_STATUS_SUCCESS) {
 						printf
-						("verify failed %d\n", ret);
+						("verify failed %d\n", (int)ret);
 					}
 				}
 			}

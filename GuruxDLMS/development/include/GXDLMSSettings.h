@@ -40,6 +40,7 @@
 #include "GXDLMSLimits.h"
 #include "GXDLMSObjectCollection.h"
 #include "GXCipher.h"
+#include <inttypes.h>
 
 #define PRIVATE_KEY_SIZE 32
 #define PUBLIC_KEY_SIZE 64
@@ -70,7 +71,7 @@ typedef struct keys
 	unsigned char m_originator_public[PUBLIC_KEY_SIZE];
 }keys_t;
 
-typedef const unsigned char *(*get_private_key_from_settings)(unsigned int *size);
+typedef const unsigned char *(*get_private_key_from_settings)(uint32_t *size);
 
 // This class includes DLMS communication Settings.
 class CGXDLMSSettings
