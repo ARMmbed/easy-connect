@@ -80,6 +80,12 @@ public:
 	SEMAPHORE m_wait_server_start;
 	
 	bool m_print;
+	char *m_drop_receive;
+	char *m_drop_send;
+	int m_drop_receive_size;
+	int m_drop_send_size;
+	int m_receive_counter;
+	int m_send_counter;
 	
  //   GX_TRACE_LEVEL m_Trace;
 
@@ -103,6 +109,12 @@ public:
 
         _ready = false;
 		m_print = false;
+		m_drop_receive = NULL;
+		m_drop_receive_size = 0;
+		m_drop_send = NULL;
+		m_drop_send_size = 0;
+		m_receive_counter = 0;
+		m_send_counter = 0;
     }
 
 
@@ -111,6 +123,8 @@ public:
     /////////////////////////////////////////////////////////////////////////
     virtual ~CGXDLMSBaseAL(void)
     {
+    	delete[] m_drop_receive;
+    	delete[] m_drop_send;
         StopServer();
     }
 
