@@ -2072,7 +2072,8 @@ int CGXDLMSServer::HandleCommand(
 
 			//the reply data is more than max PDU
 			//copy the whole message including the GBT header we got from the reply
-			if(ch == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
+			//this operation should be done only on the first time
+			if((ch == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) && (sr.GetReplyingToGbt() == false))
 			{
 
 				//m_Settings.SetBlockNumberAck(1);
@@ -2145,6 +2146,10 @@ int CGXDLMSServer::HandleCommand(
 				sr.SetReplyingToGbt(true);
 				//if transaction is NULL ift means that all data was received and this is teh last balock
 				sr.SetIsLastBlock(m_Transaction == NULL);
+				if(NULL != m_Transaction)
+				{
+					m_Transaction->SetCommand(DLMS_COMMAND_GET_REQUEST);
+				}
 				//we got the complete reply including teh wrapper frame
 				//nothing else to do so return
 				return ret;
