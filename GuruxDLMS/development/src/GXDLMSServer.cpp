@@ -2065,6 +2065,27 @@ int CGXDLMSServer::HandleCommand(
         if (data.GetSize() != 0)
         {
             ret = HandleGetRequest(data);
+
+             //check if the answer we got is in GBT
+            //in ase it is GBT need to se appropriate flags
+            m_ReplyData.GetUInt8(0,&ch);
+
+			//the reply data is more than max PDU
+			//copy the whole message including the GBT header we got from the reply
+			if(ch == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
+			{
+
+				//m_Settings.SetBlockNumberAck(1);
+				//we decrease from the count the current block we got
+				sr.SetCount(sr.GetClientWindowSize()-1);
+				sr.SetReplyingToGbt(true);
+				//if transaction is NULL it means that all data was received and this is the last block
+				sr.SetIsLastBlock(m_Transaction == NULL);
+				if(NULL != m_Transaction)
+				{
+					m_Transaction->SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+				}
+			}
         }
         break;
     case DLMS_COMMAND_READ_REQUEST:
