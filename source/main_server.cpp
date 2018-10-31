@@ -22,6 +22,7 @@
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
 #include <cstring>
+#include <string.h>
 
 #include "comp_defines.h"
 #include "GXDLMSBaseAL.h"
@@ -57,6 +58,7 @@
 
 static int get_hex_value(unsigned char c);
 static int hex_string_to_int(char *s);
+static char *hex_string_to_hex_arr(char *s, int *size);
 
 static CGXDLMSBaseAL *server = NULL;
 
@@ -79,12 +81,34 @@ DLMS_CONFORMANCE_GET | DLMS_CONFORMANCE_SET |
 DLMS_CONFORMANCE_SELECTIVE_ACCESS | DLMS_CONFORMANCE_ACTION;
 static char **s_set_argv = NULL;
 static int s_set_argc = 0;
+static char *s_drop_receive = NULL;
+static char *s_drop_send = NULL;
+static int s_drop_receive_size = 0;
+static int s_drop_send_size = 0;
 
 static unsigned char server_sys_title[] =
 {
 	0x4D,0x4D,0x4D,0x00,0x00,0x00,0x00,0x01
 };
 
+static void print_buf(char *s, int size)
+{
+	int i;
+	int enable_print = 1;
+
+	if(enable_print)
+	{
+		for (i = 0 ; i < size ; ++i)
+		{
+			printf("%02x ", 0xff & s[i]);
+
+			if((i+1) % 20 == 0)
+				printf("\n");
+		}
+
+		printf("\n");
+	}
+}
 
 static int getopt(int argc, char* argv[])
 {
@@ -93,6 +117,34 @@ static int getopt(int argc, char* argv[])
 
 	for (int i = 0; i < argc; ++i)
 	{
+		if (strcmp(argv[i], "-dropr") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				s_drop_receive = (char*)hex_string_to_hex_arr(argv[i + 1], &s_drop_receive_size);
+				if(s_drop_receive != NULL)
+				{
+					printf("### configuration ###   received packet drop is active\n");
+					print_buf(s_drop_receive, s_drop_receive_size);
+				}
+				++i;
+			}
+		}
+
+		if (strcmp(argv[i], "-drops") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				s_drop_send = (char*)hex_string_to_hex_arr(argv[i + 1], &s_drop_send_size);
+				if(s_drop_send != NULL)
+				{
+					printf("### configuration ###   sent packet drop is active\n");
+					print_buf(s_drop_send, s_drop_send_size);
+				}
+				++i;
+			}
+		}
+
 		if (strcmp(argv[i], "-i") == 0)
 		{
 			if (i + 1 < argc)
@@ -151,7 +203,7 @@ static int getopt(int argc, char* argv[])
 
 		}
 
-		else if (strcmp(argv[i], "-m") == 0)
+		else if (strcmp(argv[i], "-max") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -284,6 +336,8 @@ static int get_hex_value(unsigned char c)
 	{
 		return c - 'A' + 10;
 	}
+
+	return 0;
 }
 
 static int hex_string_to_int(char *s)
@@ -302,6 +356,69 @@ static int hex_string_to_int(char *s)
 	{
 		ret = ret * 16 + get_hex_value(*ptr);
 		++ptr;
+	}
+
+	return ret;
+}
+
+static char *hex_string_to_hex_arr(char *s, int *size)
+{
+	// this function receive string of hexadecimal number starts with '0x'
+	// it returns an array which represents the bit stream of the hexadecimal number
+	// for example: if the input is '0x152' the output will be pointer to next bit stream: --> [01010010][00000001]
+
+	char *ptr = s;
+	char *end;
+	char *ret = NULL;
+	int string_len;
+	int i;
+
+	// the input string must start with '0x' or '0X'
+	while(*ptr != '0')
+	{
+		++ptr;
+	}
+
+	++ptr;
+
+	if(!(*ptr == 'x' || *ptr == 'X'))
+	{
+		return NULL;
+	}
+
+	++ptr;
+
+	// caculate the len of the output
+	string_len = strlen(ptr);
+	end = ptr + string_len - 1;
+	int alloc_len = (string_len % 2 == 0) ? string_len / 2 : (string_len / 2) + 1;
+	*size = alloc_len;
+	ret = (char*)calloc(1, alloc_len);
+
+	assert(ret != NULL);
+
+	i = 0;
+
+	// next loop build the output array
+	while(end >= ptr)
+	{
+		// every char in the input string will represent a bits in the output array (because every hexadecimal number is 4 bits)
+		char hex = get_hex_value(*end);
+
+		// if the index is even, the 4 bits goes to the lower part of the char in the output array
+		if(i % 2 == 0)
+		{
+			ret[i / 2] = (ret[i / 2] & 0xf0) | (0x0f & hex);
+		}
+
+		// if the index is odd, the 4 bits goes to the upper part of the char in the output array
+		else
+		{
+			ret[i / 2] = (ret[i / 2] & 0x0f) | (0xf0 & (hex << 4));
+		}
+
+		++i;
+		--end;
 	}
 
 	return ret;
@@ -447,6 +564,10 @@ int main_server(int argc, char* argv[])
 	server->SetMaxReceivePDUSize(max_pdu_size);
 	server->SetConformance((DLMS_CONFORMANCE)conformance);
 	server->m_print = is_print_packets;
+	server->m_drop_receive = s_drop_receive;
+	server->m_drop_send = s_drop_send;
+	server->m_drop_receive_size = s_drop_receive_size;
+	server->m_drop_send_size = s_drop_send_size;
 
 	///////////////////// ECDSA /////////////////////////////
 	if(s_test_case != BAD_PATH_NO_KEY_IN_SERVER) {

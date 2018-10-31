@@ -247,7 +247,7 @@ static void ListenerThread(const void* pVoid)
 				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 				break;
 			}
-
+        
 			//If client is closed the connection.
 			if (ret != SUCCESS)
 			{
@@ -326,7 +326,6 @@ static void ListenerThread(const void* pVoid)
 			osThreadYield();
 			pal_osDelay(5000);
 #endif
-
 		}
 		server->SetState(false);
 		server->Reset();

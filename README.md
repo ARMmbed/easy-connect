@@ -40,6 +40,13 @@ To solve this you need to do next steps for only one time:
 the binary file will be in path:
 ./BUILD/K64F/GCC_ARM/e2e-iot-dlms-server.bin
 
+## drop packets from command line:
+* `-dropr           <hexadeciamal number starts with 0x>` - drop received packets.
+* `-drops           <hexadeciamal number starts with 0x>` - drop sent packets.
+
+The hexadecimal number will indiacte the indexes of the packets you want to drop, by its binary representation.
+for example: if you type 0x152 you will drop the 2nd, 5th, 7th and 9th packets, because the binary representation is 000101010010
+
 ## command line in cli
 
 ## command line in cli
@@ -49,7 +56,7 @@ the binary file will be in path:
 * `-i           <hdlc/wrapper>` - default wrraper
 * `-protocol    <tcp/udp>` - default udp
 * `-p           <port number>` - default 4061
-* `-m           <max pdu size>` - default 1024
+* `-max         <max pdu size>` - default 1024
 * `-c           <conformance block (in hexadecimal - can start with 0x)>` - default as Yael requested
 * `-print`      print the received and sent packets - default is not printing
 * `-k`          <key number (1 - 10)> - default is 1
