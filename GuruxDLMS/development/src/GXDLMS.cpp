@@ -39,6 +39,8 @@
 #include "../include/GXBytebuffer.h"
 
 static unsigned char CIPHERING_HEADER_SIZE = 7 + 12 + 3;
+#define GBT_HEADER_SIZE 6
+
 //CRC table.
 static unsigned short FCS16Table[256] =
 {
@@ -776,9 +778,11 @@ int CGXDLMS::GetLNPdu(
                 // Get request size can be bigger than PDU size.
 				if (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER)
 				{
-					if (10 + len + reply.GetSize() > p.GetSettings()->GetMaxPduSize())
+					//calculate the maximal number of bytes that can be written after the GBT header whithout exceeding the client max PDU size
+					unsigned long gbtHeaderLength = GBT_HEADER_SIZE + GXHelpers::GetObjectCountSizeInBytes(p.GetSettings()->GetMaxPduSize()-GBT_HEADER_SIZE);
+					if (gbtHeaderLength + len + reply.GetSize() > p.GetSettings()->GetMaxPduSize())
 					{
-						len = p.GetSettings()->GetMaxPduSize() - reply.GetSize() - 10;
+						len = p.GetSettings()->GetMaxPduSize() - reply.GetSize() - gbtHeaderLength;
 					}
 				}
 				else if (p.GetCommand() != DLMS_COMMAND_GET_REQUEST && len
@@ -884,7 +888,7 @@ int CGXDLMS::GetLNPdu(
         }
     }
 
-    //TODO: need to check if these lines are needed
+    //TODO: need to enable these lines when we will add support for  HDCL interface
 #if 0
     if (p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC) {
         AddLLCBytes(p.GetSettings(), reply);

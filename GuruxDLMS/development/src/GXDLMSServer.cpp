@@ -47,6 +47,7 @@
 
 #define DLMS_WRAPPER_FRAME_LENGTH 8
 #define DLMS_DATA_LENGTH_OFFSET 6
+#define DLMS_GBT_BNA_LSB_BYTE_OFFSET 5
 
 static void PrintfBuff(CGXByteBuffer *bb);
 
@@ -2050,7 +2051,7 @@ int CGXDLMSServer::HandleCommand(
     int ret = 0;
     unsigned char frame = 0, *tmpPtr, ch = 0;
     bool bHandlingGbtFirsttime = false;
-	CGXByteBuffer intermediateReply,savedReplyDaya;
+	CGXByteBuffer intermediateReply,savedReplyData;
 	unsigned short intermediateLen;
 
     switch (cmd)
@@ -2067,7 +2068,7 @@ int CGXDLMSServer::HandleCommand(
             ret = HandleGetRequest(data);
 
              //check if the answer we got is in GBT
-            //in ase it is GBT need to se appropriate flags
+            //in case it is GBT need to se appropriate flags
             m_ReplyData.GetUInt8(0,&ch);
 
 			//the reply data is more than max PDU
@@ -2115,7 +2116,7 @@ int CGXDLMSServer::HandleCommand(
     	ret = HandleGeneralBlockTransfer(data, sr);
     	if(sr.GetReplyingToGbt() == false)
     	{
-			savedReplyDaya = m_ReplyData;
+			savedReplyData = m_ReplyData;
 			m_ReplyData.Clear();
 			ret = HandleCommand(m_Transaction->GetCommand(),m_Transaction->GetData(),intermediateReply, sr);
 
@@ -2134,9 +2135,9 @@ int CGXDLMSServer::HandleCommand(
 			if(ch == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
 			{
 				//since this is the first time we are handling the GBT then need to set the block acked to 1
-				if((NULL != tmpPtr) && (intermediateReply.GetSize() >= DLMS_WRAPPER_FRAME_LENGTH +5))
+				if((NULL != tmpPtr) && (intermediateReply.GetSize() >= DLMS_WRAPPER_FRAME_LENGTH + DLMS_GBT_BNA_LSB_BYTE_OFFSET))
 				{
-					tmpPtr[DLMS_WRAPPER_FRAME_LENGTH + 5] = 1;
+					tmpPtr[DLMS_WRAPPER_FRAME_LENGTH + DLMS_GBT_BNA_LSB_BYTE_OFFSET] = 1;
 				}
 
 				m_Settings.SetBlockNumberAck(1);
@@ -2156,14 +2157,13 @@ int CGXDLMSServer::HandleCommand(
 			}
 			else
 			{
-				m_ReplyData = savedReplyDaya;
+				m_ReplyData = savedReplyData;
 				//get the length of the intermediate reply
 				intermediateReply.GetUInt16(DLMS_DATA_LENGTH_OFFSET,&intermediateLen);
 
 				GXHelpers::SetObjectCount(intermediateLen,m_ReplyData);
 				m_ReplyData.Set(&intermediateReply,DLMS_WRAPPER_FRAME_LENGTH,intermediateReply.GetSize()-DLMS_WRAPPER_FRAME_LENGTH);
 
-				printf("##406 %d %d %d %x\n",ret,intermediateReply.GetSize(),intermediateReply.GetPosition(),*(intermediateReply.GetData()));
 				sr.SetReplyingToGbt(true);
 			}
     	}
