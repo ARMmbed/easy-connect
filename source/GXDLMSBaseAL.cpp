@@ -76,6 +76,7 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "GXDLMSClient.h"
 #include "GXDLMSData.h"
 #include "GXDLMSRegister.h"
+#include "GXDLMSExtendedRegister.h"
 #include "GXDLMSClock.h"
 #include "GXDLMSTcpUdpSetup.h"
 #include "GXDLMSProfileGeneric.h"
@@ -343,25 +344,35 @@ static void sensor_thread(void const *pVoid)
 	CGXDLMSObjectCollection& items = pDLMSBase->GetItems();
 	CGXDLMSObject* obj;
 	string str_id;
-	CGXDLMSVariant vol = 0.0;
+//	CGXDLMSVariant hum = 0.0;
 	CGXDLMSVariant curr = 0.0;
 	CGXDLMSVariant power = 0.0;
+
+	CGXDLMSVariant active((int)0);
+	CGXDLMSVariant reactive((unsigned long)0);
+	CGXDLMSVariant sum_li = CGXDLMSVariant((long long)0);
+//	CGXDLMSVariant custom((bool)0);
+
 	CGXDLMSVariant new_value;
 
 	while(1)
 	{
 		printf("*********************************************************************\r\n");
+#if 0
+		//don't change value of the HUMIDITY_OBJ
+		// it should stay constant for system tests
 		/* HUMIDITY_OBJECT  */
 		str_id= HUMIDITY_OBJECT;
 		obj= items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
 		if(obj!=NULL)
 		{
-			vol = ((CGXDLMSData*)obj)->GetValue();
-			new_value = (vol.fltVal + 1 > 225) ? 225 :vol.fltVal + 1;
+			hum = ((CGXDLMSData*)obj)->GetValue();
+			new_value = (hum.fltVal + 1 > 225) ? 225 :hum.fltVal + 1;
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Humidity: prev value = %f   new value = %f\n", vol.fltVal, new_value.fltVal);
+			printf("Humidity: prev value = %f   new value = %f\n", hum.fltVal, new_value.fltVal);
 
 		}
+#endif
 		/* CURRENT_OBJECT  */
 		str_id = CURRENT_OBJECT;
 		obj = items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
@@ -382,6 +393,51 @@ static void sensor_thread(void const *pVoid)
 			((CGXDLMSData*)obj)->SetValue(new_value);
 			printf("power:   prev value = %f   new value = %f\n", power.fltVal, new_value.fltVal);
 		}
+
+		/* ACTIVE_ENERGY  */
+		str_id = ACTIVE_ENERGY;
+		obj = items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
+		if (obj != NULL)
+		{
+			active = ((CGXDLMSData*)obj)->GetValue();
+			if(active.lVal + 5 < 300)
+				new_value = CGXDLMSVariant((int)active.lVal + 5);
+			else
+				new_value = CGXDLMSVariant((int)10);
+
+			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("Active energy: prev value = %ld   new value = %ld\n", active.lVal, new_value.lVal);
+		}
+
+		/* REACTIVE_ENERGY  */
+		str_id = REACTIVE_ENERGY;
+		obj = items.FindByLN(DLMS_OBJECT_TYPE_REGISTER, str_id);
+		if (obj != NULL)
+		{
+			reactive = ((CGXDLMSRegister*)obj)->GetValue();
+			if(reactive.ulVal + 2 < 100)
+				new_value = CGXDLMSVariant((unsigned long)reactive.ulVal + 2);
+			else
+				new_value = CGXDLMSVariant((unsigned long)2);
+			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("Reactive energy: prev value = %lu   new value = %lu\n", reactive.ulVal, new_value.ulVal);
+		}
+
+		/* SUM_LI_ACTIVE_POWER  */
+		str_id = SUM_LI_ACTIVE_POWER;
+		obj = items.FindByLN(DLMS_OBJECT_TYPE_EXTENDED_REGISTER, str_id);
+		if (obj != NULL)
+		{
+			sum_li = ((CGXDLMSRegister*)obj)->GetValue();
+			if(sum_li.llVal + 10 < 250)
+				new_value = CGXDLMSVariant((long long)sum_li.llVal + 10);
+			else
+				new_value = CGXDLMSVariant((long long)5);
+
+			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.llVal, (long)new_value.llVal);
+		}
+
 		pal_osDelay(10000);
 	}
 
@@ -814,7 +870,7 @@ int CGXDLMSBaseAL::CreateObjects()
     std::string address;
     GetIpAddressAL(address);
 
-//#if MAX_MEMORY
+#if MAX_MEMORY
     unsigned long sn = 123456;
     CGXDLMSData* ldn = AddLogicalDeviceNameAL(GetItems(), sn);
     //Add firmaware.
@@ -827,38 +883,69 @@ int CGXDLMSBaseAL::CreateObjects()
     //Set access right. Client can't change Device name.
     pRegister->SetAccess(2, DLMS_ACCESS_MODE_READ);
     GetItems().push_back(pRegister);
-//#endif  //MAX_MEMORY
+#endif  //MAX_MEMORY
 
 	int count = GetItems().size();
-//#ifdef __MBED__
+
 	/* HUMIDITY_OBJECT */
-//	CGXDLMSVariant voltage_value = 0;
 	unsigned char test_humidity_val[] = {0xDE, 0xAD, 0xBE, 0xEF};
 	CGXDLMSVariant humidity_value(test_humidity_val, 4, DLMS_DATA_TYPE_OCTET_STRING);
     CGXDLMSData* pDataHumidity = new CGXDLMSData(HUMIDITY_OBJECT);
 	pDataHumidity->SetValue(humidity_value);
     GetItems().push_back(pDataHumidity);
-    count = GetItems().size();
+
 	/* POWER_OBJECT */
 	CGXDLMSVariant power_value = 0;
 	CGXDLMSData* pDataPower = new CGXDLMSData(POWER_OBJECT);
 	pDataPower->SetValue(power_value);
 	GetItems().push_back(pDataPower);
-	count = GetItems().size();
+
 	/* CURRENT_OBJECT */
 	CGXDLMSVariant current_value = 0;
 	CGXDLMSData* pDataCurrent = new CGXDLMSData(CURRENT_OBJECT);
 	pDataCurrent->SetValue(current_value);
 	GetItems().push_back(pDataCurrent);
-	count = GetItems().size();
-//#else
+
     CGXDLMSVariant temp_value=30;
     //add temp value
     CGXDLMSRegister* pRegisterTemp = new CGXDLMSRegister(TEMPERATURE_OBJECT);
     pRegisterTemp->SetValue(temp_value);
     GetItems().push_back(pRegisterTemp);
-//#endif
-//#if MAX_MEMORY
+
+    /* ACTIVE_ENERGY - data*/
+    int energy = 10;
+	CGXDLMSVariant active_energy(energy);
+    CGXDLMSData* pDataActiveEnergy = new CGXDLMSData(ACTIVE_ENERGY);
+    pDataActiveEnergy->SetValue(active_energy);
+    GetItems().push_back(pDataActiveEnergy);
+
+	/* REACTIVE_ENERGY - register*/
+    unsigned long reactive = 2;
+	CGXDLMSVariant reactive_energy(reactive);
+	CGXDLMSRegister* pReactiveEnergy = new CGXDLMSRegister(REACTIVE_ENERGY);
+	pReactiveEnergy->SetValue(reactive_energy);
+	pReactiveEnergy->SetScaler(10.0);
+	pReactiveEnergy->SetUnit(1);
+	GetItems().push_back(pReactiveEnergy);
+
+	/* SUM_LI_ACTIVE_POWER - extended register */
+    long long sum = 5;
+	CGXDLMSVariant sum_li(sum);
+	CGXDLMSExtendedRegister* pSumLi = new CGXDLMSExtendedRegister(SUM_LI_ACTIVE_POWER);
+	pDataCurrent->SetValue(sum_li);
+	pReactiveEnergy->SetScaler(100.0);
+	pReactiveEnergy->SetUnit(2);
+	GetItems().push_back(pSumLi);
+
+	/* MANUFACTURER_SPECIFIC - data */
+    bool on_off = 0;
+    CGXDLMSVariant custom_value(on_off);
+    CGXDLMSData* pCustomObj = new CGXDLMSData(MANUFACTURER_SPECIFIC);
+    pCustomObj->SetValue(custom_value);
+    GetItems().push_back(pCustomObj);
+    count = GetItems().size();
+
+#if MAX_MEMORY
 
     //Add default clock. Clock's Logical Name is 0.0.1.0.0.255.
     CGXDLMSClock* pClock = new CGXDLMSClock();
@@ -961,8 +1048,8 @@ int CGXDLMSBaseAL::CreateObjects()
     pPush->GetPushObjectList().push_back(std::pair<CGXDLMSObject*, CGXDLMSCaptureObject>(ldn, CGXDLMSCaptureObject(2, 0)));
     // Add 0.0.25.1.0.255 Ch. 0 IPv4 setup IP address.
     //pPush->GetPushObjectList().push_back(std::pair<CGXDLMSObject*, CGXDLMSCaptureObject>(pIp4, CGXDLMSCaptureObject(3, 0)));
-
-//#endif //MAX_MEMORY
+    count = GetItems().size();
+#endif //MAX_MEMORY
 	///////////////////////////////////////////////////////////////////////
     //Server must initialize after all objects are added.
     ret = Initialize();

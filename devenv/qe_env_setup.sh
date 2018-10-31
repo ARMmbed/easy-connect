@@ -27,8 +27,6 @@ echo $PLATFORM_ARG
 export QE_PLAT=$PLATFORM_ARG
 
 cp devenv/mbed_app.json ./
-rm -f makefile
-cp devenv/makefile ./
 echo "e2eIoT-test-device/*" > .mbedignore
 echo "wifi/*" > mbed-os/components/.mbedignore
 echo "unity/*" > mbed-os/features/frameworks/.mbedignore
@@ -219,8 +217,7 @@ easy-connect/stm-spirit1-rf-driver/*
 pal-platform/*
 platform/linux/*
 mbed-cloud-client/mbed-client-pal/Source/Port/Reference-Impl/OS_Specific/mbedOS/FileSystem/pal_plat_fileSystem.cpp
-platform/mbed-os/TARGET_UBLOX_EVK_ODIN_W2/pal_insecure_ROT.cpp
-mbed-os/features/mbedtls/*" > .mbedignore
+platform/mbed-os/TARGET_UBLOX_EVK_ODIN_W2/pal_insecure_ROT.cpp" > .mbedignore
 
 # JAVA 8 is needed for all targets -
 # (Placed here to make sure this is first in the PATH).
