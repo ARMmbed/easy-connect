@@ -589,6 +589,12 @@ int CGXDLMS::GetLNPdu(
 	unsigned char ciphering = 0;
 #endif
     int len = 0;
+
+    if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
+    {
+        AddLLCBytes(p.GetSettings(), reply);
+    }
+
     if (p.GetCommand() == DLMS_COMMAND_AARQ)
     {
         reply.Set(p.GetAttributeDescriptor());
