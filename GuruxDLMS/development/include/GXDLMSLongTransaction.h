@@ -86,6 +86,14 @@ public:
     }
 
     /**
+     * @set Executed command.
+     */
+    void SetCommand(DLMS_COMMAND value)
+    {
+        m_Command = value;
+    }
+
+    /**
      * @return Targets.
      */
     std::vector<CGXDLMSValueEventArg*>& GetTargets()

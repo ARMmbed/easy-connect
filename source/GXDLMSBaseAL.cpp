@@ -95,6 +95,7 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "GXDLMSPushSetup.h"
 #include "GXDLMSAssociationLogicalName.h"
 #include "GXDLMSAssociationShortName.h"
+#include "GXServerReply.h"
 
 #define MAX_PACKET_PRINT 170
 
@@ -179,7 +180,6 @@ static bool DropSend(CGXDLMSBaseAL *server)
 
 static void ListenerThread(const void* pVoid)
 {
-    CGXByteBuffer reply;
 	STATUS result = SUCCESS;
     CGXDLMSBaseAL* server = (CGXDLMSBaseAL*)pVoid;
     int ret;
@@ -189,6 +189,7 @@ static void ListenerThread(const void* pVoid)
 	SOCKADDR client_sock_addr = { 0 };
 	SOCKLEN client_sock_addr_len;
 	bool first_packet = true;
+    CGXServerReply sr;
 
     while (server->IsConnected())
     {
@@ -229,68 +230,75 @@ static void ListenerThread(const void* pVoid)
 				{
 					PrintfBuff(bb.GetData(), len);
 				}
+				continue;
 			}
 
-			else
+			if(server->m_print)
 			{
-				if(server->m_print)
-				{
-					printf("packet received\n");
-					PrintfBuff(bb.GetData(), len);
-				}
+				printf("packet received\n");
+				PrintfBuff(bb.GetData(), len);
+			}
 
-				if ( ret == 0 && len == 0 )
-				{
-					server->SetState(false);
-					//Notify error.
-					server->Reset();
-					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-					break;
-				}
+			if ( ret == 0 && len == 0 )
+			{
+				server->SetState(false);
+				//Notify error.
+				server->Reset();
+				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+				break;
+			}
+        
+			//If client is closed the connection.
+			if (ret != SUCCESS)
+			{
+				server->SetState(false);
+				server->Reset();
+				server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+				printf("PAL_ERR_SOCKET_CONNECTION_CLOSED, close socket\n");
+				break;
+			}
 
-				//If client is closed the connection.
-				if (ret != SUCCESS)
-				{
-					server->SetState(false);
-					server->Reset();
-					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
-					printf("PAL_ERR_SOCKET_CONNECTION_CLOSED, close socket\n");
-					break;
-				}
+			bb.SetSize(bb.GetSize() + len);
 
-				bb.SetSize(bb.GetSize() + len);
+   			sr.SetData(bb);
 
-				if (server->HandleRequest(bb, reply) != 0)
+            do {
+
+				if (server->HandleRequest(sr) != 0)
 				{
 					printf("\n\nServer: Error!!!\n\n");
-					PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+					PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
 					server->SetState(false);
 					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+					break;
 				}
-				bb.SetSize(0);
 
-				if (reply.GetSize() != 0)
-				{
+
+				// Reply is null if we do not want to send any data to the
+				// client.
+				// This is done if client try to make connection with wrong
+				// server or client address.
+				if (sr.GetReply().GetData() != NULL) {
+
 					if(DropSend(server) == true)
 					{
 						printf("drop sent packet %d\n", server->m_send_counter);
 
 						if(server->m_print)
 						{
-							PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+							PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
 						}
 					}
-
 					else
 					{
 						if(server->m_print)
 						{
-							printf("packet sent\n");
-							PrintfBuff(reply.GetData(), reply.GetSize() - reply.GetPosition());
+							printf("server packet sent\n");
+							PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
 						}
 
-						ret = server->Write(client_sock, reply, &len);
-
+						sr.GetReply().SetPosition(0);
+						ret = server->Write(client_sock, sr.GetReply(), &len);
 						if (ret == -1)
 						{
 							//If error has occured
@@ -298,18 +306,26 @@ static void ListenerThread(const void* pVoid)
 							server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 						}
 					}
-
-					server->SetState(true);
-					reply.Clear();
 				}
-	#ifdef __linux__
-				sleep(1);
-	#else
-				osThreadYield();
-				pal_osDelay(5000);
-	#endif
+
+
+            } while (sr.IsStreaming());
+
+
+			bb.SetSize(0);
+			server->SetState(true);
+			//we will reset the server reply only if we are not in the middle of a GBT session
+			if(sr.GetIsLastBlock())
+			{
+				sr.Reset();
 			}
 
+#ifdef __linux__
+			sleep(1);
+#else
+			osThreadYield();
+			pal_osDelay(5000);
+#endif
 		}
 		server->SetState(false);
 		server->Reset();

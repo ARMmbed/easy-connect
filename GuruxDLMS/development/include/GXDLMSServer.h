@@ -48,6 +48,7 @@
 #include "GXDLMSAssociationLogicalName.h"
 #include "GXDLMSAssociationShortName.h"
 #include "GXDLMSPushSetup.h"
+#include "GXServerReply.h"
 
 enum TEST_CASE
 {
@@ -115,7 +116,7 @@ private:
     * @param data
     *            Received data.
     */
-    int GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char invokeID);
+    int GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char invokeID, bool streaming);
 
     /**
      * Handle get request with list command.
@@ -171,10 +172,15 @@ private:
     * Handle received command.
     */
     int HandleCommand(
-        CGXDLMSConnectionEventArgs& connectionInfo,
         DLMS_COMMAND cmd,
         CGXByteBuffer& data,
-        CGXByteBuffer& reply);
+        CGXByteBuffer& reply,
+		CGXServerReply& sr);
+
+    /**
+    * Extract the general block transfer parameters.
+    */
+    int HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerReply& sr);
 
     /**
     * Parse AARQ request that client send and returns AARE request.
@@ -451,6 +457,11 @@ public:
 	void SetTestCase(TEST_CASE _t) {m_test_case = _t;};
 	TEST_CASE GetTestCase() {return m_test_case;};
 
+	unsigned long GetServerAddress();
+
+	unsigned long GetClientAddress();
+
+
     /**
     * @return HDLC settings.
     */
@@ -670,16 +681,12 @@ public:
     /**
      * Handles client request.
      *
-     * @param data
-     *            Received data from the client.
+     * @param sr
+     *            Server reply.
      * @return Response to the request. Response is NULL if request packet is
      *         not complete.
      */
-    int HandleRequest(
-        CGXDLMSConnectionEventArgs& connectionInfo,
-        unsigned char* data,
-        unsigned short size,
-        CGXByteBuffer& reply);
+    int HandleRequest(CGXServerReply& sr);
 
 
     /**
