@@ -48,6 +48,7 @@
 #include "GXDLMSAssociationLogicalName.h"
 #include "GXDLMSAssociationShortName.h"
 #include "GXDLMSPushSetup.h"
+#include "../../../security_util/include/security_api.h"
 #include "GXServerReply.h"
 
 enum TEST_CASE
@@ -456,6 +457,7 @@ public:
 	void SetServerPublicKey(unsigned char *q);
 	void SetTestCase(TEST_CASE _t) {m_test_case = _t;};
 	TEST_CASE GetTestCase() {return m_test_case;};
+	void InitSecurityUtils(void);
 
 	unsigned long GetServerAddress();
 

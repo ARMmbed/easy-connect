@@ -2760,6 +2760,17 @@ void CGXDLMSServer::SetServerPublicKey(unsigned char *q)
 	memcpy(m_Settings.GetKey().m_recipient_public, q, PUBLIC_KEY_SIZE);
 }
 
+void CGXDLMSServer::InitSecurityUtils(void)
+{
+	security_key_pair_t ds_key_pair;
+
+	ds_key_pair.public_key = m_Settings.GetKey().m_originator_public;
+	ds_key_pair.public_key_size = PRIVATE_KEY_SIZE;
+	ds_key_pair.private_key = m_Settings.get_key_cb(&ds_key_pair.private_key_size);
+
+	init_security_util(&ds_key_pair, NULL);
+}
+
 unsigned long CGXDLMSServer::GetServerAddress()
 {
     return m_Settings.GetServerAddress();
@@ -2769,5 +2780,3 @@ unsigned long CGXDLMSServer::GetClientAddress()
 {
     return m_Settings.GetClientAddress();
 }
-
-

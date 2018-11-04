@@ -574,6 +574,7 @@ int main_server(int argc, char* argv[])
 		server->SetPrivateKey(keys.m_private);
 		server->SetServerPublicKey(keys.m_public);
 		server->SetCB(get_private_key);
+		server->InitSecurityUtils();
 	}
 
 	server->SetTestCase(s_test_case);
