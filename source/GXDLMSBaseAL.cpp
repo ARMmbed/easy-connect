@@ -34,6 +34,7 @@
 
 #ifdef __MBED__
 #include <AnalogIn.h>
+#include "mbed.h"
 #include "../../mbed-os/rtos/Thread.h"
 #else //Linux includes
 #include <termios.h>
@@ -52,6 +53,14 @@
 #define SIMULATION_THREAD_STACK_SIZE 512
 
 #ifdef __MBED__
+
+DigitalOut led1(LED1);
+DigitalOut led2(PD_9);
+DigitalOut led3(PD_8);
+DigitalOut led4(PD_11);
+DigitalOut led5(PD_12);
+
+static int prev_led;
 using namespace rtos;
 Thread listener(osPriorityHigh, sizeof(uint32_t) * LISTENER_THREAD_STACK_SIZE);
 Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_SIZE);
@@ -350,8 +359,8 @@ static void sensor_thread(void const *pVoid)
 
 	CGXDLMSVariant active((int)0);
 	CGXDLMSVariant reactive((unsigned long)0);
-	CGXDLMSVariant sum_li = CGXDLMSVariant((long long)0);
-//	CGXDLMSVariant custom((bool)0);
+	CGXDLMSVariant sum_li = CGXDLMSVariant((unsigned long)0);
+	CGXDLMSVariant custom((bool)0);
 
 	CGXDLMSVariant new_value;
 
@@ -400,10 +409,10 @@ static void sensor_thread(void const *pVoid)
 		if (obj != NULL)
 		{
 			active = ((CGXDLMSData*)obj)->GetValue();
-			if(active.lVal + 5 < 300)
-				new_value = CGXDLMSVariant((int)active.lVal + 5);
+			if(active.lVal + 2 < 10)
+				new_value = CGXDLMSVariant((int)active.lVal + 2);
 			else
-				new_value = CGXDLMSVariant((int)10);
+				new_value = CGXDLMSVariant((int)1);
 
 			((CGXDLMSData*)obj)->SetValue(new_value);
 			printf("Active energy: prev value = %ld   new value = %ld\n", active.lVal, new_value.lVal);
@@ -415,8 +424,8 @@ static void sensor_thread(void const *pVoid)
 		if (obj != NULL)
 		{
 			reactive = ((CGXDLMSRegister*)obj)->GetValue();
-			if(reactive.ulVal + 2 < 100)
-				new_value = CGXDLMSVariant((unsigned long)reactive.ulVal + 2);
+			if(reactive.ulVal + 1 < 10)
+				new_value = CGXDLMSVariant((unsigned long)reactive.ulVal + 1);
 			else
 				new_value = CGXDLMSVariant((unsigned long)2);
 			((CGXDLMSData*)obj)->SetValue(new_value);
@@ -429,13 +438,33 @@ static void sensor_thread(void const *pVoid)
 		if (obj != NULL)
 		{
 			sum_li = ((CGXDLMSRegister*)obj)->GetValue();
-			if(sum_li.llVal + 10 < 250)
-				new_value = CGXDLMSVariant((long long)sum_li.llVal + 10);
+			if(sum_li.ulVal + 3 < 15)
+				new_value = CGXDLMSVariant((unsigned long)sum_li.ulVal + 3);
 			else
-				new_value = CGXDLMSVariant((long long)5);
+				new_value = CGXDLMSVariant((unsigned long)1);
 
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.llVal, (long)new_value.llVal);
+			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.ulVal, (long)new_value.ulVal);
+		}
+
+
+		/* MANUFACTURER_SPECIFIC  */
+		str_id = MANUFACTURER_SPECIFIC;
+		obj = items.FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
+		if (obj != NULL)
+		{
+			custom = ((CGXDLMSRegister*)obj)->GetValue();
+			/*if(custom.lVal != prev_led) {*/
+				prev_led = custom.boolVal;
+
+				led1 = !led1;
+				led2 = !led2;
+				led3 = (int)custom.boolVal;
+				led4 = !led4;
+				led5 = !led5;
+				printf("Custom: value = %d\n", custom.boolVal);
+				printf("Leds: led1 = %d led2 = %d led3 = %d\n", (int)led1, (int)led2, (int)led3);
+			//}
 		}
 
 		pal_osDelay(10000);
@@ -446,6 +475,13 @@ static void sensor_thread(void const *pVoid)
 static void temprature_thread(void const *pVoid)
 
 {
+	CGXDLMSVariant active((int)0);
+	CGXDLMSVariant reactive((unsigned long)0);
+	CGXDLMSVariant sum_li = CGXDLMSVariant((unsigned long)0);
+	CGXDLMSVariant custom((bool)0);
+
+	CGXDLMSVariant new_value;
+
 	printf("start temprature thread \r\n");
 	CGXDLMSBaseAL* pDLMSBase=(CGXDLMSBaseAL*)pVoid;
 	while(1)
@@ -462,6 +498,59 @@ static void temprature_thread(void const *pVoid)
 			temp_value=temp_value.iVal+1;
 			printf("New temp value %d\r\n",temp_value.iVal);
 			((CGXDLMSRegister*)obj)->SetValue(temp_value);
+		}
+		/* ACTIVE_ENERGY  */
+		str_id = ACTIVE_ENERGY;
+		obj = pDLMSBase->GetItems().FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
+		if (obj != NULL)
+		{
+			active = ((CGXDLMSData*)obj)->GetValue();
+			if(active.lVal + 2 < 10)
+				new_value = CGXDLMSVariant((int)active.lVal + 2);
+			else
+				new_value = CGXDLMSVariant((int)1);
+
+			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("Active energy: prev value = %ld   new value = %ld\n", active.lVal, new_value.lVal);
+		}
+
+		/* REACTIVE_ENERGY  */
+		str_id = REACTIVE_ENERGY;
+		obj = pDLMSBase->GetItems().FindByLN(DLMS_OBJECT_TYPE_REGISTER, str_id);
+		if (obj != NULL)
+		{
+			reactive = ((CGXDLMSRegister*)obj)->GetValue();
+			if(reactive.ulVal + 1 < 10)
+				new_value = CGXDLMSVariant((unsigned long)reactive.ulVal + 1);
+			else
+				new_value = CGXDLMSVariant((unsigned long)2);
+			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("Reactive energy: prev value = %lu   new value = %lu\n", reactive.ulVal, new_value.ulVal);
+		}
+
+		/* SUM_LI_ACTIVE_POWER  */
+		str_id = SUM_LI_ACTIVE_POWER;
+		obj = pDLMSBase->GetItems().FindByLN(DLMS_OBJECT_TYPE_EXTENDED_REGISTER, str_id);
+		if (obj != NULL)
+		{
+			sum_li = ((CGXDLMSRegister*)obj)->GetValue();
+			if(sum_li.ulVal + 3 < 15)
+				new_value = CGXDLMSVariant((unsigned long)sum_li.ulVal + 3);
+			else
+				new_value = CGXDLMSVariant((unsigned long)1);
+
+			((CGXDLMSData*)obj)->SetValue(new_value);
+			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.ulVal, (long)new_value.ulVal);
+		}
+
+
+		/* MANUFACTURER_SPECIFIC  */
+		str_id = MANUFACTURER_SPECIFIC;
+		obj = pDLMSBase->GetItems().FindByLN(DLMS_OBJECT_TYPE_DATA, str_id);
+		if (obj != NULL)
+		{
+			custom = ((CGXDLMSRegister*)obj)->GetValue();
+			printf("Custom: value = %d\n", custom.boolVal);
 		}
 		sleep(1);
 	}
@@ -924,26 +1013,33 @@ int CGXDLMSBaseAL::CreateObjects()
 	CGXDLMSVariant reactive_energy(reactive);
 	CGXDLMSRegister* pReactiveEnergy = new CGXDLMSRegister(REACTIVE_ENERGY);
 	pReactiveEnergy->SetValue(reactive_energy);
-	pReactiveEnergy->SetScaler(10.0);
+	pReactiveEnergy->SetScaler(1.0);
 	pReactiveEnergy->SetUnit(1);
 	GetItems().push_back(pReactiveEnergy);
 
 	/* SUM_LI_ACTIVE_POWER - extended register */
-    long long sum = 5;
+	unsigned long sum = 5;
 	CGXDLMSVariant sum_li(sum);
 	CGXDLMSExtendedRegister* pSumLi = new CGXDLMSExtendedRegister(SUM_LI_ACTIVE_POWER);
 	pDataCurrent->SetValue(sum_li);
-	pReactiveEnergy->SetScaler(100.0);
-	pReactiveEnergy->SetUnit(2);
+	pReactiveEnergy->SetScaler(10.0);
+	pReactiveEnergy->SetUnit(1);
 	GetItems().push_back(pSumLi);
 
 	/* MANUFACTURER_SPECIFIC - data */
-    bool on_off = 0;
+    bool on_off = 1;
     CGXDLMSVariant custom_value(on_off);
     CGXDLMSData* pCustomObj = new CGXDLMSData(MANUFACTURER_SPECIFIC);
     pCustomObj->SetValue(custom_value);
     GetItems().push_back(pCustomObj);
     count = GetItems().size();
+
+#ifdef __MBED__
+    prev_led = on_off;
+    led1 = 0;
+    led2 = 0;
+    led3 = 1;
+#endif
 
 #if MAX_MEMORY
 

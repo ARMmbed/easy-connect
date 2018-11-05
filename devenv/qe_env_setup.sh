@@ -163,7 +163,6 @@ spv_set_MbedOS_env() {
 	rm -rf __x86_x64_NativeLinux_mbedtls
 	echo "FreeRTOS/*" >> e2eIoT-test-device/qe-device-infra/os_specific_source/.mbedignore
     echo "Linux/*" >> e2eIoT-test-device/qe-device-infra/os_specific_source/.mbedignore
-    sed -i -e 's/NSAPI_SECURITY_WPA_WPA2/NSAPI_SECURITY_NONE/g' ./easy-connect/easy-connect.h
 }
 
 case "$QE_PLAT" in
