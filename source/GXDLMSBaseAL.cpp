@@ -472,7 +472,7 @@ static void sensor_thread(void const *pVoid)
 
 }
 #else
-static void temprature_thread(void const *pVoid)
+static void *temperature_thread(void *pVoid)
 
 {
 	CGXDLMSVariant active((int)0);
@@ -634,6 +634,8 @@ int CGXDLMSBaseAL::StartServer(char *ip_address, const char* pPort)
 #else
 	sem_wait(&m_wait_server_start);
 #endif // __linux__
+
+	ret = pthread_create(&m_TempratureThread, NULL, temperature_thread, (void *)this);
 
 #else // MBED
 	listener.start(mbed::callback(ListenerThread, (void*)this));
