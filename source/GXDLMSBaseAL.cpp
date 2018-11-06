@@ -434,7 +434,7 @@ static void sensor_thread(void const *pVoid)
 
 		/* SUM_LI_ACTIVE_POWER  */
 		str_id = SUM_LI_ACTIVE_POWER;
-		obj = items.FindByLN(DLMS_OBJECT_TYPE_EXTENDED_REGISTER, str_id);
+		obj = items.FindByLN(DLMS_OBJECT_TYPE_REGISTER, str_id);
 		if (obj != NULL)
 		{
 			sum_li = ((CGXDLMSRegister*)obj)->GetValue();
@@ -457,13 +457,13 @@ static void sensor_thread(void const *pVoid)
 			/*if(custom.lVal != prev_led) {*/
 				prev_led = custom.boolVal;
 
-				led1 = !led1;
-				led2 = !led2;
+				led1 = (int)custom.boolVal;
+				led2 = (int)custom.boolVal;
 				led3 = (int)custom.boolVal;
-				led4 = !led4;
-				led5 = !led5;
+				led4 = (int)custom.boolVal;
+				led5 = (int)custom.boolVal;
 				printf("Custom: value = %d\n", custom.boolVal);
-				printf("Leds: led1 = %d led2 = %d led3 = %d\n", (int)led1, (int)led2, (int)led3);
+//				printf("Leds: led1 = %d led2 = %d led3 = %d\n", (int)led1, (int)led2, (int)led3);
 			//}
 		}
 
@@ -530,7 +530,7 @@ static void *temperature_thread(void *pVoid)
 
 		/* SUM_LI_ACTIVE_POWER  */
 		str_id = SUM_LI_ACTIVE_POWER;
-		obj = pDLMSBase->GetItems().FindByLN(DLMS_OBJECT_TYPE_EXTENDED_REGISTER, str_id);
+		obj = pDLMSBase->GetItems().FindByLN(DLMS_OBJECT_TYPE_REGISTER, str_id);
 		if (obj != NULL)
 		{
 			sum_li = ((CGXDLMSRegister*)obj)->GetValue();
@@ -1022,10 +1022,10 @@ int CGXDLMSBaseAL::CreateObjects()
 	/* SUM_LI_ACTIVE_POWER - extended register */
 	unsigned long sum = 5;
 	CGXDLMSVariant sum_li(sum);
-	CGXDLMSExtendedRegister* pSumLi = new CGXDLMSExtendedRegister(SUM_LI_ACTIVE_POWER);
-	pDataCurrent->SetValue(sum_li);
-	pReactiveEnergy->SetScaler(10.0);
-	pReactiveEnergy->SetUnit(1);
+	CGXDLMSRegister* pSumLi = new CGXDLMSRegister(SUM_LI_ACTIVE_POWER);
+	pSumLi->SetValue(sum_li);
+	pSumLi->SetScaler(10.0);
+	pSumLi->SetUnit(1);
 	GetItems().push_back(pSumLi);
 
 	/* MANUFACTURER_SPECIFIC - data */
