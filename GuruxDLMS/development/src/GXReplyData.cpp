@@ -129,7 +129,6 @@ void CGXReplyData::Clear()
     m_PacketLength = 0;
     m_DataType = DLMS_DATA_TYPE_NONE;
     m_CipherIndex = 0;
-    m_Gbt = false;
 }
 
 bool CGXReplyData::IsMoreData()
@@ -207,16 +206,6 @@ void CGXReplyData::SetCipherIndex(unsigned short value)
     m_CipherIndex = value;
 }
 
-bool CGXReplyData::GetGbt()
-{
-    return m_Gbt;
-}
-
-void CGXReplyData::SetGbt(bool value)
-{
-    m_Gbt = value;
-}
-
 struct tm* CGXReplyData::GetTime()
 {
     return m_Time;
@@ -240,4 +229,52 @@ void CGXReplyData::SetTime(struct tm* value)
         }
         memcpy(m_Time, value, sizeof(struct tm));
     }
+}
+
+
+unsigned short CGXReplyData::GetBlockNumber()
+{
+	return m_BlockNumber;
+}
+
+void CGXReplyData::SetBlockNumber(unsigned short value)
+{
+	m_BlockNumber = value;
+}
+
+unsigned short CGXReplyData::GetBlockNumberAck()
+{
+	return m_BlockNumberAck;
+}
+
+
+void CGXReplyData::SetBlockNumberAck(unsigned short value)
+{
+	m_BlockNumberAck = value;
+}
+
+bool CGXReplyData::GetStreaming()
+{
+	return m_Streaming;
+}
+
+void CGXReplyData::SetStreaming(bool value)
+{
+	m_Streaming = value;
+}
+
+unsigned char CGXReplyData::GetWindowSize()
+{
+	return m_WindowSize;
+}
+
+void CGXReplyData::SetWindowSize(unsigned char  value)
+{
+	m_WindowSize = value;
+}
+
+ bool CGXReplyData::IsStreaming()
+ {
+	return GetStreaming() && (GetBlockNumberAck() * GetWindowSize())
+			+ 1 > GetBlockNumber();
 }

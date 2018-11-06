@@ -43,6 +43,13 @@
 #include "../include/GXSecure.h"
 #include "../include/GXDLMSValueEventCollection.h"
 #include "../include/GXDLMSSettings.h"
+#include "../include/GXServerReply.h"
+
+#define DLMS_WRAPPER_FRAME_LENGTH 8
+#define DLMS_DATA_LENGTH_OFFSET 6
+#define DLMS_GBT_BNA_LSB_BYTE_OFFSET 5
+
+static void PrintfBuff(CGXByteBuffer *bb);
 
 CGXDLMSServer::CGXDLMSServer(bool logicalNameReferencing,
     DLMS_INTERFACE_TYPE type) : m_Transaction(NULL), m_Settings(true)
@@ -1142,85 +1149,119 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
     return ret;
 }
 
-int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char invokeID)
+int CGXDLMSServer::GetRequestNextDataBlock(CGXByteBuffer& data, unsigned char invokeID, bool streaming)
 {
     CGXByteBuffer bb;
     int ret;
     unsigned long index;
     // Get block index.
-    if ((ret = data.GetUInt32(&index)) != 0)
+    if (!streaming)
     {
-        return ret;
+		if ((ret = data.GetUInt32(&index)) != 0)
+		{
+			return ret;
+		}
+		if (index != m_Settings.GetBlockIndex())
+		{
+			CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2,
+				0, &bb,
+				DLMS_ERROR_CODE_DATA_BLOCK_NUMBER_INVALID);
+			return CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
+		}
     }
-    if (index != m_Settings.GetBlockIndex())
-    {
-        CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2,
-            NULL, &bb,
-            DLMS_ERROR_CODE_DATA_BLOCK_NUMBER_INVALID);
-        return CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
-    }
+
+    m_Settings.IncreaseBlockIndex();
+	CGXDLMSLNParameters p(&m_Settings, invokeID,
+		 streaming ? DLMS_COMMAND_GENERAL_BLOCK_TRANSFER
+				 : DLMS_COMMAND_GET_RESPONSE,
+		 2, 0, &bb, DLMS_ERROR_CODE_OK);
+	p.SetStreaming(streaming);
+	p.SetWindowSize(m_Settings.GetWindowSize());
+
+	// If transaction is not in progress.
+	if (m_Transaction == NULL)
+	{
+		p.SetStatus(DLMS_ERROR_CODE_NO_LONG_GET_OR_READ_IN_PROGRESS);
+	}
     else
     {
-        m_Settings.IncreaseBlockIndex();
-        CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 2, NULL, &bb, DLMS_ERROR_CODE_OK);
-        // If m_Transaction is not in progress.
-        if (m_Transaction == NULL)
-        {
-            p.SetStatus(DLMS_ERROR_CODE_NO_LONG_GET_OR_READ_IN_PROGRESS);
-        }
-        else
-        {
-            bb.Set(&m_Transaction->GetData());
-            unsigned char moreData = m_Settings.GetIndex() != m_Settings.GetCount();
-            if (moreData)
-            {
-                // If there is multiple blocks on the buffer.
-                // This might happen when Max PDU size is very small.
-                if (bb.GetSize() < m_Settings.GetMaxPduSize())
-                {
-                    CGXDLMSVariant value;
-                    for (std::vector<CGXDLMSValueEventArg*>::iterator arg = m_Transaction->GetTargets().begin();
-                        arg != m_Transaction->GetTargets().end(); ++arg)
-                    {
-                        PreRead(m_Transaction->GetTargets());
-                        if (!(*arg)->GetHandled())
-                        {
-                            if ((ret = (*arg)->GetTarget()->GetValue(m_Settings, *(*arg))) != 0)
-                            {
-                                return ret;
-                            }
-                            std::vector<CGXDLMSValueEventArg*> arr;
-                            arr.push_back(*arg);
-                            PostRead(arr);
-                        }
-                        value = (*arg)->GetValue();
-                        // Add data.
-                        if ((*arg)->IsByteArray() && value.vt == DLMS_DATA_TYPE_OCTET_STRING)
-                        {
-                            // If byte array is added do not add type.
-                            bb.Set(value.byteArr, value.GetSize());
-                        }
-                        else if ((ret = CGXDLMS::AppendData((*arg)->GetTarget(), (*arg)->GetIndex(), bb, value)) != 0)
-                        {
-                            return DLMS_ERROR_CODE_HARDWARE_FAULT;
-                        }
-                    }
-                }
-            }
-            p.SetMultipleBlocks(true);
-            ret = CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
-            moreData = m_Settings.GetIndex() != m_Settings.GetCount();
-            if (moreData || bb.GetSize() - bb.GetPosition() != 0)
-            {
-                m_Transaction->SetData(bb);
-            }
-            else
-            {
-                delete m_Transaction;
-                m_Transaction = NULL;
-                m_Settings.ResetBlockIndex();
-            }
-        }
+
+		bb.Set(&m_Transaction->GetData());
+		bool moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+		if (moreData) {
+		 // If there is multiple blocks on the buffer.
+		 // This might happen when Max PDU size is very small.
+		 if (bb.GetSize() < m_Settings.GetMaxPduSize())
+		 {
+
+			 CGXDLMSVariant value;
+			  for (std::vector<CGXDLMSValueEventArg*>::iterator arg = m_Transaction->GetTargets().begin();
+				  arg != m_Transaction->GetTargets().end(); ++arg)
+			  {
+				  PreRead(m_Transaction->GetTargets());
+				  if (!(*arg)->GetHandled())
+				  {
+					  if ((ret = (*arg)->GetTarget()->GetValue(m_Settings, *(*arg))) != 0)
+					  {
+						  return ret;
+					  }
+					  std::vector<CGXDLMSValueEventArg*> arr;
+					  arr.push_back(*arg);
+					  PostRead(arr);
+				  }
+				  value = (*arg)->GetValue();
+				  // Add data.
+				  if ((*arg)->IsByteArray() && value.vt == DLMS_DATA_TYPE_OCTET_STRING)
+				  {
+					  // If byte array is added do not add type.
+					  bb.Set(value.byteArr, value.GetSize());
+				  }
+				  else if ((ret = CGXDLMS::AppendData((*arg)->GetTarget(), (*arg)->GetIndex(), bb, value)) != 0)
+				  {
+					  return DLMS_ERROR_CODE_HARDWARE_FAULT;
+				  }
+
+			  }
+
+#if 0 //TODO: we might need to change above for loop code with below lines
+			 Object value;
+			 for (ValueEventArgs arg : server.getTransaction()
+					 .getTargets()) {
+				 arg.setInvokeId(p.getInvokeId());
+				 server.notifyRead(new ValueEventArgs[] { arg });
+				 if (arg.getHandled()) {
+					 value = arg.getValue();
+				 } else {
+					 value = arg.getTarget().getValue(settings, arg);
+				 }
+				 p.setInvokeId(arg.getInvokeId());
+				 // Add data.
+				 if (arg.isByteArray()) {
+					 bb.set((byte[]) value);
+				 } else {
+					 GXDLMS.appendData(arg.getTarget(), arg.getIndex(),
+							 bb, value);
+				 }
+			 }
+#endif
+			 moreData = m_Settings.GetIndex() != m_Settings.GetCount();
+		 }
+
+
+		}
+
+		p.SetMultipleBlocks(true);
+		CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
+		if (moreData || bb.GetSize() - bb.GetPosition() != 0)
+		{
+			m_Transaction->SetData(bb);
+		}
+		else
+		{
+			delete m_Transaction;
+			m_Transaction = NULL;
+			m_Settings.ResetBlockIndex();
+		}
     }
     return ret;
 }
@@ -1364,7 +1405,7 @@ int CGXDLMSServer::HandleGetRequest(
     else if (type == DLMS_GET_COMMAND_TYPE_NEXT_DATA_BLOCK)
     {
         // Get request for next data block
-        ret = GetRequestNextDataBlock(data, invokeID);
+        ret = GetRequestNextDataBlock(data, invokeID,false);
     }
     else if (type == DLMS_GET_COMMAND_TYPE_WITH_LIST)
     {
@@ -2002,13 +2043,17 @@ int CGXDLMSServer::HandleReleaseRequest(CGXByteBuffer& data)
 }
 
 int CGXDLMSServer::HandleCommand(
-    CGXDLMSConnectionEventArgs& connectionInfo,
     DLMS_COMMAND cmd,
     CGXByteBuffer& data,
-    CGXByteBuffer& reply)
+	CGXByteBuffer& reply,
+	CGXServerReply& sr)
 {
     int ret = 0;
-    unsigned char frame = 0;
+    unsigned char frame = 0, *tmpPtr, ch = 0;
+    bool bHandlingGbtFirsttime = false;
+	CGXByteBuffer intermediateReply,savedReplyData;
+	unsigned short intermediateLen;
+
     switch (cmd)
     {
     case DLMS_COMMAND_SET_REQUEST:
@@ -2021,20 +2066,42 @@ int CGXDLMSServer::HandleCommand(
         if (data.GetSize() != 0)
         {
             ret = HandleGetRequest(data);
+
+             //check if the answer we got is in GBT
+            //in case it is GBT need to se appropriate flags
+            m_ReplyData.GetUInt8(0,&ch);
+
+			//the reply data is more than max PDU
+			//copy the whole message including the GBT header we got from the reply
+			//this operation should be done only on the first time
+			if((ch == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) && (sr.GetReplyingToGbt() == false))
+			{
+
+				//m_Settings.SetBlockNumberAck(1);
+				//we decrease from the count the current block we got
+				sr.SetCount(sr.GetClientWindowSize()-1);
+				sr.SetReplyingToGbt(true);
+				//if transaction is NULL it means that all data was received and this is the last block
+				sr.SetIsLastBlock(m_Transaction == NULL);
+				if(NULL != m_Transaction)
+				{
+					m_Transaction->SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+				}
+			}
         }
         break;
     case DLMS_COMMAND_READ_REQUEST:
         ret = HandleReadRequest(data);
         break;
     case DLMS_COMMAND_METHOD_REQUEST:
-        ret = HandleMethodRequest(data, connectionInfo);
+        ret = HandleMethodRequest(data, sr.GetConnectionInfo());
         break;
     case DLMS_COMMAND_SNRM:
         ret = HandleSnrmRequest(m_Settings, data, m_ReplyData);
         frame = DLMS_COMMAND_UA;
         break;
     case DLMS_COMMAND_AARQ:
-        ret = HandleAarqRequest(data, connectionInfo);
+        ret = HandleAarqRequest(data, sr.GetConnectionInfo());
         break;
     case DLMS_COMMAND_RELEASE_REQUEST:
         ret = HandleReleaseRequest(data);
@@ -2042,8 +2109,64 @@ int CGXDLMSServer::HandleCommand(
     case DLMS_COMMAND_DISC:
         ret = GenerateDisconnectRequest(m_Settings, m_ReplyData);
         m_Settings.SetConnected(false);
-        Disconnected(connectionInfo);
+        Disconnected(sr.GetConnectionInfo());
         frame = DLMS_COMMAND_UA;
+        break;
+    case DLMS_COMMAND_GENERAL_BLOCK_TRANSFER:
+    	ret = HandleGeneralBlockTransfer(data, sr);
+    	if(sr.GetReplyingToGbt() == false)
+    	{
+			savedReplyData = m_ReplyData;
+			m_ReplyData.Clear();
+			ret = HandleCommand(m_Transaction->GetCommand(),m_Transaction->GetData(),intermediateReply, sr);
+
+
+			//get the lenght of teh intermediate reply
+			intermediateReply.GetUInt16(DLMS_DATA_LENGTH_OFFSET,&intermediateLen);
+			//check if the intermediate reply was in GBT
+			intermediateReply.GetUInt8(DLMS_WRAPPER_FRAME_LENGTH,&ch);
+
+			tmpPtr = intermediateReply.GetData();
+
+
+
+			//the reply data is more than max PDU
+			//copy the whole message including the GBT header we got from the reply
+			if(ch == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
+			{
+				//since this is the first time we are handling the GBT then need to set the block acked to 1
+				if((NULL != tmpPtr) && (intermediateReply.GetSize() >= DLMS_WRAPPER_FRAME_LENGTH + DLMS_GBT_BNA_LSB_BYTE_OFFSET))
+				{
+					tmpPtr[DLMS_WRAPPER_FRAME_LENGTH + DLMS_GBT_BNA_LSB_BYTE_OFFSET] = 1;
+				}
+
+				m_Settings.SetBlockNumberAck(1);
+				//we decrease from teh count the current block we got
+				sr.SetCount(sr.GetClientWindowSize()-1);
+				reply.Set(&intermediateReply,0,intermediateReply.GetSize());
+				sr.SetReplyingToGbt(true);
+				//if transaction is NULL ift means that all data was received and this is teh last balock
+				sr.SetIsLastBlock(m_Transaction == NULL);
+				if(NULL != m_Transaction)
+				{
+					m_Transaction->SetCommand(DLMS_COMMAND_GET_REQUEST);
+				}
+				//we got the complete reply including teh wrapper frame
+				//nothing else to do so return
+				return ret;
+			}
+			else
+			{
+				m_ReplyData = savedReplyData;
+				//get the length of the intermediate reply
+				intermediateReply.GetUInt16(DLMS_DATA_LENGTH_OFFSET,&intermediateLen);
+
+				GXHelpers::SetObjectCount(intermediateLen,m_ReplyData);
+				m_ReplyData.Set(&intermediateReply,DLMS_WRAPPER_FRAME_LENGTH,intermediateReply.GetSize()-DLMS_WRAPPER_FRAME_LENGTH);
+
+				sr.SetReplyingToGbt(true);
+			}
+    	}
         break;
     case DLMS_COMMAND_NONE:
         //Get next frame.
@@ -2056,7 +2179,7 @@ int CGXDLMSServer::HandleCommand(
     {
         if (m_Settings.GetInterfaceType() == DLMS_INTERFACE_TYPE_WRAPPER)
         {
-            ret = CGXDLMS::GetWrapperFrame(m_Settings, m_ReplyData, reply);
+        	ret = CGXDLMS::GetWrapperFrame(m_Settings, m_ReplyData, reply);
         }
         else
         {
@@ -2069,6 +2192,194 @@ int CGXDLMSServer::HandleCommand(
         Reset();
     }
     return ret;
+}
+
+
+int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerReply& sr)
+{
+	int ret = 0;
+
+	if (m_Transaction != NULL) {
+		if ((m_Transaction->GetCommand() == DLMS_COMMAND_GET_REQUEST)||
+			(m_Transaction->GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)) {
+
+			//parse the ack received from teh client and only then continue with teh execution
+			if(m_Transaction->GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) {
+				// BlockControl
+				unsigned char bc;
+			    if ((ret = data.GetUInt8(&bc)) != 0)
+			    {
+			        return ret;
+			    }
+
+				// Block number.
+				unsigned short blockNumber;
+			    if ((ret = data.GetUInt16(&blockNumber)) != 0)
+			    {
+			        return ret;
+			    }
+				// Block number acknowledged.
+				unsigned short blockNumberAck;
+			    if ((ret = data.GetUInt16(&blockNumberAck)) != 0)
+			    {
+			        return ret;
+			    }
+
+
+				sr.SetClientBlockNumAcked(blockNumberAck);
+				sr.SetClientBlockNum(blockNumber);
+				sr.SetClientWindowSize(bc & 0x3f);
+		    	m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
+		    	sr.SetCount(sr.GetClientWindowSize());
+		    	m_Settings.SetBlockNumberAck(blockNumber);
+		    	m_Settings.SetClientBlockNumberAck(blockNumberAck);
+		    	sr.SetIsLastBlock(false);
+		    	m_Transaction->SetCommand(DLMS_COMMAND_GET_REQUEST);
+
+			}
+
+			// Get request for next data block
+			if (sr.GetCount() == 0) {
+				m_Settings.SetBlockNumberAck(
+						m_Settings.GetBlockNumberAck() + 1);
+				sr.SetCount(m_Settings.GetWindowSize());
+			}
+			GetRequestNextDataBlock(data, 0, true);
+			if (sr.GetCount() != 0) {
+				sr.SetCount(sr.GetCount() - 1);
+			}
+			if (m_Transaction == NULL) {
+				sr.SetCount(0);
+				sr.SetIsLastBlock(true);
+			}
+			else if(sr.GetCount() == 0)
+			{
+				//in case this is the last block in the window we need to mark
+				//in the transaction that we will need to parse client reply after the
+				//next confirmation
+				m_Transaction->SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+			}
+		} else {
+			// BlockControl
+			unsigned char bc;
+		    if ((ret = data.GetUInt8(&bc)) != 0)
+		    {
+		        return ret;
+		    }
+
+			sr.SetClientWindowSize(bc & 0x3f);
+	    	m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
+
+			// Block number.
+			unsigned short blockNumber;
+		    if ((ret = data.GetUInt16(&blockNumber)) != 0)
+		    {
+		        return ret;
+		    }
+
+			// Block number acknowledged.
+			unsigned short blockNumberAck;
+		    if ((ret = data.GetUInt16(&blockNumberAck)) != 0)
+		    {
+		        return ret;
+		    }
+
+			unsigned long len;
+			GXHelpers::GetObjectCount(data,len);
+			if (len > data.GetSize() - data.GetPosition())
+			{
+				GenerateConfirmedServiceError(
+						DLMS_CONFIRMED_SERVICE_ERROR_INITIATE_ERROR,
+						DLMS_SERVICE_ERROR_SERVICE,
+						DLMS_SERVICE_UNSUPPORTED,m_ReplyData);
+			}
+			else
+			{
+				m_Transaction->GetData().Set(data.GetData(),data.GetSize());
+				// Send ACK.
+				bool igonoreAck = (bc & 0x40) != 0
+						&& (blockNumberAck * m_Settings.GetWindowSize())
+								+ 1 > blockNumber;
+				int windowSize = m_Settings.GetWindowSize();
+				int bn = m_Settings.GetBlockIndex();
+				if ((bc & 0x80) != 0) {
+					HandleCommand(m_Transaction->GetCommand(),
+							m_Transaction->GetData(),sr.GetReply(), sr);
+					m_Transaction = NULL;
+					igonoreAck = false;
+					windowSize = 1;
+				}
+				if (igonoreAck) {
+					return false;
+				}
+				m_ReplyData.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+				m_ReplyData.SetUInt8((unsigned char) (0x80 | windowSize));
+				m_Settings.SetBlockIndex(m_Settings.GetBlockIndex() + 1);
+				m_ReplyData.SetUInt16(bn);
+				m_ReplyData.SetUInt16(blockNumber);
+				m_ReplyData.SetUInt8(0);
+			}
+		}
+	} else {
+		// BlockControl
+		unsigned char bc;
+	    if ((ret = data.GetUInt8(&bc)) != 0)
+	    {
+	        return ret;
+	    }
+
+		// Block number.
+		unsigned short blockNumber;
+	    if ((ret = data.GetUInt16(&blockNumber)) != 0)
+	    {
+	        return ret;
+	    }
+
+		// Block number acknowledged.
+		unsigned short blockNumberAck;
+	    if ((ret = data.GetUInt16(&blockNumberAck)) != 0)
+	    {
+	        return ret;
+	    }
+
+		unsigned long len;
+		GXHelpers::GetObjectCount(data,len);
+		if (len > data.GetSize() - data.GetPosition())
+		{
+			GenerateConfirmedServiceError(
+					DLMS_CONFIRMED_SERVICE_ERROR_INITIATE_ERROR,
+					DLMS_SERVICE_ERROR_SERVICE,
+					DLMS_SERVICE_UNSUPPORTED,m_ReplyData);
+		}
+		else
+		{
+			unsigned char ch;
+
+			sr.SetClientBlockNumAcked(blockNumberAck);
+			sr.SetClientBlockNum(blockNumber);
+			sr.SetClientWindowSize(bc & 0x3f);
+	    	m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
+
+			if ((ret = data.GetUInt8(&ch)) != 0)
+		    {
+		        return ret;
+		    }
+		    CGXDLMSValueEventCollection tmp;
+			m_Transaction =
+					new CGXDLMSLongTransaction(tmp, (DLMS_COMMAND)ch, data);
+			m_ReplyData.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+			m_ReplyData.SetUInt8((0x80 | m_Settings.GetWindowSize()));
+			m_ReplyData.SetUInt16(blockNumber);
+			++blockNumberAck;
+			m_ReplyData.SetUInt16(blockNumberAck);
+			sr.SetIsLastBlock(false);
+			//TODO:need to check if this byte needed
+			//m_ReplyData.SetUInt8(0);
+
+
+		}
+	}
+	return ret;
 }
 
 static void PrintfBuff(unsigned char *ptr, int size)
@@ -2207,6 +2518,7 @@ int CGXDLMSServer::HandleMethodRequest(
     return ret;
 }
 
+#if 0
 int CGXDLMSServer::HandleRequest(
     CGXByteBuffer& data,
     CGXByteBuffer& reply)
@@ -2216,19 +2528,23 @@ int CGXDLMSServer::HandleRequest(
         (unsigned short)(data.GetSize() - data.GetPosition()),
         reply);
 }
+
+#endif
 
 int CGXDLMSServer::HandleRequest(
     CGXDLMSConnectionEventArgs& connectionInfo,
     CGXByteBuffer& data,
     CGXByteBuffer& reply)
 {
-    return HandleRequest(
-        connectionInfo,
-        data.GetData(),
-        (unsigned short)(data.GetSize() - data.GetPosition()),
-        reply);
+	int ret;
+    CGXServerReply sr(data);
+    sr.SetConnectionInfo(connectionInfo);
+    ret = HandleRequest(sr);
+    reply = sr.GetReply();
+    return ret;
 }
 
+#if 0
 int CGXDLMSServer::HandleRequest(
     unsigned char* buff,
     unsigned short size,
@@ -2237,97 +2553,106 @@ int CGXDLMSServer::HandleRequest(
     CGXDLMSConnectionEventArgs connectionInfo;
     return HandleRequest(connectionInfo, buff, size, reply);
 }
+#endif
 
-int CGXDLMSServer::HandleRequest(
-    CGXDLMSConnectionEventArgs& connectionInfo,
-    unsigned char* buff,
-    unsigned short size,
-    CGXByteBuffer& reply)
+
+int CGXDLMSServer::HandleRequest(CGXServerReply &sr)
 {
     int ret;
-    reply.Clear();
-    if (buff == NULL || size == 0)
-    {
-        return 0;
-    }
+
+    if (!sr.IsStreaming()
+             && (sr.GetData().GetData() == NULL || sr.GetData().GetSize() == 0)) {
+         return 0;
+     }
+
     if (!m_Initialized)
     {
         //Server not Initialized.
         return DLMS_ERROR_CODE_NOT_INITIALIZED;
     }
-    m_ReceivedData.Set(buff, size);
-    bool first = m_Settings.GetServerAddress() == 0
-        && m_Settings.GetClientAddress() == 0;
-    if ((ret = CGXDLMS::GetData(m_Settings, m_ReceivedData, m_Info)) != 0)
-    {
-        //If all data is not received yet.
-        if (ret == DLMS_ERROR_CODE_FALSE)
-        {
-            ret = 0;
-        }
-        return ret;
-    }
-    // If all data is not received yet.
-    if (!m_Info.IsComplete())
-    {
-        return 0;
-    }
-    m_ReceivedData.Clear();
 
-    if (first || m_Info.GetCommand() == DLMS_COMMAND_SNRM ||
-        (m_Settings.GetInterfaceType() == DLMS_INTERFACE_TYPE_WRAPPER && m_Info.GetCommand() == DLMS_COMMAND_AARQ))
-    {
-        // Check is data send to this server.
-        if (!IsTarget(m_Settings.GetServerAddress(), m_Settings.GetClientAddress()))
-        {
-            m_Info.Clear();
-            return 0;
-        }
+    if (!sr.IsStreaming()) {
+
+    	m_ReceivedData.Set(sr.GetData().GetData(), sr.GetData().GetSize());
+		bool first = m_Settings.GetServerAddress() == 0
+			&& m_Settings.GetClientAddress() == 0;
+		if ((ret = CGXDLMS::GetData(m_Settings, m_ReceivedData, m_Info)) != 0)
+		{
+			//If all data is not received yet.
+			if (ret == DLMS_ERROR_CODE_FALSE)
+			{
+				ret = 0;
+			}
+			return ret;
+		}
+		// If all data is not received yet.
+		if (!m_Info.IsComplete())
+		{
+			return 0;
+		}
+		m_ReceivedData.Clear();
+
+		if (first || m_Info.GetCommand() == DLMS_COMMAND_SNRM ||
+			(m_Settings.GetInterfaceType() == DLMS_INTERFACE_TYPE_WRAPPER && m_Info.GetCommand() == DLMS_COMMAND_AARQ))
+		{
+			// Check is data send to this server.
+			if (!IsTarget(m_Settings.GetServerAddress(), m_Settings.GetClientAddress()))
+			{
+				m_Info.Clear();
+				return 0;
+			}
+		}
+
+		// If client want next frame.
+		if ((m_Info.GetMoreData() & DLMS_DATA_REQUEST_TYPES_FRAME) == DLMS_DATA_REQUEST_TYPES_FRAME)
+		{
+			m_DataReceived = (long)time(NULL);
+			return CGXDLMS::GetHdlcFrame(m_Settings, m_Settings.GetReceiverReady(), &m_ReplyData, sr.GetReply());
+		}
+		// Update command if m_Transaction and next frame is asked.
+		if (m_Info.GetCommand() == DLMS_COMMAND_NONE)
+		{
+			if (m_Transaction != NULL)
+			{
+				m_Info.SetCommand(m_Transaction->GetCommand());
+			}
+		}
+		// Check inactivity time out.
+		if (m_Hdlc != NULL && m_Hdlc->GetInactivityTimeout() != 0)
+		{
+			if (m_Info.GetCommand() != DLMS_COMMAND_SNRM)
+			{
+				long elapsed = (long)(time(NULL) - m_DataReceived);
+				// If inactivity time out is elapsed.
+				if (elapsed >= m_Hdlc->GetInactivityTimeout())
+				{
+					Reset();
+					m_DataReceived = 0;
+					return 0;
+				}
+			}
+		}
+		else if (m_Wrapper != NULL && m_Wrapper->GetInactivityTimeout() != 0)
+		{
+			if (m_Info.GetCommand() != DLMS_COMMAND_AARQ)
+			{
+				long elapsed = (long)(time(NULL) - m_DataReceived);
+				// If inactivity time out is elapsed.
+				if (elapsed >= m_Wrapper->GetInactivityTimeout())
+				{
+					Reset();
+					m_DataReceived = 0;
+					return 0;
+				}
+			}
+		}
     }
-    // If client want next frame.
-    if ((m_Info.GetMoreData() & DLMS_DATA_REQUEST_TYPES_FRAME) == DLMS_DATA_REQUEST_TYPES_FRAME)
+    else
     {
-        m_DataReceived = (long)time(NULL);
-        return CGXDLMS::GetHdlcFrame(m_Settings, m_Settings.GetReceiverReady(), &m_ReplyData, reply);
+    	m_Info.SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
     }
-    // Update command if m_Transaction and next frame is asked.
-    if (m_Info.GetCommand() == DLMS_COMMAND_NONE)
-    {
-        if (m_Transaction != NULL)
-        {
-            m_Info.SetCommand(m_Transaction->GetCommand());
-        }
-    }
-    // Check inactivity time out.
-    if (m_Hdlc != NULL && m_Hdlc->GetInactivityTimeout() != 0)
-    {
-        if (m_Info.GetCommand() != DLMS_COMMAND_SNRM)
-        {
-            long elapsed = (long)(time(NULL) - m_DataReceived);
-            // If inactivity time out is elapsed.
-            if (elapsed >= m_Hdlc->GetInactivityTimeout())
-            {
-                Reset();
-                m_DataReceived = 0;
-                return 0;
-            }
-        }
-    }
-    else if (m_Wrapper != NULL && m_Wrapper->GetInactivityTimeout() != 0)
-    {
-        if (m_Info.GetCommand() != DLMS_COMMAND_AARQ)
-        {
-            long elapsed = (long)(time(NULL) - m_DataReceived);
-            // If inactivity time out is elapsed.
-            if (elapsed >= m_Wrapper->GetInactivityTimeout())
-            {
-                Reset();
-                m_DataReceived = 0;
-                return 0;
-            }
-        }
-    }
-    ret = HandleCommand(connectionInfo, m_Info.GetCommand(), m_Info.GetData(), reply);
+    ret = HandleCommand( m_Info.GetCommand(),
+    					m_Info.GetData(), sr.GetReply(),sr);
     m_Info.Clear();
     m_DataReceived = (long)time(NULL);
     return ret;
@@ -2433,4 +2758,25 @@ void CGXDLMSServer::SetPrivateKey(unsigned char *d)
 void CGXDLMSServer::SetServerPublicKey(unsigned char *q)
 {
 	memcpy(m_Settings.GetKey().m_recipient_public, q, PUBLIC_KEY_SIZE);
+}
+
+void CGXDLMSServer::InitSecurityUtils(void)
+{
+	security_key_pair_t ds_key_pair;
+
+	ds_key_pair.public_key = m_Settings.GetKey().m_originator_public;
+	ds_key_pair.public_key_size = PRIVATE_KEY_SIZE;
+	ds_key_pair.private_key = m_Settings.get_key_cb(&ds_key_pair.private_key_size);
+
+	init_security_util(&ds_key_pair, NULL);
+}
+
+unsigned long CGXDLMSServer::GetServerAddress()
+{
+    return m_Settings.GetServerAddress();
+}
+
+unsigned long CGXDLMSServer::GetClientAddress()
+{
+    return m_Settings.GetClientAddress();
 }

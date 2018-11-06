@@ -1199,6 +1199,10 @@ int CGXDLMSClient::Write(
             CGXDLMSLNParameters p(&m_Settings, 0,
                 DLMS_COMMAND_SET_REQUEST, DLMS_SET_COMMAND_TYPE_NORMAL,
                 &bb, &data, 0xff);
+            p.SetBlockIndex(m_Settings.GetBlockIndex());
+            p.SetBlockNumberAck(m_Settings.GetBlockNumberAck());
+            p.SetStreaming(false);
+
             ret = CGXDLMS::GetLnMessages(p, reply);
         }
         else
@@ -1568,3 +1572,15 @@ int  CGXDLMSClient::GetServerAddress(unsigned long logicalAddress,
     }
     return DLMS_ERROR_CODE_INVALID_PARAMETER;
 }
+
+
+unsigned char CGXDLMSClient::GetWindowSize()
+{
+    return m_Settings.GetWindowSize();
+}
+
+void CGXDLMSClient::SetWindowSize(unsigned char value)
+{
+	m_Settings.SetWindowSize(value);
+}
+

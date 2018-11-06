@@ -56,6 +56,9 @@ CGXDLMSSettings::CGXDLMSSettings(bool isServer)
     m_Index = 0;
     m_Count = 0;
     m_ProposedConformance = m_NegotiatedConformance = (DLMS_CONFORMANCE)0;
+    m_WindowSize = 1;
+    m_ClientWindowSize = 1;
+    m_ClientBlockNumberAck = 0;
 }
 
 //Destructor.
@@ -233,6 +236,7 @@ void CGXDLMSSettings::SetBlockIndex(unsigned long value)
 void CGXDLMSSettings::ResetBlockIndex()
 {
     m_BlockIndex = 1;
+    m_BlockNumberAck = 0;
 }
 
 void CGXDLMSSettings::IncreaseBlockIndex()
@@ -522,4 +526,45 @@ void CGXDLMSSettings::SetOriginatorPublicKey(unsigned char *q)
 void CGXDLMSSettings::SetRecipientPublicKey(unsigned char *q)
 {
 	memcpy(m_keys.m_recipient_public, q, PUBLIC_KEY_SIZE);
+}
+
+unsigned short CGXDLMSSettings::GetBlockNumberAck()
+{
+	return m_BlockNumberAck;
+}
+void CGXDLMSSettings::SetBlockNumberAck(unsigned short value)
+{
+	m_BlockNumberAck = value;
+}
+
+
+unsigned char CGXDLMSSettings::GetWindowSize()
+{
+	return m_WindowSize;
+}
+
+void CGXDLMSSettings::SetWindowSize(unsigned char value)
+{
+	m_WindowSize = value;
+}
+
+
+unsigned char CGXDLMSSettings::GetClientWindowSize()
+{
+	return m_ClientWindowSize;
+}
+
+void CGXDLMSSettings::SetClientWindowSize(unsigned char value)
+{
+	m_ClientWindowSize = value;
+}
+
+unsigned short CGXDLMSSettings::GeClientBlockNumberAck()
+{
+	return m_ClientBlockNumberAck;
+}
+
+void CGXDLMSSettings::SetClientBlockNumberAck(unsigned short value)
+{
+	m_ClientBlockNumberAck = value;
 }

@@ -178,6 +178,26 @@ class CGXDLMSSettings
     */
     DLMS_CONFORMANCE m_NegotiatedConformance;
 
+    /**
+     * Block number acknowledged in GBT.
+     */
+    unsigned short m_BlockNumberAck;
+     /**
+     * GBT window size.
+     */
+    unsigned char m_WindowSize;
+
+    /**
+    *  the client window size.
+    */
+    unsigned short m_ClientWindowSize;
+
+    /**
+     * Client Block number acknowledged in GBT.
+     */
+    unsigned short m_ClientBlockNumberAck;
+
+
 public:
     // Constructor.
     CGXDLMSSettings(bool isServer);
@@ -424,6 +444,50 @@ public:
 	}
 
 	keys_t& GetKey() {return m_keys;}
+
+    /**
+     * @return Block number acknowledged in GBT.
+     */
+    unsigned short GetBlockNumberAck();
+
+     /**
+     * @param value
+     *            Block number acknowledged in GBT.
+     */
+    void SetBlockNumberAck(unsigned short value);
+
+    /**
+     * @return GBT window size.
+     */
+    unsigned char GetWindowSize();
+
+    /**
+     * @param value
+     *            GBT window size.
+     */
+    void SetWindowSize(unsigned char value);
+
+    /**
+     * @return client GBT window size.
+     */
+    unsigned char GetClientWindowSize();
+
+    /**
+     * @param value
+     *           the client GBT window size.
+     */
+    void SetClientWindowSize(unsigned char value);
+
+    /**
+     * @return Client Block number acknowledged in GBT.
+     */
+    unsigned short GeClientBlockNumberAck();
+
+     /**
+     * @param value
+     *            Client Block number acknowledged in GBT.
+     */
+    void SetClientBlockNumberAck(unsigned short value);
 
 	public:
 	get_private_key_from_settings get_key_cb;
