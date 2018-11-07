@@ -101,7 +101,7 @@ int32_t ECDSA_Sign(security_int_params_t	*params,
 					uint8_t		*hash,
 					uint32_t	hash_size)
 {
-	printf("%s\n", __func__);
+//	printf("%s\n", __func__);
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	mbedtls_ecdsa_context mbedTls_ctx;
 	uint8_t  *sig = NULL;
@@ -114,7 +114,7 @@ int32_t ECDSA_Sign(security_int_params_t	*params,
 
 	ret = init_mbedtls_context(&mbedTls_ctx, params);
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
-		printf(" failed! init_mbedtls_context returned %d\n", ret);
+		printf(" failed! init_mbedtls_context returned %d\n", (int)ret);
 	} else {
 		ret = mbedtls_ecdsa_sign
 			(&mbedTls_ctx.grp, &r, &s, &mbedTls_ctx.d,
@@ -122,8 +122,8 @@ int32_t ECDSA_Sign(security_int_params_t	*params,
 
 		len_r = mbedtls_mpi_size(&r);
 		len_s = mbedtls_mpi_size(&s);
-		printf("%s: len_r=%d, len_s=%d\n",
-			__func__, (int)len_r, (int)len_s);
+//		printf("%s: len_r=%d, len_s=%d\n",
+//			__func__, (int)len_r, (int)len_s);
 //		assert(len_r == len_s);
 		assert((len_r <= HALF_SIG_SIZE) && (len_r > 0));
 		assert((len_s <= HALF_SIG_SIZE) && (len_s > 0));
@@ -149,7 +149,7 @@ int32_t ECDSA_Sign(security_int_params_t	*params,
 
 		if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 			printf
-			("mbedtls_ecdsa_write_signature returned %d\n", ret);
+			("mbedtls_ecdsa_write_signature returned %d\n", (int)ret);
 		} else {
 			memcpy(buffer, sig, sig_len);
 			*buffer_size = sig_len;
@@ -169,7 +169,7 @@ int32_t ECDSA_Verify(security_int_params_t	*params,
 					uint8_t		*hash,
 					uint32_t	hash_size)
 {
-	printf("%s\n", __func__);
+//	printf("%s\n", __func__);
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	mbedtls_ecdsa_context mbedTls_ctx;
 	mbedtls_mpi r, s;
@@ -180,36 +180,37 @@ int32_t ECDSA_Verify(security_int_params_t	*params,
 	ret = init_mbedtls_context(&mbedTls_ctx, params);
 
 	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
-		printf(" failed! init_mbedtls_context returned %d\n", ret);
+		printf(" failed! init_mbedtls_context returned %d\n", (int)ret);
 	} else {
 		size_t sig_size;
 
 		assert(buffer_size > 2);
 		assert(buffer != NULL);
 		sig_size = buffer_size;
-		printf("buffer_size %d, sig_size=%d\n",
-			(int)buffer_size, (int)sig_size);
+//		printf("buffer_size %d, sig_size=%d\n",
+//			(int)buffer_size, (int)sig_size);
 
 		ret = mbedtls_mpi_read_binary
 					(&r, buffer, sig_size/2);
 		if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 			printf
-				("read of r failed %d\n", ret);
+				("read of r failed %d\n", (int)ret);
 		} else {
 			ret = mbedtls_mpi_read_binary
 					(&s, buffer + sig_size/2,
 					sig_size/2);
 			if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
 				printf
-					("read of s failed %d\n", ret);
+					("read of s failed %d\n", (int)ret);
 			} else {
 				ret = mbedtls_ecdsa_verify
 						(&mbedTls_ctx.grp,
 						hash, hash_size,
 						&mbedTls_ctx.Q, &r, &s);
+
 				if (ret !=
 					SECURITY_UTIL_STATUS_SUCCESS) {
-					printf("verify failed %d\n", ret);
+					printf("verify failed %d\n", (int)ret);
 				}
 			}
 		}

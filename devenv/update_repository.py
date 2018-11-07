@@ -51,8 +51,7 @@ else:
 		'mbed-os.lib'              			: 'mbed-os',
 		'sd-driver.lib'            			: 'sd-driver',
 		'mbed-cloud-client.lib' 			: 'mbed-cloud-client-restricted',
-		'easy-connect.lib'					: 'easy-connect',
-		'e2eIoT-test-device.lib'   			: 'e2eIoT-test-device'
+		'easy-connect.lib'					: 'easy-connect'
 	}
 
 class UpdateRepository(object):
