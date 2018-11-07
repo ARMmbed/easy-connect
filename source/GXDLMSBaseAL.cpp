@@ -282,7 +282,7 @@ static void ListenerThread(const void* pVoid)
 					server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
 					break;
 				}
-
+				printf("\n\nServer: Handling DLMS request\n");
 
 				// Reply is null if we do not want to send any data to the
 				// client.
@@ -382,7 +382,7 @@ static void sensor_thread(void const *pVoid)
 
 	while(1)
 	{
-		printf("*********************************************************************\r\n");
+//		printf("*********************************************************************\r\n");
 #if 0
 		//don't change value of the HUMIDITY_OBJ
 		// it should stay constant for system tests
@@ -406,7 +406,7 @@ static void sensor_thread(void const *pVoid)
 			curr = ((CGXDLMSData*)obj)->GetValue();
 			new_value = (curr.fltVal + 1 > 30) ? 30 :curr.fltVal + 1;
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("current: prev value = %f   new value = %f\n", curr.fltVal, new_value.fltVal);
+//			printf("current: prev value = %f   new value = %f\n", curr.fltVal, new_value.fltVal);
 		}
 		/* POWER_OBJECT  */
 		str_id = POWER_OBJECT;
@@ -416,7 +416,7 @@ static void sensor_thread(void const *pVoid)
 			power = ((CGXDLMSData*)obj)->GetValue();
 			new_value = (power.fltVal + 1 > 100) ? 100 : power.fltVal + 1;
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("power:   prev value = %f   new value = %f\n", power.fltVal, new_value.fltVal);
+//			printf("power:   prev value = %f   new value = %f\n", power.fltVal, new_value.fltVal);
 		}
 
 		/* ACTIVE_ENERGY  */
@@ -431,7 +431,7 @@ static void sensor_thread(void const *pVoid)
 				new_value = CGXDLMSVariant((int)1);
 
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Active energy: prev value = %ld   new value = %ld\n", active.lVal, new_value.lVal);
+//			printf("Active energy: prev value = %ld   new value = %ld\n", active.lVal, new_value.lVal);
 		}
 
 		/* REACTIVE_ENERGY  */
@@ -445,7 +445,7 @@ static void sensor_thread(void const *pVoid)
 			else
 				new_value = CGXDLMSVariant((unsigned long)2);
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Reactive energy: prev value = %lu   new value = %lu\n", reactive.ulVal, new_value.ulVal);
+//			printf("Reactive energy: prev value = %lu   new value = %lu\n", reactive.ulVal, new_value.ulVal);
 		}
 
 		/* SUM_LI_ACTIVE_POWER  */
@@ -460,7 +460,7 @@ static void sensor_thread(void const *pVoid)
 				new_value = CGXDLMSVariant((unsigned long)1);
 
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.ulVal, (long)new_value.ulVal);
+//			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.ulVal, (long)new_value.ulVal);
 		}
 
 
@@ -478,7 +478,7 @@ static void sensor_thread(void const *pVoid)
 				led3 = (int)custom.boolVal;
 				led4 = (int)custom.boolVal;
 				led5 = (int)custom.boolVal;
-				printf("Custom: value = %d\n", custom.boolVal);
+//				printf("Custom: value = %d\n", custom.boolVal);
 //				printf("Leds: led1 = %d led2 = %d led3 = %d\n", (int)led1, (int)led2, (int)led3);
 			//}
 		}
@@ -570,6 +570,7 @@ static void *temperature_thread(void *pVoid)
 		}
 		sleep(1);
 	}
+	return NULL;
 
 }
 #endif

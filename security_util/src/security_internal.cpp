@@ -101,7 +101,7 @@ int32_t ECDSA_Sign(security_int_params_t	*params,
 					uint8_t		*hash,
 					uint32_t	hash_size)
 {
-	printf("%s\n", __func__);
+//	printf("%s\n", __func__);
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	mbedtls_ecdsa_context mbedTls_ctx;
 	uint8_t  *sig = NULL;
@@ -122,8 +122,8 @@ int32_t ECDSA_Sign(security_int_params_t	*params,
 
 		len_r = mbedtls_mpi_size(&r);
 		len_s = mbedtls_mpi_size(&s);
-		printf("%s: len_r=%d, len_s=%d\n",
-			__func__, (int)len_r, (int)len_s);
+//		printf("%s: len_r=%d, len_s=%d\n",
+//			__func__, (int)len_r, (int)len_s);
 //		assert(len_r == len_s);
 		assert((len_r <= HALF_SIG_SIZE) && (len_r > 0));
 		assert((len_s <= HALF_SIG_SIZE) && (len_s > 0));
@@ -169,7 +169,7 @@ int32_t ECDSA_Verify(security_int_params_t	*params,
 					uint8_t		*hash,
 					uint32_t	hash_size)
 {
-	printf("%s\n", __func__);
+//	printf("%s\n", __func__);
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	mbedtls_ecdsa_context mbedTls_ctx;
 	mbedtls_mpi r, s;
@@ -187,8 +187,8 @@ int32_t ECDSA_Verify(security_int_params_t	*params,
 		assert(buffer_size > 2);
 		assert(buffer != NULL);
 		sig_size = buffer_size;
-		printf("buffer_size %d, sig_size=%d\n",
-			(int)buffer_size, (int)sig_size);
+//		printf("buffer_size %d, sig_size=%d\n",
+//			(int)buffer_size, (int)sig_size);
 
 		ret = mbedtls_mpi_read_binary
 					(&r, buffer, sig_size/2);
