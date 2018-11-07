@@ -48,6 +48,7 @@
 #define DLMS_WRAPPER_FRAME_LENGTH 8
 #define DLMS_DATA_LENGTH_OFFSET 6
 #define DLMS_GBT_BNA_LSB_BYTE_OFFSET 5
+#define DLMS_GBT_BNA_OFFSET 4
 
 static void PrintfBuff(CGXByteBuffer *bb);
 
@@ -2054,6 +2055,8 @@ int CGXDLMSServer::HandleCommand(
 	CGXByteBuffer intermediateReply,savedReplyData;
 	unsigned short intermediateLen;
 
+	sr.SetCommand(cmd);
+
     switch (cmd)
     {
     case DLMS_COMMAND_SET_REQUEST:
@@ -2141,10 +2144,21 @@ int CGXDLMSServer::HandleCommand(
 				}
 
 				m_Settings.SetBlockNumberAck(1);
-				//we decrease from teh count the current block we got
+				sr.SetIsRecoveringLostBlocks(false);
+				sr.SetStartWindowBlockIndex(1,sr.GetClientWindowSize());
+
+				//we decrease from the count the current block we got
 				sr.SetCount(sr.GetClientWindowSize()-1);
+
+				//save the block for recovery operations
+				if(false == sr.SetRecoveryBlock(intermediateReply,1))
+				{
+					ret = DLMS_ERROR_CODE_FALSE;
+				}
+
 				reply.Set(&intermediateReply,0,intermediateReply.GetSize());
 				sr.SetReplyingToGbt(true);
+
 				//if transaction is NULL ift means that all data was received and this is teh last balock
 				sr.SetIsLastBlock(m_Transaction == NULL);
 				if(NULL != m_Transaction)
@@ -2163,6 +2177,12 @@ int CGXDLMSServer::HandleCommand(
 
 				GXHelpers::SetObjectCount(intermediateLen,m_ReplyData);
 				m_ReplyData.Set(&intermediateReply,DLMS_WRAPPER_FRAME_LENGTH,intermediateReply.GetSize()-DLMS_WRAPPER_FRAME_LENGTH);
+
+				//save the block for recovery operations
+				if(false == sr.SetRecoveryBlock(m_ReplyData,1))
+				{
+					ret = DLMS_ERROR_CODE_FALSE;
+				}
 
 				sr.SetReplyingToGbt(true);
 			}
@@ -2198,12 +2218,15 @@ int CGXDLMSServer::HandleCommand(
 int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerReply& sr)
 {
 	int ret = 0;
+	unsigned short recoveryBlockIndex;
 
 	if (m_Transaction != NULL) {
 		if ((m_Transaction->GetCommand() == DLMS_COMMAND_GET_REQUEST)||
 			(m_Transaction->GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)) {
+			//save the next block recovery index
+			recoveryBlockIndex = m_Settings.GetBlockIndex() +1;
 
-			//parse the ack received from teh client and only then continue with teh execution
+			//parse the ack received from the client and only then continue with the execution
 			if(m_Transaction->GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) {
 				// BlockControl
 				unsigned char bc;
@@ -2225,17 +2248,50 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 			        return ret;
 			    }
 
+		    	if(blockNumberAck != m_Settings.GetBlockIndex())
+		    	{
+		    		//if we are already in the process of recovering blocks
+		    		if(sr.GetIsRecoveringLostBlocks() == false)
+		    		{
+		    			sr.SetIsRecoveringLostBlocks(true,blockNumberAck+1,bc & 0x3f,blockNumber);
+		    		}
 
-				sr.SetClientBlockNumAcked(blockNumberAck);
-				sr.SetClientBlockNum(blockNumber);
-				sr.SetClientWindowSize(bc & 0x3f);
-		    	m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
-		    	sr.SetCount(sr.GetClientWindowSize());
-		    	m_Settings.SetBlockNumberAck(blockNumber);
-		    	m_Settings.SetClientBlockNumberAck(blockNumberAck);
-		    	sr.SetIsLastBlock(false);
-		    	m_Transaction->SetCommand(DLMS_COMMAND_GET_REQUEST);
+		    		m_Transaction->SetCommand(DLMS_COMMAND_GET_REQUEST);
+		    	}
+		    	else
+		    	{
+					sr.SetClientBlockNumAcked(blockNumberAck);
+					sr.SetClientBlockNum(blockNumber);
+					sr.SetClientWindowSize(bc & 0x3f);
+					m_Settings.SetClientWindowSize(sr.GetClientWindowSize());
+					sr.SetCount(sr.GetClientWindowSize());
+					m_Settings.SetBlockNumberAck(blockNumber);
+					m_Settings.SetClientBlockNumberAck(blockNumberAck);
+					sr.SetIsLastBlock(false);
+					m_Transaction->SetCommand(DLMS_COMMAND_GET_REQUEST);
+					sr.SetIsRecoveringLostBlocks(false);
+					sr.SetStartWindowBlockIndex(blockNumberAck+1,sr.GetClientWindowSize());
+		    	}
 
+			}
+
+			if(sr.GetIsRecoveringLostBlocks() == true)
+			{
+	    		//get the needed block
+	    		if(false == sr.GetRecoveryBlock(m_ReplyData))
+	    		{
+	    			return DLMS_ERROR_CODE_UNKNOWN;
+	    		}
+
+				//in case this is the last block in the window we need to mark
+				//in the transaction that we will need to parse client reply after the
+				//next confirmation
+				if(sr.IsLastRecoveryBlock())
+				{
+					m_Transaction->SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
+				}
+
+	    		return ret;
 			}
 
 			// Get request for next data block
@@ -2259,6 +2315,15 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 				//next confirmation
 				m_Transaction->SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
 			}
+
+			//save the block for recovery operations
+			if(false == sr.SetRecoveryBlock(m_ReplyData,recoveryBlockIndex))
+			{
+				ret = DLMS_ERROR_CODE_FALSE;
+			}
+
+			m_ReplyData.SetPosition(0);
+
 		} else {
 			// BlockControl
 			unsigned char bc;
@@ -2342,6 +2407,33 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 	        return ret;
 	    }
 
+
+	    //check if this  a recovery request for a block from teh last window
+	    //the signs is that blockNumberAck != 0
+    	if(blockNumberAck != 0)
+    	{
+    		//if we are already in the process of recovering blocks
+    		if(sr.GetIsRecoveringLostBlocks() == false)
+    		{
+    			sr.SetIsRecoveringLostBlocks(true,blockNumberAck+1,bc & 0x3f,blockNumber);
+    		}
+
+
+			if(sr.GetIsRecoveringLostBlocks() == true)
+			{
+	    		//get the needed block
+	    		if(false == sr.GetRecoveryBlock(m_ReplyData))
+	    		{
+	    			return DLMS_ERROR_CODE_UNKNOWN;
+	    		}
+
+	    		return ret;
+			}
+
+			//we should not reach here
+			return DLMS_ERROR_CODE_UNKNOWN;
+    	}
+
 		unsigned long len;
 		GXHelpers::GetObjectCount(data,len);
 		if (len > data.GetSize() - data.GetPosition())
@@ -2373,6 +2465,7 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 			++blockNumberAck;
 			m_ReplyData.SetUInt16(blockNumberAck);
 			sr.SetIsLastBlock(false);
+			sr.SetStartWindowBlockIndex(blockNumberAck+1,sr.GetClientWindowSize());
 			//TODO:need to check if this byte needed
 			//m_ReplyData.SetUInt8(0);
 
@@ -2781,3 +2874,51 @@ unsigned long CGXDLMSServer::GetClientAddress()
 {
     return m_Settings.GetClientAddress();
 }
+
+bool CGXDLMSServer::IsGbtRecoveryRequest(CGXByteBuffer& request)
+{
+
+	unsigned char ch;
+	unsigned short blockNumberAck;
+	bool isGbtRecoveryRequest = true;//if this is a GBT request and the bna is not 0 then this is a recovery request
+
+
+	request.SetPosition(DLMS_WRAPPER_FRAME_LENGTH);
+
+	if(request.GetUInt8(&ch) != 0)
+	{
+		isGbtRecoveryRequest = false;
+	}
+
+	if(isGbtRecoveryRequest)
+	{
+		//if it is not GBT request then it is not a GBT recovery request
+		if(ch != DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
+		{
+			isGbtRecoveryRequest = false;
+		}
+	}
+
+	if(isGbtRecoveryRequest)
+	{
+		// Block number acknowledged.
+	    request.SetPosition(DLMS_WRAPPER_FRAME_LENGTH+DLMS_GBT_BNA_OFFSET);
+
+
+		if ((request.GetUInt16(&blockNumberAck)) != 0)
+		{
+			isGbtRecoveryRequest = false;
+		}
+
+		//a mew GBT request
+		if(blockNumberAck == 0)
+		{
+			isGbtRecoveryRequest = false;
+		}
+
+	}
+
+	request.SetPosition(0);
+	return isGbtRecoveryRequest;
+}
+

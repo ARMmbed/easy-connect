@@ -190,6 +190,29 @@ void CGXByteBuffer::SetUInt32(unsigned long item)
     m_Size += 4;
 }
 
+void CGXByteBuffer::SetUInt8ByIndex(unsigned long index, unsigned char item)
+{
+    if (m_Capacity == 0 || index + 1 > m_Capacity)
+    {
+        m_Capacity += VECTOR_CAPACITY;
+        m_Data = (unsigned char*)realloc(m_Data, m_Capacity);
+    }
+
+    m_Data[index] = item;
+}
+
+void CGXByteBuffer::SetUInt16ByIndex(unsigned long index, unsigned short item)
+{
+    if (m_Capacity == 0 || index + 2 > m_Capacity)
+    {
+        m_Capacity += VECTOR_CAPACITY;
+        m_Data = (unsigned char*)realloc(m_Data, m_Capacity);
+    }
+
+    m_Data[index] = (item >> 8) & 0xFF;
+    m_Data[index + 1] = item & 0xFF;
+}
+
 void CGXByteBuffer::SetUInt32ByIndex(unsigned long index, unsigned long item)
 {
     if (m_Capacity == 0 || index + 4 > m_Capacity)

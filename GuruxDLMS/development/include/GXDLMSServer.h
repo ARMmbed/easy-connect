@@ -726,5 +726,7 @@ public:
         struct tm* date,
         CGXDLMSPushSetup* push,
         std::vector<CGXByteBuffer>& reply);
+
+    bool IsGbtRecoveryRequest(CGXByteBuffer& request);
 };
 #endif //GXDLMSSERVER_H

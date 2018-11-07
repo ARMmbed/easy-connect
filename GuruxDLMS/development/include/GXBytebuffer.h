@@ -95,6 +95,10 @@ public:
 
     void SetUInt32ByIndex(unsigned long index, unsigned long item);
 
+    void SetUInt8ByIndex(unsigned long index, unsigned char item);
+
+    void SetUInt16ByIndex(unsigned long index, unsigned short item);
+
     void SetUInt64(unsigned long long item);
 
     void SetInt8(char item);

@@ -270,6 +270,22 @@ static void ListenerThread(const void* pVoid)
 
 			bb.SetSize(bb.GetSize() + len);
 
+   			//in case the last request we handled was GBT and we have transmitted
+			//the last block we need to check if the new command is a request for a re-tranmission of
+			//a block from the last window or a complete new transaction
+			//in case this is a new request then we will reset the server reply
+
+			if(sr.GetIsLastBlock() && (sr.GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER))
+			{
+				//in case we completed the GBT transaction and the new request is not a
+				// recovery request then we can reser the server reply and start handling teh new transaction
+				//is not a recovery
+				if(server->IsGbtRecoveryRequest(bb) == false)
+				{
+					sr.Reset();
+				}
+			}
+
    			sr.SetData(bb);
 
             do {
@@ -318,14 +334,22 @@ static void ListenerThread(const void* pVoid)
 					}
 				}
 
+				//in the special case where we are handling block recovery we need to break from the loop
+				//if this is teh last recovery blcok
+				if(sr.IsLastRecoveryBlock())
+				{
+					sr.SetIsRecoveringLostBlocks(false);
+					break;
+				}
 
-            } while (sr.IsStreaming());
+            } while (sr.IsStreaming() || sr.GetIsRecoveringLostBlocks());
 
 
 			bb.SetSize(0);
 			server->SetState(true);
+
 			//we will reset the server reply only if we are not in the middle of a GBT session
-			if(sr.GetIsLastBlock())
+			if(sr.GetIsLastBlock() && (sr.GetCommand() != DLMS_COMMAND_GENERAL_BLOCK_TRANSFER))
 			{
 				sr.Reset();
 			}
