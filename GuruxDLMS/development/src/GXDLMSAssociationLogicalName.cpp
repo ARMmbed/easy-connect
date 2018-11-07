@@ -632,7 +632,9 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			uint8_t *buffer = e.GetParameters().byteArr;
 			uint8_t is_originator = !settings.IsServer(); // server is never the originator
 
-			PrintfBuff(buffer, buffer_size);
+			if(0)
+				PrintfBuff(buffer, buffer_size);
+
 			hls_auth_params_t auth_params;
 
 			fill_hls_params(auth_params, settings);

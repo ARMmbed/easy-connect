@@ -2495,7 +2495,8 @@ int CGXDLMSServer::HandleMethodRequest(
                 bb.SetUInt8(0);
                 GXHelpers::SetData(bb, actionReply.vt, actionReply);
 				printf("Server: Ready to send action response\n\n");
-				PrintfBuff(&bb);
+				if(0)
+					PrintfBuff(&bb);
             }
             else
             {
