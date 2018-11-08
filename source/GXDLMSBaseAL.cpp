@@ -651,9 +651,27 @@ int CGXDLMSBaseAL::Connect(char *ip_address, int port)
     return 0;
 }
 
+void buff_to_int(uint32_t *counter, char *buff, uint32_t size)
+{
+	assert((size == 4) && buff);
+
+#if BYTE_ORDER
+	#if BYTE_ORDER == BIG_ENDIAN
+		*counter = buff[0] << 24 | buff[1] << 16 |
+				buff[2] << 8 | buff[3];
+		#else
+		*counter = buff[3] << 24 | buff[2] << 16 |
+				buff[1] << 8 | buff[0];
+		#endif
+#else
+	assert(0);
+#endif
+}
+
 int CGXDLMSBaseAL::StartServer(char *ip_address, const char* pPort)
 {
     int ret = 0;
+    uint32_t ip_addr = 0;
 
     if ((ret = StopServer()) != 0)
     {
@@ -665,6 +683,13 @@ int CGXDLMSBaseAL::StartServer(char *ip_address, const char* pPort)
     	printf("Failed to open port\n");
         return ret;
     }
+
+    m_Settings.SetServerPort(*pPort);
+
+    if (ip_address != NULL)
+		buff_to_int(&ip_addr, ip_address, 4);
+
+    m_Settings.SetServerIpAddr(ip_addr);
 
 //    printf("Port Connected\n");
 

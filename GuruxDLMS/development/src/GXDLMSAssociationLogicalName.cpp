@@ -619,6 +619,51 @@ static void PrintfBuff(unsigned char *ptr, int size)
 	printf("#########################\n\n");
 }
 
+#define SERVER_KA_PRIV_KEY \
+					0xAA, 0xD3, 0xFD, 0x07, 0x32, 0xE9, 0x91, 0xCF, 0x52, 0xA7,\
+					0x4C, 0x66, 0xC1, 0xF2, 0x82, 0x7D, 0xDC, 0x53, 0x52, 0x2A,\
+					0x2E, 0x0A, 0x16, 0x9D, 0x7C, 0x4F, 0xFC, 0xC0, 0xFB, 0x5D,\
+					0x6A, 0x4D
+
+#define SERVER_KA_PUB_KEY \
+					0xA6, 0x53, 0x56, 0x5B, 0x0E, 0x06, 0x07, 0x0B, 0xAE, 0x9F,\
+					0xBE, 0x14, 0x0A, 0x5D, 0x21, 0x56, 0x81, 0x2A, 0xEE, 0x2D,\
+					0xD5, 0x25, 0x05, 0x3E, 0x3E, 0xFC, 0x85, 0x0B, 0xF1, 0x3B,\
+					0xFD, 0xFF, 0xCB, 0x24, 0x0B, 0xC7, 0xB7, 0x7B, 0xFF, 0x58,\
+					0x83, 0x34, 0x4E, 0x72, 0x75, 0x90, 0x8D, 0x22, 0x87, 0xBE,\
+					0xFA, 0x37, 0x25, 0x01, 0x72, 0x95, 0xA0, 0x96, 0x98, 0x9D,\
+					0x23, 0x38, 0x29, 0x0B
+
+static unsigned char d_server_ka[]= {SERVER_KA_PRIV_KEY};
+unsigned char q_server_ka[]= {SERVER_KA_PUB_KEY};
+#define CLIENT_KA_PUB_KEY \
+					0x07, 0xC5, 0x6D, 0xE2, 0xDC, 0xAF, 0x0F, 0xD7, 0x93, 0xEF,\
+					0x29, 0xF0, 0x19, 0xC8, 0x9B, 0x4A, 0x0C, 0xC1, 0xE0, 0x01,\
+					0xCE, 0x94, 0xF4, 0xFF, 0xBE, 0x10, 0xBC, 0x05, 0xE7, 0xE6,\
+					0x6F, 0x76, 0x71, 0xA1, 0x3F, 0xBC, 0xF9, 0xE6, 0x62, 0xB9,\
+					0x82, 0x6F, 0xFF, 0x6A, 0x69, 0x38, 0x54, 0x6D, 0x52, 0x4E,\
+					0xD6, 0xD3, 0x40, 0x5F, 0x02, 0x02, 0x96, 0xBD, 0xE1, 0x6B,\
+					0x04, 0xF7, 0xA7, 0xC2
+unsigned char q_client_ka[]= {CLIENT_KA_PUB_KEY};
+#define PUBLIC_KEY_SIZE			64
+#define PRIVATE_KEY_SIZE		32
+
+static void init_local_ds_keys_server(
+		security_key_pair_t *ds_key_pair, CGXDLMSSettings& settings)
+{
+	ds_key_pair->public_key = settings.GetKey().m_originator_public;
+	ds_key_pair->public_key_size = PRIVATE_KEY_SIZE;
+	ds_key_pair->private_key = settings.get_key_cb(&ds_key_pair->private_key_size);
+}
+
+static void init_local_ka_keys_server(
+		security_key_pair_t *ka_key_pair)
+{
+	ka_key_pair->private_key = d_server_ka;
+	ka_key_pair->private_key_size = PRIVATE_KEY_SIZE;
+	ka_key_pair->public_key = q_server_ka;
+	ka_key_pair->public_key_size = PUBLIC_KEY_SIZE;
+}
 
 int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e)
 {
@@ -631,6 +676,13 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			uint32_t buffer_size = e.GetParameters().GetSize();
 			uint8_t *buffer = e.GetParameters().byteArr;
 			uint8_t is_originator = !settings.IsServer(); // server is never the originator
+
+			security_key_pair_t ds_key_pair;
+			security_key_pair_t ka_key_pair;
+
+			init_local_ds_keys_server(&ds_key_pair, settings);
+			init_local_ka_keys_server(&ka_key_pair);
+			init_security_util(&ds_key_pair, &ka_key_pair);
 
 			if(0)
 				PrintfBuff(buffer, buffer_size);
@@ -662,6 +714,24 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			// the server accepts the connection
 			settings.SetConnected(true);
 			m_AssociationStatus = DLMS_ASSOCIATION_STATUS_ASSOCIATED;
+
+			// set the KA
+			secured_association_params_t session_id;
+			session_id.local_wrapper_port = settings.GetClientWport();
+			session_id.remote_wrapper_port = settings.GetServerWport();
+			session_id.remote_port = settings.GetServerPort();
+			session_id.remote_ip_address.type = security_IP_address_ipV4;
+			session_id.remote_ip_address.choice.ipV4 = settings.GetServerIpAddr();
+
+			if ((ret = validate_and_save_remote_ka_crt(&session_id, q_client_ka, PUBLIC_KEY_SIZE)) != 0) {
+				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
+				return ret;
+			}
+
+			if ((ret = calculate_shared_secret(&session_id)) != 0) {
+				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
+				return ret;
+			}
 		}
 
 		else

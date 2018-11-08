@@ -126,6 +126,14 @@ private:
     static int HandledGloResponse(
         CGXDLMSSettings& settings,
         CGXReplyData& data, int index);
+
+    static int HandledGeneralCipheringRequest(CGXDLMSSettings& settings,
+			CGXReplyData& data);
+
+    static int HandledGeneralCipheringResponse(CGXDLMSSettings& settings,
+			CGXByteBuffer& plainText,
+			CGXByteBuffer& encrypted);
+
 public:
 
     /////////////////////////////////////////////////////////////////////////////

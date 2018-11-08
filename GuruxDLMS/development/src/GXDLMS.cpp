@@ -37,6 +37,7 @@
 #include "../include/GXDLMSClient.h"
 #include "../include/GXDLMSObjectFactory.h"
 #include "../include/GXBytebuffer.h"
+#include "../../../security_util/include/security_api.h"
 
 static unsigned char CIPHERING_HEADER_SIZE = 7 + 12 + 3;
 #define GBT_HEADER_SIZE 6
@@ -78,6 +79,15 @@ static unsigned short FCS16Table[256] =
     0x7BC7, 0x6A4E, 0x58D5, 0x495C, 0x3DE3, 0x2C6A, 0x1EF1, 0x0F78
 };
 
+/*
+ *  constant part of the encryption header - Tag + 5 (octet strings size) + 1 (no key info)
+ *  + len + 5 (security control and invocation counter)
+ */
+#define ENCRYPT_HEADER_SIZE 13
+#define TRANSACTION_ID \
+					0x01, 0x23, 0x45, 0x67, 0x89, 0x01, 0x23, 0x45
+static unsigned char transaction_id[] = {TRANSACTION_ID};
+
 bool CGXDLMS::IsReplyMessage(DLMS_COMMAND cmd)
 {
     return cmd == DLMS_COMMAND_GET_RESPONSE ||
@@ -114,11 +124,11 @@ int CGXDLMS::GetAddress(long value, unsigned long& address, int& size)
 
 int CGXDLMS::CheckInit(CGXDLMSSettings& settings)
 {
-    if (settings.GetClientAddress() == 0)
+    if (settings.GetClientWport() == 0)
     {
         return DLMS_ERROR_CODE_INVALID_CLIENT_ADDRESS;
     }
-    if (settings.GetServerAddress() == 0)
+    if (settings.GetServerWport() == 0)
     {
         return DLMS_ERROR_CODE_INVALID_SERVER_ADDRESS;
     }
@@ -262,13 +272,13 @@ int CGXDLMS::GetWrapperFrame(
     reply.SetUInt16(1);
     if (settings.IsServer())
     {
-        reply.SetUInt16((unsigned short)settings.GetServerAddress());
-        reply.SetUInt16((unsigned short)settings.GetClientAddress());
+        reply.SetUInt16((unsigned short)settings.GetServerWport());
+        reply.SetUInt16((unsigned short)settings.GetClientWport());
     }
     else
     {
-        reply.SetUInt16((unsigned short)settings.GetClientAddress());
-        reply.SetUInt16((unsigned short)settings.GetServerAddress());
+        reply.SetUInt16((unsigned short)settings.GetClientWport());
+        reply.SetUInt16((unsigned short)settings.GetServerWport());
     }
     // Data length.
     reply.SetUInt16((unsigned short)data.GetSize());
@@ -314,22 +324,22 @@ int CGXDLMS::GetHdlcFrame(
     CGXByteBuffer primaryAddress, secondaryAddress;
     if (settings.IsServer())
     {
-        if ((ret = GetAddressBytes(settings.GetClientAddress(), primaryAddress)) != 0)
+        if ((ret = GetAddressBytes(settings.GetClientWport(), primaryAddress)) != 0)
         {
             return ret;
         }
-        if ((ret = GetAddressBytes(settings.GetServerAddress(), secondaryAddress)) != 0)
+        if ((ret = GetAddressBytes(settings.GetServerWport(), secondaryAddress)) != 0)
         {
             return ret;
         }
     }
     else
     {
-        if ((ret = GetAddressBytes(settings.GetServerAddress(), primaryAddress)) != 0)
+        if ((ret = GetAddressBytes(settings.GetServerWport(), primaryAddress)) != 0)
         {
             return ret;
         }
-        if ((ret = GetAddressBytes(settings.GetClientAddress(), secondaryAddress)) != 0)
+        if ((ret = GetAddressBytes(settings.GetClientWport(), secondaryAddress)) != 0)
         {
             return ret;
         }
@@ -580,14 +590,11 @@ int CGXDLMS::GetLNPdu(
 {
     int ret;
 	// TODO - This needs to be enabled back again after M6
-#ifdef M6_FUNCTIONALITY
     unsigned char ciphering = if_ciphering && 
 		(p.GetCommand() != DLMS_COMMAND_AARQ) && (p.GetCommand() != DLMS_COMMAND_AARE)
         && (p.GetSettings()->GetCipher() != NULL)
-        && (p.GetSettings()->GetCipher()->GetSecurity() != DLMS_SECURITY_NONE);
-#else
-	unsigned char ciphering = 0;
-#endif
+        && (p.GetSettings()->GetCipher()->GetSecurity() != DLMS_SECURITY_NONE)
+		&& (p.GetSettings()->GetCipheringCommand() == DLMS_COMMAND_GENERAL_CIPHERING);
     int len = 0;
 
     if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
@@ -813,37 +820,48 @@ int CGXDLMS::GetLNPdu(
             {
                 cmd = (unsigned char)DLMS_COMMAND_GENERAL_GLO_CIPHERING;
             }
-            ret = p.GetSettings()->GetCipher()->Encrypt(
-                p.GetSettings()->GetCipher()->GetSecurity(),
-                DLMS_COUNT_TYPE_PACKET,
-                p.GetSettings()->GetCipher()->GetFrameCounter(),
-                cmd,
-                p.GetSettings()->GetCipher()->GetSystemTitle(),
-                reply, tmp);
-			
-            if (ret != 0)
+
+            if (p.GetSettings()->GetCipheringCommand() == DLMS_COMMAND_GENERAL_CIPHERING)
             {
-                return ret;
-            }
-            reply.SetSize(0);
-            if (p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
-            {
-                AddLLCBytes(p.GetSettings(), reply);
-            }
-			
-            if (p.GetCommand() == DLMS_COMMAND_DATA_NOTIFICATION || (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_PROTECTION) != 0)
-            {
-                // Add command.
-                reply.SetUInt8(tmp.GetData()[0]);
-                // Add system title.
-                GXHelpers::SetObjectCount(p.GetSettings()->GetCipher()->GetSystemTitle().GetSize(), reply);
-                reply.Set(&p.GetSettings()->GetCipher()->GetSystemTitle());
-                // Add data.
-                reply.Set(&tmp, 1, tmp.GetSize() - 1);
+				ret = HandledGeneralCipheringResponse(*p.GetSettings(), reply, tmp);
+				if (ret != 0)
+					return ret;
+
+				reply.SetSize(0);
+				reply.Set(&tmp, 0, tmp.GetSize());
             }
             else
             {
-                reply.Set(&tmp, 0, tmp.GetSize());
+				ret = p.GetSettings()->GetCipher()->Encrypt(
+						p.GetSettings()->GetCipher()->GetSecurity(),
+						DLMS_COUNT_TYPE_PACKET,
+						p.GetSettings()->GetCipher()->GetFrameCounter(),
+						cmd,
+						p.GetSettings()->GetCipher()->GetSystemTitle(),
+						reply, tmp);
+				if (ret != 0)
+				{
+					return ret;
+				}
+				reply.SetSize(0);
+				if (p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
+				{
+					AddLLCBytes(p.GetSettings(), reply);
+				}
+				if (p.GetCommand() == DLMS_COMMAND_DATA_NOTIFICATION || (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_PROTECTION) != 0)
+				{
+					// Add command.
+					reply.SetUInt8(tmp.GetData()[0]);
+					// Add system title.
+					GXHelpers::SetObjectCount(p.GetSettings()->GetCipher()->GetSystemTitle().GetSize(), reply);
+					reply.Set(&p.GetSettings()->GetCipher()->GetSystemTitle());
+					// Add data.
+					reply.Set(&tmp, 1, tmp.GetSize() - 1);
+				}
+				else
+				{
+					reply.Set(&tmp, 0, tmp.GetSize());
+				}
             }
         }
     }
@@ -1504,7 +1522,7 @@ int CGXDLMS::CheckHdlcAddress(
     if (server)
     {
         // Check that server addresses match.
-        if (settings.GetServerAddress() != 0 && settings.GetServerAddress() != target)
+        if (settings.GetServerWport() != 0 && settings.GetServerWport() != target)
         {
             // Get frame command.
             if (reply.GetUInt8(reply.GetPosition(), &ch) != 0)
@@ -1514,7 +1532,7 @@ int CGXDLMS::CheckHdlcAddress(
             //If SNRM and client has not call disconnect and changes client ID.
             if (ch == DLMS_COMMAND_SNRM)
             {
-                settings.SetServerAddress(target);
+                settings.SetServerWport(target);
             }
             else
             {
@@ -1523,11 +1541,11 @@ int CGXDLMS::CheckHdlcAddress(
         }
         else
         {
-            settings.SetServerAddress(target);
+            settings.SetServerWport(target);
         }
 
         // Check that client addresses match.
-        if (settings.GetClientAddress() != 0 && settings.GetClientAddress() != source)
+        if (settings.GetClientWport() != 0 && settings.GetClientWport() != source)
         {
             // Get frame command.
             if (reply.GetUInt8(reply.GetPosition(), &ch) != 0)
@@ -1537,7 +1555,7 @@ int CGXDLMS::CheckHdlcAddress(
             //If SNRM and client has not call disconnect and changes client ID.
             if (ch == DLMS_COMMAND_SNRM)
             {
-                settings.SetClientAddress(source);
+                settings.SetClientWport(source);
             }
             else
             {
@@ -1546,30 +1564,30 @@ int CGXDLMS::CheckHdlcAddress(
         }
         else
         {
-            settings.SetClientAddress(source);
+            settings.SetClientWport(source);
         }
     }
     else
     {
         // Check that client addresses match.
-        if (settings.GetClientAddress() != target)
+        if (settings.GetClientWport() != target)
         {
             // If echo.
-            if (settings.GetClientAddress() == source && settings.GetServerAddress() == target)
+            if (settings.GetClientWport() == source && settings.GetServerWport() == target)
             {
                 reply.SetPosition(index + 1);
             }
             return DLMS_ERROR_CODE_FALSE;
         }
         // Check that server addresses match.
-        if (settings.GetServerAddress() != source)
+        if (settings.GetServerWport() != source)
         {
             //Check logical and physical address separately.
             //This is done because some meters might send four bytes
             //when only two bytes is needed.
             int readLogical, readPhysical, logical, physical;
             GetServerAddress(source, readLogical, readPhysical);
-            GetServerAddress(settings.GetServerAddress(), logical, physical);
+            GetServerAddress(settings.GetServerWport(), logical, physical);
             if (readLogical != logical || readPhysical != physical)
             {
                 return DLMS_ERROR_CODE_FALSE;
@@ -1891,6 +1909,220 @@ int CGXDLMS::HandledGloResponse(
     return 0;
 }
 
+/* security header = SC-EA / SC-CEA || Incocation counter */
+#define SECURITY_HEADER_SIZE 5
+
+#define GET_SECURE_SUITE(security_options) (security_options & 0xf)
+#define ENCRYPT_EN(security_options) ((security_options >> 5) & 0x1)
+#define AUTH_EN(security_options) ((security_options >> 4) & 0x1)
+#define SECURITY_CONTROl 0x31
+
+int CGXDLMS::HandledGeneralCipheringRequest(CGXDLMSSettings& settings,
+		CGXReplyData& data)
+{
+	uint8_t *plain_buffer;
+	uint32_t plain_buffer_size, cipher_buffer_size;
+	secured_association_params_t session_id;
+	crypto_params_t params;
+	CGXByteBuffer transaction_id, originator_sys_title, recipient_sys_title;
+	unsigned char tmp_char;
+	uint8_t invocation_counter[4];
+	int ret;
+
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+			 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	params.transaction_id.size = tmp_char;
+	if (tmp_char > data.GetData().GetSize() - data.GetData().GetPosition())
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	data.GetData().SubArray(data.GetData().GetPosition(), tmp_char, transaction_id);
+
+	params.transaction_id.buf = transaction_id.GetData();
+
+
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	params.originator_sys_title.size = tmp_char;
+	if (tmp_char > data.GetData().GetSize() - data.GetData().GetPosition())
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	data.GetData().SubArray(data.GetData().GetPosition(), tmp_char, originator_sys_title);
+	params.originator_sys_title.buf = originator_sys_title.GetData();
+
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	params.recipient_sys_title.size = tmp_char;
+	if (tmp_char > data.GetData().GetSize() - data.GetData().GetPosition())
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	data.GetData().SubArray(data.GetData().GetPosition(), tmp_char, recipient_sys_title);
+	params.recipient_sys_title.buf = recipient_sys_title.GetData();
+
+	/* read date-time */
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	data.GetData().SetPosition(data.GetData().GetPosition() + tmp_char);
+
+	/* read other-information */
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	data.GetData().SetPosition(data.GetData().GetPosition() + tmp_char);
+
+	/* skip key info */
+	data.GetData().SetPosition(data.GetData().GetPosition() + 4);
+
+	/* read len */
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	cipher_buffer_size = tmp_char;
+	cipher_buffer_size -= SECURITY_HEADER_SIZE;
+
+	/* read security control */
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	if (!ENCRYPT_EN(tmp_char) || !AUTH_EN(tmp_char))
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	params.security_suite = GET_SECURE_SUITE(tmp_char);
+	params.security_mode = security_mode_auth_encrypt;
+
+	/* get invocation_counter */
+	ret = data.GetData().Get(invocation_counter, 4);
+	if (ret != 0)
+		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	params.invocation_counter = invocation_counter;
+
+	auth_decrypt_get_output_size(security_mode_auth_encrypt,
+			cipher_buffer_size,
+			&plain_buffer_size);
+
+	if (plain_buffer_size == 0)
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	plain_buffer = (uint8_t*)calloc(1, plain_buffer_size);
+	assert(plain_buffer);
+
+	session_id.local_wrapper_port = settings.GetClientWport();
+	session_id.remote_wrapper_port = settings.GetServerWport();
+	session_id.remote_port = settings.GetServerPort();
+	session_id.remote_ip_address.type = security_IP_address_ipV4;
+	session_id.remote_ip_address.choice.ipV4 = settings.GetServerIpAddr();
+
+	ret =  auth_decrypt(&session_id, &params,
+			data.GetData().GetData() + data.GetData().GetPosition(),
+			cipher_buffer_size,
+			plain_buffer,
+			&plain_buffer_size);
+	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+		free(plain_buffer);
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+	}
+
+    data.GetData().Set(plain_buffer, plain_buffer_size);
+
+	data.GetData().SetPosition(data.GetData().GetPosition() + cipher_buffer_size);
+    data.SetCommand(DLMS_COMMAND_NONE);
+
+	GetPdu(settings, data);
+	data.SetCipherIndex((unsigned short)data.GetData().GetSize());
+
+	settings.SetCipheringCommand(DLMS_COMMAND_GENERAL_CIPHERING);
+
+	free(plain_buffer);
+
+	return 0;
+}
+
+int CGXDLMS::HandledGeneralCipheringResponse(CGXDLMSSettings& settings,
+		CGXByteBuffer& plainText,
+		CGXByteBuffer& encrypted)
+{
+	uint8_t *cipher_buffer;
+	uint32_t cipher_buffer_size;
+	secured_association_params_t session_id;
+	crypto_params_t params;
+	uint8_t invocation_counter[4] = {};
+
+	int ret;
+
+	settings.SetCipheringCommand(DLMS_COMMAND_NONE);
+
+	// get encription size
+	auth_encrypt_get_output_size(security_mode_auth_encrypt,
+			plainText.GetSize(),
+			&cipher_buffer_size);
+
+	if (cipher_buffer_size == 0)
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	cipher_buffer = (uint8_t*)calloc(1, cipher_buffer_size);
+	assert(cipher_buffer);
+
+	// build encryption structures
+	params.security_suite = 1;
+	params.security_mode = security_mode_auth_encrypt;
+	params.invocation_counter = invocation_counter;
+	params.originator_sys_title.size = settings.GetCipher()->GetSystemTitle().GetSize();
+	params.originator_sys_title.buf = settings.GetCipher()->GetSystemTitle().GetData();
+	params.transaction_id.size = sizeof(transaction_id);
+	params.transaction_id.buf = transaction_id;
+	params.recipient_sys_title.size = settings.GetSourceSystemTitle().GetSize();
+	params.recipient_sys_title.buf = settings.GetSourceSystemTitle().GetData();
+
+	session_id.local_wrapper_port = settings.GetClientWport();
+	session_id.remote_wrapper_port = settings.GetServerWport();
+	session_id.remote_port = settings.GetServerPort();
+	session_id.remote_ip_address.type = security_IP_address_ipV4;
+	session_id.remote_ip_address.choice.ipV4 = settings.GetServerIpAddr();
+
+	// encription
+	ret =  auth_encrypt(&session_id, &params,
+			plainText.GetData(),
+			plainText.GetSize(),
+			cipher_buffer,
+			&cipher_buffer_size);
+	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+		free(cipher_buffer);
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+	}
+
+	// build encryption header
+	encrypted.Capacity(cipher_buffer_size + params.transaction_id.size + params.originator_sys_title.size +
+			params.recipient_sys_title.size + ENCRYPT_HEADER_SIZE);
+
+	encrypted.SetInt8(DLMS_COMMAND_GENERAL_CIPHERING);
+	encrypted.SetInt8(params.transaction_id.size);
+	encrypted.Set(transaction_id, params.transaction_id.size);
+	encrypted.SetInt8(params.originator_sys_title.size);
+	encrypted.Set(params.originator_sys_title.buf, params.originator_sys_title.size);
+	encrypted.SetInt8(params.recipient_sys_title.size);
+	encrypted.Set(params.recipient_sys_title.buf, params.recipient_sys_title.size);
+	encrypted.SetInt16(0); // date time & other info
+	encrypted.SetInt8(0); // no key info
+	encrypted.SetInt8(cipher_buffer_size + SECURITY_HEADER_SIZE); // len
+	encrypted.SetInt8(SECURITY_CONTROl);
+	encrypted.Set(invocation_counter, sizeof(invocation_counter));
+	encrypted.Set(cipher_buffer, cipher_buffer_size);
+
+	free(cipher_buffer);
+
+	return 0;
+}
 
 int CGXDLMS::GetPdu(
     CGXDLMSSettings& settings,
@@ -1917,7 +2149,9 @@ int CGXDLMS::GetPdu(
         }
 
 		cmd = (DLMS_COMMAND)ch;
+
         data.SetCommand(cmd);
+
         switch (cmd)
         {
         case DLMS_COMMAND_READ_RESPONSE:
@@ -2052,6 +2286,9 @@ int CGXDLMS::GetPdu(
             {
                 HandledGloResponse(settings, data, index);
             }
+            break;
+        case DLMS_COMMAND_GENERAL_CIPHERING:
+            HandledGeneralCipheringRequest(settings, data);
             break;
         case DLMS_COMMAND_DATA_NOTIFICATION:
             ret = HandleDataNotification(settings, data);
@@ -2786,14 +3023,14 @@ int CGXDLMS::CheckWrapperAddress(
             return ret;
         }
         // Check that client addresses match.
-        if (settings.GetClientAddress() != 0
-            && settings.GetClientAddress() != value)
+        if (settings.GetClientWport() != 0
+            && settings.GetClientWport() != value)
         {
             return DLMS_ERROR_CODE_INVALID_CLIENT_ADDRESS;
         }
         else
         {
-            settings.SetClientAddress(value);
+            settings.SetClientWport(value);
         }
 
         if ((ret = buff.GetUInt16(&value)) != 0)
@@ -2801,14 +3038,14 @@ int CGXDLMS::CheckWrapperAddress(
             return ret;
         }
         // Check that server addresses match.
-        if (settings.GetServerAddress() != 0
-            && settings.GetServerAddress() != value)
+        if (settings.GetServerWport() != 0
+            && settings.GetServerWport() != value)
         {
             return DLMS_ERROR_CODE_INVALID_SERVER_ADDRESS;
         }
         else
         {
-            settings.SetServerAddress(value);
+            settings.SetServerWport(value);
         }
     }
     else
@@ -2818,14 +3055,14 @@ int CGXDLMS::CheckWrapperAddress(
             return ret;
         }
         // Check that server addresses match.
-        if (settings.GetServerAddress() != 0
-            && settings.GetServerAddress() != value)
+        if (settings.GetServerWport() != 0
+            && settings.GetServerWport() != value)
         {
             return DLMS_ERROR_CODE_INVALID_SERVER_ADDRESS;
         }
         else
         {
-            settings.SetServerAddress(value);
+            settings.SetServerWport(value);
         }
 
         if ((ret = buff.GetUInt16(&value)) != 0)
@@ -2833,14 +3070,14 @@ int CGXDLMS::CheckWrapperAddress(
             return ret;
         }
         // Check that client addresses match.
-        if (settings.GetClientAddress() != 0
-            && settings.GetClientAddress() != value)
+        if (settings.GetClientWport() != 0
+            && settings.GetClientWport() != value)
         {
             return DLMS_ERROR_CODE_INVALID_CLIENT_ADDRESS;
         }
         else
         {
-            settings.SetClientAddress(value);
+            settings.SetClientWport(value);
         }
     }
     return DLMS_ERROR_CODE_OK;

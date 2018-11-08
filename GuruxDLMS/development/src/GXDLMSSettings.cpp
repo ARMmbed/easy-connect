@@ -46,8 +46,10 @@ CGXDLMSSettings::CGXDLMSSettings(bool isServer)
     m_LongInvokeID = 1;
     m_Priority = DLMS_PRIORITY_HIGH;
     m_ServiceClass = DLMS_SERVICE_CLASS_UN_CONFIRMED;
-    m_ClientAddress = 0;
-    m_ServerAddress = 0;
+    m_ClientWport = 0;
+    m_ServerWport = 0;
+    m_ServerPort = 0;
+    m_ServerIpAddr = 0;
     m_InterfaceType = DLMS_INTERFACE_TYPE_HDLC;
     m_Authentication = DLMS_AUTHENTICATION_NONE;
     m_MaxServerPDUSize = m_MaxReceivePDUSize = 0xFFFF;
@@ -59,6 +61,7 @@ CGXDLMSSettings::CGXDLMSSettings(bool isServer)
     m_WindowSize = 1;
     m_ClientWindowSize = 1;
     m_ClientBlockNumberAck = 0;
+    m_CipheringCommand = DLMS_COMMAND_NONE;
 }
 
 //Destructor.
@@ -264,26 +267,49 @@ void CGXDLMSSettings::SetInterfaceType(DLMS_INTERFACE_TYPE value)
     m_InterfaceType = value;
 }
 
-unsigned long CGXDLMSSettings::GetClientAddress()
+unsigned long CGXDLMSSettings::GetClientWport()
 {
-    return m_ClientAddress;
+    return m_ClientWport;
 }
 
-void CGXDLMSSettings::SetClientAddress(unsigned long value)
+void CGXDLMSSettings::SetClientWport(unsigned long value)
 {
-    m_ClientAddress = value;
+    m_ClientWport = value;
 }
 
-unsigned long CGXDLMSSettings::GetServerAddress()
+unsigned long CGXDLMSSettings::GetServerWport()
 {
-    return m_ServerAddress;
+    return m_ServerWport;
 }
 
 // Server address.
-void CGXDLMSSettings::SetServerAddress(unsigned long value)
+void CGXDLMSSettings::SetServerWport(unsigned long value)
 {
-    m_ServerAddress = value;
+    m_ServerWport = value;
 }
+
+unsigned long CGXDLMSSettings::GetServerPort()
+{
+    return m_ServerPort;
+}
+
+// Server address.
+void CGXDLMSSettings::SetServerPort(unsigned long value)
+{
+    m_ServerPort = value;
+}
+
+unsigned long CGXDLMSSettings::GetServerIpAddr()
+{
+    return m_ServerIpAddr;
+}
+
+// Server address.
+void CGXDLMSSettings::SetServerIpAddr(unsigned long value)
+{
+    m_ServerIpAddr = value;
+}
+
 
 // DLMS version number.
 unsigned char CGXDLMSSettings::GetDLMSVersion()
@@ -567,4 +593,14 @@ unsigned short CGXDLMSSettings::GeClientBlockNumberAck()
 void CGXDLMSSettings::SetClientBlockNumberAck(unsigned short value)
 {
 	m_ClientBlockNumberAck = value;
+}
+
+void CGXDLMSSettings::SetCipheringCommand(DLMS_COMMAND cmd)
+{
+	m_CipheringCommand = cmd;
+}
+
+DLMS_COMMAND CGXDLMSSettings::GetCipheringCommand()
+{
+	return m_CipheringCommand;
 }

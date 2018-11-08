@@ -367,11 +367,16 @@ void CGXDLMSServer::Reset(bool connected)
     m_Settings.SetConnected(false);
     m_ReceivedData.Clear();
     m_ReplyData.Clear();
+    m_Settings.SetCipheringCommand(DLMS_COMMAND_NONE);
+
     if (!connected)
     {
         m_Info.Clear();
-        m_Settings.SetServerAddress(0);
-        m_Settings.SetClientAddress(0);
+        m_Settings.SetServerWport(0);
+        m_Settings.SetServerPort(0);
+        m_Settings.SetServerIpAddr(0);
+        m_Settings.SetClientWport(0);
+
 
         //#ecdsa#
 //        m_Settings.GetCipher()->SetSecurity(DLMS_SECURITY_NONE);
@@ -2668,8 +2673,8 @@ int CGXDLMSServer::HandleRequest(CGXServerReply &sr)
     if (!sr.IsStreaming()) {
 
     	m_ReceivedData.Set(sr.GetData().GetData(), sr.GetData().GetSize());
-		bool first = m_Settings.GetServerAddress() == 0
-			&& m_Settings.GetClientAddress() == 0;
+		bool first = m_Settings.GetServerWport() == 0
+			&& m_Settings.GetClientWport() == 0;
 		if ((ret = CGXDLMS::GetData(m_Settings, m_ReceivedData, m_Info)) != 0)
 		{
 			//If all data is not received yet.
@@ -2690,7 +2695,7 @@ int CGXDLMSServer::HandleRequest(CGXServerReply &sr)
 			(m_Settings.GetInterfaceType() == DLMS_INTERFACE_TYPE_WRAPPER && m_Info.GetCommand() == DLMS_COMMAND_AARQ))
 		{
 			// Check is data send to this server.
-			if (!IsTarget(m_Settings.GetServerAddress(), m_Settings.GetClientAddress()))
+			if (!IsTarget(m_Settings.GetServerWport(), m_Settings.GetClientWport()))
 			{
 				m_Info.Clear();
 				return 0;
@@ -2867,12 +2872,12 @@ void CGXDLMSServer::InitSecurityUtils(void)
 
 unsigned long CGXDLMSServer::GetServerAddress()
 {
-    return m_Settings.GetServerAddress();
+    return m_Settings.GetServerWport();
 }
 
 unsigned long CGXDLMSServer::GetClientAddress()
 {
-    return m_Settings.GetClientAddress();
+    return m_Settings.GetClientWport();
 }
 
 bool CGXDLMSServer::IsGbtRecoveryRequest(CGXByteBuffer& request)

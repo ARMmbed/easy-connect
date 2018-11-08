@@ -104,10 +104,12 @@ class CGXDLMSSettings
     DLMS_SERVICE_CLASS m_ServiceClass;
 
     // Client address.
-    unsigned long m_ClientAddress;
+    unsigned long m_ClientWport;
 
     // Server address.
-    unsigned long m_ServerAddress;
+    unsigned long m_ServerWport;
+    unsigned long m_ServerPort;
+    unsigned long m_ServerIpAddr;
 
     // Is Logical Name referencing used.
     bool m_UseLogicalNameReferencing;
@@ -197,6 +199,10 @@ class CGXDLMSSettings
      */
     unsigned short m_ClientBlockNumberAck;
 
+    /*
+     *  Ciphering command
+     */
+    DLMS_COMMAND m_CipheringCommand;
 
 public:
     // Constructor.
@@ -274,16 +280,20 @@ public:
     void SetInterfaceType(DLMS_INTERFACE_TYPE value);
 
     // Gets client address.
-    unsigned long GetClientAddress();
+    unsigned long GetClientWport();
 
     // Sets client address.
-    void SetClientAddress(unsigned long value);
+    void SetClientWport(unsigned long value);
 
     // Server address.
-    unsigned long GetServerAddress();
+    unsigned long GetServerWport();
+    unsigned long GetServerPort();
+    unsigned long GetServerIpAddr();
 
     // Server address.
-    void SetServerAddress(unsigned long value);
+    void SetServerWport(unsigned long value);
+    void SetServerPort(unsigned long value);
+    void SetServerIpAddr(unsigned long value);
 
     // DLMS version number.
     unsigned char GetDLMSVersion();
@@ -488,6 +498,10 @@ public:
      *            Client Block number acknowledged in GBT.
      */
     void SetClientBlockNumberAck(unsigned short value);
+
+    // ciphering command
+    void SetCipheringCommand(DLMS_COMMAND cmd);
+    DLMS_COMMAND GetCipheringCommand();
 
 	public:
 	get_private_key_from_settings get_key_cb;

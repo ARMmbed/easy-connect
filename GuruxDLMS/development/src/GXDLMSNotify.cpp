@@ -50,8 +50,8 @@ CGXDLMSNotify::CGXDLMSNotify(bool useLogicalNameReferencing,
     DLMS_INTERFACE_TYPE interfaceType) : m_Settings(true)
 {
     m_Settings.SetUseLogicalNameReferencing(useLogicalNameReferencing);
-    m_Settings.SetClientAddress(clientAddress);
-    m_Settings.SetServerAddress(serverAddress);
+    m_Settings.SetClientWport(clientAddress);
+    m_Settings.SetServerWport(serverAddress);
     m_Settings.SetInterfaceType(interfaceType);
 }
 

@@ -54,8 +54,8 @@ CGXDLMSClient::CGXDLMSClient(bool UseLogicalNameReferencing,
 {
     m_IsAuthenticationRequired = false;
     m_Settings.SetUseLogicalNameReferencing(UseLogicalNameReferencing);
-    m_Settings.SetClientAddress(clientAddress);
-    m_Settings.SetServerAddress(serverAddress);
+    m_Settings.SetClientWport(clientAddress);
+    m_Settings.SetServerWport(serverAddress);
     m_Settings.SetInterfaceType(intefaceType);
     m_Settings.SetAuthentication(authentication);
     m_Settings.GetPassword().AddString(password);
