@@ -81,9 +81,9 @@ static unsigned short FCS16Table[256] =
 
 /*
  *  constant part of the encryption header - Tag + 5 (octet strings size) + 1 (no key info)
- *  + len + 5 (security control and invocation counter)
+ *  + 5 (security control and invocation counter)
  */
-#define ENCRYPT_HEADER_SIZE 13
+#define ENCRYPT_HEADER_SIZE 12
 #define TRANSACTION_ID \
 					0x01, 0x23, 0x45, 0x67, 0x89, 0x01, 0x23, 0x45
 static unsigned char transaction_id[] = {TRANSACTION_ID};
@@ -589,13 +589,19 @@ int CGXDLMS::GetLNPdu(
     CGXByteBuffer& reply)
 {
     int ret;
+
 	// TODO - This needs to be enabled back again after M6
     unsigned char ciphering = if_ciphering && 
 		(p.GetCommand() != DLMS_COMMAND_AARQ) && (p.GetCommand() != DLMS_COMMAND_AARE)
         && (p.GetSettings()->GetCipher() != NULL)
         && (p.GetSettings()->GetCipher()->GetSecurity() != DLMS_SECURITY_NONE)
 		&& (p.GetSettings()->GetCipheringCommand() == DLMS_COMMAND_GENERAL_CIPHERING);
+
     int len = 0;
+    int startPos = 0;
+
+    if (p.GetData())
+		startPos = p.GetData()->GetPosition();
 
     if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)
     {
@@ -649,6 +655,7 @@ int CGXDLMS::GetLNPdu(
             }
 
             MultipleBlocks(p, reply, ciphering);
+
         }
         else if (p.GetCommand() != DLMS_COMMAND_RELEASE_REQUEST)
         {
@@ -864,6 +871,13 @@ int CGXDLMS::GetLNPdu(
 				}
             }
         }
+
+        if (p.GetCommand() == DLMS_COMMAND_GENERAL_CIPHERING)
+        {
+            p.GetData()->SetPosition(startPos);
+            reply.Clear();
+            reply.Set(p.GetData(), 0, len);
+        }
     }
 
     if (p.GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER ||
@@ -872,6 +886,7 @@ int CGXDLMS::GetLNPdu(
     {
         CGXByteBuffer bb;
         bb.Set(reply.GetData(),reply.GetSize());
+
         reply.Clear();
         reply.SetUInt8(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
         int value = 0;
@@ -905,6 +920,7 @@ int CGXDLMS::GetLNPdu(
 
         // Add data length.
         GXHelpers::SetObjectCount(bb.GetSize(), reply);
+
         reply.Set(bb.GetData(),bb.GetSize());
         if (p.GetCommand() != DLMS_COMMAND_GENERAL_BLOCK_TRANSFER) {
             p.SetCommand(DLMS_COMMAND_GENERAL_BLOCK_TRANSFER);
@@ -1921,7 +1937,8 @@ int CGXDLMS::HandledGeneralCipheringRequest(CGXDLMSSettings& settings,
 		CGXReplyData& data)
 {
 	uint8_t *plain_buffer;
-	uint32_t plain_buffer_size, cipher_buffer_size;
+	uint32_t plain_buffer_size;
+	unsigned long cipher_buffer_size;
 	secured_association_params_t session_id;
 	crypto_params_t params;
 	CGXByteBuffer transaction_id, originator_sys_title, recipient_sys_title;
@@ -1982,11 +1999,10 @@ int CGXDLMS::HandledGeneralCipheringRequest(CGXDLMSSettings& settings,
 	data.GetData().SetPosition(data.GetData().GetPosition() + 4);
 
 	/* read len */
-	ret = data.GetData().GetUInt8(&tmp_char);
+	ret = GXHelpers::GetObjectCount(data.GetData(), cipher_buffer_size);
 	if (ret != 0)
 		 return DLMS_ERROR_CODE_INVALID_PARAMETER;
 
-	cipher_buffer_size = tmp_char;
 	cipher_buffer_size -= SECURITY_HEADER_SIZE;
 
 	/* read security control */
@@ -2101,9 +2117,11 @@ int CGXDLMS::HandledGeneralCipheringResponse(CGXDLMSSettings& settings,
 		return DLMS_ERROR_CODE_INVALID_PARAMETER;
 	}
 
+
+
 	// build encryption header
 	encrypted.Capacity(cipher_buffer_size + params.transaction_id.size + params.originator_sys_title.size +
-			params.recipient_sys_title.size + ENCRYPT_HEADER_SIZE);
+			params.recipient_sys_title.size + ENCRYPT_HEADER_SIZE + GXHelpers::GetObjectCountSizeInBytes(cipher_buffer_size + SECURITY_HEADER_SIZE));
 
 	encrypted.SetInt8(DLMS_COMMAND_GENERAL_CIPHERING);
 	encrypted.SetInt8(params.transaction_id.size);
@@ -2114,7 +2132,7 @@ int CGXDLMS::HandledGeneralCipheringResponse(CGXDLMSSettings& settings,
 	encrypted.Set(params.recipient_sys_title.buf, params.recipient_sys_title.size);
 	encrypted.SetInt16(0); // date time & other info
 	encrypted.SetInt8(0); // no key info
-	encrypted.SetInt8(cipher_buffer_size + SECURITY_HEADER_SIZE); // len
+	GXHelpers::SetObjectCount(cipher_buffer_size + SECURITY_HEADER_SIZE, encrypted);
 	encrypted.SetInt8(SECURITY_CONTROl);
 	encrypted.Set(invocation_counter, sizeof(invocation_counter));
 	encrypted.Set(cipher_buffer, cipher_buffer_size);

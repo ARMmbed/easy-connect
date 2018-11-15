@@ -770,6 +770,7 @@ int CGXDLMSServer::HandleSetRequest(
             p.SetStatus(DLMS_ERROR_CODE_DATA_BLOCK_NUMBER_INVALID);
             return 0;
         }
+
         m_Settings.IncreaseBlockIndex();
         ret = GXHelpers::GetObjectCount(data, size);
         if (ret != 0)
@@ -1033,6 +1034,7 @@ unsigned short CGXDLMSServer::GetRowsToPdu(CGXDLMSProfileGeneric* pg)
             rowsize += GXHelpers::GetDataTypeSize(dt);
         }
     }
+
     if (rowsize != 0)
     {
         return m_Settings.GetMaxPduSize() / rowsize;
@@ -1049,8 +1051,10 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
     m_Settings.ResetBlockIndex();
     CGXDLMSValueEventCollection arr;
     unsigned char attributeIndex;
+    bool generalCiphering = (m_Settings.GetCipheringCommand() == DLMS_COMMAND_GENERAL_CIPHERING);
     int ret;
     unsigned char *ln;
+    DLMS_COMMAND cmd = DLMS_COMMAND_GET_RESPONSE;
     // CI
     unsigned short tmp;
     if ((ret = data.GetUInt16(&tmp)) != 0)
@@ -1093,6 +1097,8 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
         }
     }
     CGXDLMSValueEventArg* e = new CGXDLMSValueEventArg(this, obj, attributeIndex, selector, parameters);
+
+
     e->SetInvokeId(invokeID);
     arr.push_back(e);
     if (obj == NULL)
@@ -1117,10 +1123,15 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
             if (!e->GetHandled())
             {
                 m_Settings.SetCount(e->GetRowEndIndex() - e->GetRowBeginIndex());
+
+                if (generalCiphering)
+					e->SetSkipMaxPduSize(true);
                 if ((ret = obj->GetValue(m_Settings, *e)) != 0)
                 {
                     status = DLMS_ERROR_CODE_HARDWARE_FAULT;
                 }
+                if (generalCiphering)
+					e->SetSkipMaxPduSize(false);
                 PostRead(arr);
             }
             if (status == 0)
@@ -1128,6 +1139,7 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
                 status = e->GetError();
             }
             CGXDLMSVariant& value = e->GetValue();
+
             if (e->IsByteArray() && value.vt == DLMS_DATA_TYPE_OCTET_STRING)
             {
                 // If byte array is added do not add type.
@@ -1139,9 +1151,30 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
             }
         }
     }
-    CGXDLMSLNParameters p(&m_Settings, invokeID, DLMS_COMMAND_GET_RESPONSE, 1, NULL, &bb, status);
+
+    if (generalCiphering) {
+        CGXByteBuffer encrypted;
+
+        int pdu = m_Settings.GetMaxPduSize();
+
+        /* update temporary the PDU to max size */
+        m_Settings.SetMaxReceivePDUSize(0xFFFFFF);
+
+        /* encrypt the packet before start GBT */
+        CGXDLMSLNParameters p(&m_Settings, invokeID, cmd, 1, NULL, &bb, status);
+        ret = CGXDLMS::GetLNPdu(p, 1, encrypted);
+
+        bb.Clear();
+        bb.Set(&encrypted, 0, encrypted.GetSize());
+
+        m_Settings.SetMaxReceivePDUSize(pdu);
+        cmd = DLMS_COMMAND_GENERAL_CIPHERING;
+    }
+
+    CGXDLMSLNParameters p(&m_Settings, invokeID, cmd, 1, NULL, &bb, status);
 
     ret = CGXDLMS::GetLNPdu(p, 1, m_ReplyData);
+
     if (m_Settings.GetCount() != m_Settings.GetIndex()
         || bb.GetSize() != bb.GetPosition())
     {
@@ -1152,6 +1185,7 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
         }
         m_Transaction = new CGXDLMSLongTransaction(arr, DLMS_COMMAND_GET_REQUEST, bb);
     }
+
     return ret;
 }
 
@@ -1403,6 +1437,7 @@ int CGXDLMSServer::HandleGetRequest(
     {
         return ret;
     }
+
     // GetRequest normal
     if (type == DLMS_GET_COMMAND_TYPE_NORMAL)
     {
@@ -2060,6 +2095,7 @@ int CGXDLMSServer::HandleCommand(
 	CGXByteBuffer intermediateReply,savedReplyData;
 	unsigned short intermediateLen;
 
+
 	sr.SetCommand(cmd);
 
     switch (cmd)
@@ -2226,6 +2262,7 @@ int CGXDLMSServer::HandleGeneralBlockTransfer(CGXByteBuffer& data,	CGXServerRepl
 	unsigned short recoveryBlockIndex;
 
 	if (m_Transaction != NULL) {
+
 		if ((m_Transaction->GetCommand() == DLMS_COMMAND_GET_REQUEST)||
 			(m_Transaction->GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)) {
 			//save the next block recovery index
