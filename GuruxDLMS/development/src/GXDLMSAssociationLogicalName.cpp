@@ -636,15 +636,6 @@ static void PrintfBuff(unsigned char *ptr, int size)
 
 static unsigned char d_server_ka[]= {SERVER_KA_PRIV_KEY};
 unsigned char q_server_ka[]= {SERVER_KA_PUB_KEY};
-#define CLIENT_KA_PUB_KEY \
-					0x07, 0xC5, 0x6D, 0xE2, 0xDC, 0xAF, 0x0F, 0xD7, 0x93, 0xEF,\
-					0x29, 0xF0, 0x19, 0xC8, 0x9B, 0x4A, 0x0C, 0xC1, 0xE0, 0x01,\
-					0xCE, 0x94, 0xF4, 0xFF, 0xBE, 0x10, 0xBC, 0x05, 0xE7, 0xE6,\
-					0x6F, 0x76, 0x71, 0xA1, 0x3F, 0xBC, 0xF9, 0xE6, 0x62, 0xB9,\
-					0x82, 0x6F, 0xFF, 0x6A, 0x69, 0x38, 0x54, 0x6D, 0x52, 0x4E,\
-					0xD6, 0xD3, 0x40, 0x5F, 0x02, 0x02, 0x96, 0xBD, 0xE1, 0x6B,\
-					0x04, 0xF7, 0xA7, 0xC2
-unsigned char q_client_ka[]= {CLIENT_KA_PUB_KEY};
 #define PUBLIC_KEY_SIZE			64
 #define PRIVATE_KEY_SIZE		32
 
@@ -715,23 +706,6 @@ int CGXDLMSAssociationLogicalName::Invoke(CGXDLMSSettings& settings, CGXDLMSValu
 			settings.SetConnected(true);
 			m_AssociationStatus = DLMS_ASSOCIATION_STATUS_ASSOCIATED;
 
-			// set the KA
-			secured_association_params_t session_id;
-			session_id.local_wrapper_port = settings.GetClientWport();
-			session_id.remote_wrapper_port = settings.GetServerWport();
-			session_id.remote_port = settings.GetServerPort();
-			session_id.remote_ip_address.type = security_IP_address_ipV4;
-			session_id.remote_ip_address.choice.ipV4 = settings.GetServerIpAddr();
-
-			if ((ret = validate_and_save_remote_ka_crt(&session_id, q_client_ka, PUBLIC_KEY_SIZE)) != 0) {
-				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
-				return ret;
-			}
-
-			if ((ret = calculate_shared_secret(&session_id)) != 0) {
-				m_AssociationStatus = DLMS_ASSOCIATION_STATUS_NON_ASSOCIATED;
-				return ret;
-			}
 		}
 
 		else

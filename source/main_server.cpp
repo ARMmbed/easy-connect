@@ -68,6 +68,7 @@ static DLMS_SERVICE_TYPE protocolType = DLMS_SERVICE_TYPE_UDP;
 static int max_pdu_size = 1024;
 static int key_number = 0;
 static char server_ip[32];
+static int error_send_packet = -1;
 key_pair_t keys;
 static char *port = NULL;
 
@@ -232,7 +233,17 @@ static void getopt(int argc, char* argv[])
 				++i;
 			}
 		}
-		
+
+		else if (strcmp(argv[i], "-errsp") == 0)
+		{
+			if (i + 1 < argc)
+			{
+				error_send_packet = atoi(argv[i + 1]);
+				printf("### configuration ###  error_send_packet = %d\n", error_send_packet);
+				++i;
+			}
+		}
+
 		else if (strcmp(argv[i], "-print") == 0)
 		{
 			printf("### configuration ###   print received and sent packets\n");
@@ -564,6 +575,7 @@ int main_server(int argc, char* argv[])
 	server->m_drop_send = s_drop_send;
 	server->m_drop_receive_size = s_drop_receive_size;
 	server->m_drop_send_size = s_drop_send_size;
+	server->m_error_send_packet = error_send_packet;
 
 	///////////////////// ECDSA /////////////////////////////
 	if(s_test_case != BAD_PATH_NO_KEY_IN_SERVER) {

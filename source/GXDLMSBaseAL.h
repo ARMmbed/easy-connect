@@ -68,7 +68,7 @@
 #define REACTIVE_ENERGY		"1.1.0.7.1.255"
 #define SUM_LI_ACTIVE_POWER	"1.1.1.8.0.255"
 #define MANUFACTURER_SPECIFIC	"0.0.98.1.1.254"
-
+#define SECURITY_SETUP 		"0.0.43.0.0.255"
 #define WAIT_TIME 5000
 #define RECEIVE_BUFFER_SIZE 200
 
@@ -92,6 +92,7 @@ public:
 	int m_drop_send_size;
 	int m_receive_counter;
 	int m_send_counter;
+	int m_error_send_packet;
 	
  //   GX_TRACE_LEVEL m_Trace;
 
@@ -121,6 +122,7 @@ public:
 		m_drop_send_size = 0;
 		m_receive_counter = 0;
 		m_send_counter = 0;
+		m_error_send_packet = -1;
     }
 
 

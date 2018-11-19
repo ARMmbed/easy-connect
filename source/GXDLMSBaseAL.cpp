@@ -106,12 +106,13 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "GXDLMSAssociationLogicalName.h"
 #include "GXDLMSAssociationShortName.h"
 #include "GXServerReply.h"
+#include "GXDLMSSecuritySetup.h"
 
 #define MAX_PACKET_PRINT 170
 
 using namespace std;
 static const char* DATAFILE = "data.csv";
-
+#define DLMS_ACTION_RESULT_OFFSET 11
 
 
 #ifdef __MBED__
@@ -186,6 +187,22 @@ static bool DropSend(CGXDLMSBaseAL *server)
 	++server->m_send_counter;
 
 	return ret;
+}
+
+//add a return error code to a certain reply packet sent from the server
+static bool ErrorSendPacket(CGXDLMSBaseAL *server,CGXByteBuffer& packet)
+{
+	if(server->m_error_send_packet == server->m_send_counter)
+	{
+		unsigned char* ptr = packet.GetData();
+		if(NULL != ptr)
+		{
+			ptr[DLMS_ACTION_RESULT_OFFSET] = DLMS_ERROR_CODE_READ_WRITE_DENIED;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 static void ListenerThread(const void* pVoid)
@@ -317,6 +334,13 @@ static void ListenerThread(const void* pVoid)
 					}
 					else
 					{
+
+						if(ErrorSendPacket(server,sr.GetReply()))
+						{
+							printf("server packet result was set as error\n");
+
+						}
+
 						if(server->m_print)
 						{
 							printf("server packet sent\n");
@@ -1093,6 +1117,10 @@ int CGXDLMSBaseAL::CreateObjects()
 	pSumLi->SetScaler(10.0);
 	pSumLi->SetUnit(1);
 	GetItems().push_back(pSumLi);
+
+    /* SECURITY_SETUP */
+    CGXDLMSSecuritySetup* pSecuritySetup = new CGXDLMSSecuritySetup(SECURITY_SETUP);
+    GetItems().push_back(pSecuritySetup);
 
 	/* MANUFACTURER_SPECIFIC - data */
     bool on_off = 1;

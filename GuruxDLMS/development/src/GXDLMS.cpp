@@ -1995,8 +1995,14 @@ int CGXDLMS::HandledGeneralCipheringRequest(CGXDLMSSettings& settings,
 
 	data.GetData().SetPosition(data.GetData().GetPosition() + tmp_char);
 
-	/* skip key info */
-	data.GetData().SetPosition(data.GetData().GetPosition() + 4);
+	/* read key info */
+	ret = data.GetData().GetUInt8(&tmp_char);
+	if (ret != 0)
+		return DLMS_ERROR_CODE_INVALID_PARAMETER;
+
+	if (tmp_char != 0)
+		/* skip key info - todo - complete key info types */
+		data.GetData().SetPosition(data.GetData().GetPosition() + 3);
 
 	/* read len */
 	ret = GXHelpers::GetObjectCount(data.GetData(), cipher_buffer_size);

@@ -41,12 +41,27 @@
 Online help:
 http://www.gurux.fi/Gurux.DLMS.Objects.CGXDLMSSecuritySetup
 */
+
+
+typedef enum
+{
+	EN_KA_STATE_NONE,
+	EN_KA_STATE_IMPORT,
+	EN_KA_STATE_KEY_CALCULATED,
+	EN_KA_STATE_EXPORT,
+}EN_KEY_AGREEMENT_STATE;
+
 class CGXDLMSSecuritySetup : public CGXDLMSObject
 {
     unsigned char m_SecurityPolicy;
     DLMS_SECURITY_SUITE m_SecuritySuite;
     CGXByteBuffer m_ServerSystemTitle;
     CGXByteBuffer m_ClientSystemTitle;
+    EN_KEY_AGREEMENT_STATE m_eKeyAgreementState;
+
+    int ValidateCertificateIdentification(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e);
+    int ValidateCertificateIdentificationEntity(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e);
+    int ValidateCertificateIdentificationSerial(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e);
 public:
     //Constructor.
     CGXDLMSSecuritySetup();
@@ -76,6 +91,8 @@ public:
 
     void SetServerSystemTitle(CGXByteBuffer& value);
 
+    EN_KEY_AGREEMENT_STATE GetKeyAgreementState();
+
     // Returns amount of attributes.
     int GetAttributeCount();
 
@@ -94,5 +111,8 @@ public:
 
     // Set value of given attribute.
     int SetValue(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e);
+
+    // Invokes method.
+    int Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e);
 };
 #endif //GXDLMSDLMS_SECURITYSETUP_H
