@@ -2903,7 +2903,7 @@ void CGXDLMSServer::InitSecurityUtils(void)
 	ds_key_pair.public_key_size = PRIVATE_KEY_SIZE;
 	ds_key_pair.private_key = m_Settings.get_key_cb(&ds_key_pair.private_key_size);
 
-	init_security_util(&ds_key_pair, NULL);
+	init_security_util(&ds_key_pair, NULL, NULL, 0);
 }
 
 unsigned long CGXDLMSServer::GetServerAddress()

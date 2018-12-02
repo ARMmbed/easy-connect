@@ -86,8 +86,7 @@ typedef struct session_secure_params {
 	e_key_sharing_status_t	ka_key_sharing_status;
 	uint8_t			ds_pub_key_remote[PUBLIC_KEY_SIZE];
 	uint32_t		ds_pub_key_remote_size;
-	uint8_t			ka_pub_key_remote[PUBLIC_KEY_SIZE];
-	uint32_t		ka_pub_key_remote_size;
+	uint8_t			*ka_crt_remote;
 	uint8_t			shared_secret[PRIVATE_KEY_SIZE];
 	uint32_t		shared_secret_size;
 } session_secure_params_t;
@@ -97,6 +96,7 @@ typedef struct security_int_params {
 	e_security_group_id_t	security_grp_id;
 	const uint8_t *remote_public_key;
 	uint32_t remote_public_key_size;
+	void *remote_ecp_public_key;
 	const uint8_t *local_private_key;
 	uint32_t local_private_key_size;
 } security_int_params_t;

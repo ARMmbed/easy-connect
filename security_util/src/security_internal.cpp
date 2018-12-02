@@ -207,7 +207,6 @@ int32_t ECDSA_Verify(security_int_params_t	*params,
 						(&mbedTls_ctx.grp,
 						hash, hash_size,
 						&mbedTls_ctx.Q, &r, &s);
-
 				if (ret !=
 					SECURITY_UTIL_STATUS_SUCCESS) {
 					printf("verify failed %d\n", (int)ret);
@@ -226,40 +225,23 @@ int32_t ECDH_compute_Z(security_int_params_t *params,
 	uint8_t *z, uint32_t *z_len)
 {
 	mbedtls_ecdh_context ecdh;
+	mbedtls_ecp_keypair *pKeyPair;
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 
 	printf("%s\n", __func__);
 
 	mbedtls_ecdh_init(&ecdh);
-
 	if (params->security_grp_id == security_group_id_ecp_dp_256r1)
 		ecdh.grp.id = MBEDTLS_ECP_DP_SECP256R1;
 	assert(mbedtls_ecp_group_load(&ecdh.grp, ecdh.grp.id) == 0);
 
-/*
- * Pay attention:
- * according to mbedTLS rules, public key MUST start from this byte:
- * BER_OCTET_STRING tag 0x4
- */
-	uint32_t public_size = params->remote_public_key_size + 1;
-	uint8_t *buff = (uint8_t *)calloc(public_size, sizeof(uint8_t));
-
-	assert(buff != NULL);
-	buff[0] = 0x04; // adding BER_OCTET_STRING tag
-	memcpy(buff + 1,
-		params->remote_public_key,
-		params->remote_public_key_size);
-
-	ret = mbedtls_ecp_point_read_binary(&ecdh.grp, &ecdh.Qp,
-						buff, public_size);
-
-	free(buff);
+	pKeyPair = (mbedtls_ecp_keypair *)(params->remote_ecp_public_key);
+	ret = mbedtls_ecp_copy(&ecdh.Qp, &(pKeyPair->Q));
 
 	if (ret == 0) {
 		ret = mbedtls_mpi_read_binary(&ecdh.d,
 			params->local_private_key,
 			params->local_private_key_size);
-
 		if (ret == 0) {
 			size_t actual_size;
 

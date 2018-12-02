@@ -8,9 +8,9 @@
  * This function should be called each time after key generation
  * NULL can be passed if one of the key pairs shouldn't be changed
  */
-void init_security_util(security_key_pair_t *ds_key_pair,
-	security_key_pair_t *ka_key_pair);
-
+int init_security_util(security_key_pair_t *ds_key_pair,
+	security_key_pair_t *ka_key_pair,
+	uint8_t *ka_certificate, uint32_t ka_certificate_size);
 /*
  * This function should be called once at the exit
  */
@@ -70,7 +70,17 @@ int32_t validate_and_save_remote_ds_crt(
  */
 int32_t validate_and_save_remote_ka_crt(
 		const secured_association_params_t *session_id,
-		const uint8_t *public_key, uint32_t public_key_size);
+		const uint8_t *remote_ka_crt, uint32_t remote_ka_crt_size);
+
+/*
+ * free remote ka crt
+ * If found -
+ *	free it, return SECURITY_UTIL_STATUS_SUCCESS
+ * If not found  -
+ *	return SECURITY_UTIL_STATUS_FAILURE
+ */
+int32_t free_remote_ka_crt(
+		const secured_association_params_t *session_id);
 /*
  * Get pointer to pre-saved local DS public key
  */
@@ -90,12 +100,17 @@ const uint8_t *get_KA_public_key_local(
 		uint32_t	*public_key_size);
 
 /*
- * Get pointer to pre-saved remote KA public key
+ * Get pointer to pre-saved local KA certificate
  */
-const uint8_t *get_KA_public_key_remote(
-		const secured_association_params_t *session_id,
-		uint32_t	*public_key_size);
+const uint8_t *get_KA_certificate_local(
+		uint32_t	*certificate_size);
 
+/*
+ * Get pointer to pre-saved remote KA certificate
+ */
+const uint8_t *get_KA_certificate_remote(
+		const secured_association_params_t *session_id,
+		uint32_t	*certificate_size);
 /*
  * Create digital signature from auth_params fields and add to the buffer
  * currently supported only Security Suite 1 && MechanismId 7

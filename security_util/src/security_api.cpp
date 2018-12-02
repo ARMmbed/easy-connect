@@ -1,6 +1,7 @@
 
 #include "security_internal.h"
 #include "security_api.h"
+#include "mbedtls/x509_crt.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +20,8 @@ static session_secure_params_t sessions[MAX_NUM_SECURE_SESSIONS];
 
 static security_key_pair_t ds_keys_local;
 static security_key_pair_t ka_keys_local;
+static uint8_t *ka_certificate_local;
+static uint32_t ka_certificate_size_local;
 
 static void init_key_pair(security_key_pair_t *src_key_pair,
 	security_key_pair_t *dst_key_pair)
@@ -29,19 +32,52 @@ static void init_key_pair(security_key_pair_t *src_key_pair,
 	}
 }
 
+static int init_certificate(unsigned char *src_certificate,
+		uint32_t src_certificate_size, uint8_t **dst_certificate,
+		uint32_t *dst_certificat_size)
+{
+	int res = SECURITY_UTIL_STATUS_FAILURE;
+	uint32_t size = src_certificate_size;
+
+	if ((src_certificate != NULL) &&
+		(dst_certificate != NULL) &&
+		(dst_certificat_size != NULL)) {
+		if (*dst_certificate != NULL) {
+			free(*dst_certificate);
+			ka_certificate_size_local = 0;
+		}
+
+		*dst_certificate = (unsigned char *)malloc(size);
+		if (*dst_certificate != NULL) {
+			memcpy(*dst_certificate, src_certificate,
+					src_certificate_size);
+			*dst_certificat_size = src_certificate_size;
+			res = SECURITY_UTIL_STATUS_SUCCESS;
+		}
+
+	}
+
+	return res;
+}
 /*
  * This function should be called each time after key generation
  * NULL can be passed if one of the key pairs shouldn't be changed
  */
-void init_security_util(security_key_pair_t *ds_key_pair,
-	security_key_pair_t *ka_key_pair)
+int init_security_util(security_key_pair_t *ds_key_pair,
+	security_key_pair_t *ka_key_pair,
+	uint8_t *ka_certificate, uint32_t ka_certificate_size)
 {
+	int res = SECURITY_UTIL_STATUS_SUCCESS;
+
 	init_key_pair(ds_key_pair, &ds_keys_local);
 	init_key_pair(ka_key_pair, &ka_keys_local);
 
+	res = init_certificate(ka_certificate, ka_certificate_size,
+			&ka_certificate_local, &ka_certificate_size_local);
 	memset(sessions, 0,
 	MAX_NUM_SECURE_SESSIONS *
 	sizeof(session_secure_params_t));
+	return res;
 }
 
 /*
@@ -49,6 +85,22 @@ void init_security_util(security_key_pair_t *ds_key_pair,
  */
 void exit_security_util(void)
 {
+	mbedtls_x509_crt *pCrt;
+
+	if (ka_certificate_local != NULL) {
+		free(ka_certificate_local);
+		ka_certificate_local = NULL;
+	}
+
+	//free all saved remote certificates
+	for (int ind = 0; ind < MAX_NUM_SECURE_SESSIONS; ind++) {
+		pCrt = (mbedtls_x509_crt *)(sessions[ind].ka_crt_remote);
+		if (pCrt != NULL) {
+			mbedtls_x509_crt_free(pCrt);
+			free(pCrt);
+			sessions[ind].ka_crt_remote = NULL;
+		}
+	}
 
 }
 
@@ -217,22 +269,74 @@ int32_t validate_and_save_remote_ds_crt(
  */
 int32_t validate_and_save_remote_ka_crt(
 		const secured_association_params_t *session_id,
-		const uint8_t *public_key, uint32_t public_key_size)
+		const uint8_t *remote_ka_crt, uint32_t remote_ka_crt_size)
 {
-	assert(public_key != NULL);
 
-	if (public_key_size != PUBLIC_KEY_SIZE)
-		return SECURITY_UTIL_STATUS_FAILURE;
+	int ret = SECURITY_UTIL_STATUS_SUCCESS;
+	mbedtls_x509_crt *pCrt;
+	int size = sizeof(mbedtls_x509_crt);
+
+	assert(remote_ka_crt != NULL);
+	assert(session_id != NULL);
 
 	int ind = find_or_add_session(session_id);
 
 	if (ind < 0)
 		return SECURITY_UTIL_STATUS_FAILURE;
-	memcpy(sessions[ind].ka_pub_key_remote, public_key, public_key_size);
-	sessions[ind].ka_pub_key_remote_size = public_key_size;
+
+
+	if (sessions[ind].ka_crt_remote != NULL) {
+		pCrt = (mbedtls_x509_crt *)sessions[ind].ka_crt_remote;
+		mbedtls_x509_crt_free(pCrt);
+		free(sessions[ind].ka_crt_remote);
+	}
+
+	sessions[ind].ka_crt_remote = (uint8_t *)malloc(size);
+	assert(sessions[ind].ka_crt_remote != NULL);
+
+	pCrt = (mbedtls_x509_crt *)sessions[ind].ka_crt_remote;
+	//in case there is already a certificate then delete it
+	mbedtls_x509_crt_init(pCrt);
+	size = remote_ka_crt_size;
+	ret = mbedtls_x509_crt_parse_der(pCrt, remote_ka_crt, size);
+	if (ret != 0) {
+		free(sessions[ind].ka_crt_remote);
+		sessions[ind].ka_crt_remote = NULL;
+		return SECURITY_UTIL_STATUS_FAILURE;
+	}
+
 	return SECURITY_UTIL_STATUS_SUCCESS;
 }
 
+
+/*
+ * free remote ka crt
+ * If found -
+ *	free it, return SECURITY_UTIL_STATUS_SUCCESS
+ * If not found  -
+ *	return SECURITY_UTIL_STATUS_FAILURE
+ */
+int32_t free_remote_ka_crt(
+		const secured_association_params_t *session_id)
+{
+	assert(session_id != NULL);
+
+	int ind = find_session(session_id);
+
+	if (ind < 0)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	if (sessions[ind].ka_crt_remote != NULL) {
+		mbedtls_x509_crt *pCrt;
+
+		pCrt = (mbedtls_x509_crt *) (sessions[ind].ka_crt_remote);
+		mbedtls_x509_crt_free(pCrt);
+		free(sessions[ind].ka_crt_remote);
+		sessions[ind].ka_crt_remote = NULL;
+	}
+
+	return SECURITY_UTIL_STATUS_SUCCESS;
+}
 
 /*
  * Get pointer to pre-saved local DS public key
@@ -269,20 +373,31 @@ const uint8_t *get_KA_public_key_local(
 	*public_key_size = ka_keys_local.public_key_size;
 	return ka_keys_local.public_key;
 }
+
 /*
- * Get pointer to pre-saved remote KA public key
+ * Get pointer to pre-saved local KA certificate
  */
-const uint8_t *get_KA_public_key_remote(
+const uint8_t *get_KA_certificate_local(
+		uint32_t	*certificate_size)
+{
+	*certificate_size = ka_certificate_size_local;
+	return ka_certificate_local;
+}
+
+/*
+ * Get pointer to pre-saved remote KA certificate
+ */
+const uint8_t *get_KA_certificate_remote(
 		const secured_association_params_t *session_id,
-		uint32_t	*public_key_size)
+		uint32_t	*certificate_size)
 {
 	int ind = find_session(session_id);
 
-	if (ind < 0 || sessions[ind].ka_pub_key_remote_size == 0)
+	if (ind < 0 || sessions[ind].ka_crt_remote == NULL)
 		return NULL;
 
-	*public_key_size = sessions[ind].ka_pub_key_remote_size;
-	return sessions[ind].ka_pub_key_remote;
+	*certificate_size = sizeof(mbedtls_x509_crt);
+	return sessions[ind].ka_crt_remote;
 }
 
 static inline void copy_and_validate(uint8_t *to, uint32_t *to_size,
@@ -705,15 +820,14 @@ int32_t calculate_shared_secret(
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	security_int_params_t int_params;
 	int ind = find_session(session_id);
+	mbedtls_x509_crt *pCrt;
 
 	if (ind < 0)
 		return SECURITY_UTIL_STATUS_FAILURE;
 
 	int_params.security_grp_id = security_group_id_ecp_dp_256r1;
-	int_params.remote_public_key_size =
-			sessions[ind].ka_pub_key_remote_size;
-	int_params.remote_public_key =
-			sessions[ind].ka_pub_key_remote;
+	pCrt = (mbedtls_x509_crt *)(sessions[ind].ka_crt_remote);
+	int_params.remote_ecp_public_key = mbedtls_pk_ec(pCrt->pk);
 	int_params.local_private_key =
 			ka_keys_local.private_key;
 	int_params.local_private_key_size =

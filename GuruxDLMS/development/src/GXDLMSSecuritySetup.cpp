@@ -293,31 +293,13 @@ int CGXDLMSSecuritySetup::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg
 		//now calculate the share key
 		if(ret == 0)
 		{
-			secured_association_params_t session_id;
-			session_id.local_wrapper_port = settings.GetClientWport();
-			session_id.remote_wrapper_port = settings.GetServerWport();
-			session_id.remote_port = settings.GetServerPort();
-			session_id.remote_ip_address.type = security_IP_address_ipV4;
-			session_id.remote_ip_address.choice.ipV4 = settings.GetServerIpAddr();
-
-			uint32_t	public_key_size;
-			const uint8_t *   p_public_key;
-			p_public_key = get_KA_public_key_local(&public_key_size);
-			if((NULL == p_public_key) || (public_key_size == 0))
-			{
+			//calculate shared secret
+			if ((ret = calculate_shared_secret(&session_id)) != 0) {
 				ret = DLMS_ERROR_CODE_INVALID_PARAMETER;
 			}
-
-			if(ret == 0)
+			else
 			{
-				//calculate shared secret
-				if ((ret = calculate_shared_secret(&session_id)) != 0) {
-					ret = DLMS_ERROR_CODE_INVALID_PARAMETER;
-				}
-				else
-				{
-					m_eKeyAgreementState = EN_KA_STATE_KEY_CALCULATED;
-				}
+				m_eKeyAgreementState = EN_KA_STATE_KEY_CALCULATED;
 			}
 		}
 
@@ -338,21 +320,21 @@ int CGXDLMSSecuritySetup::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg
 		    //respond the data as an octet string
 		    if(ret == 0)
 		    {
-				uint32_t	public_key_size;
-				const uint8_t *   p_public_key;
-				p_public_key = get_KA_public_key_local(&public_key_size);
-				if((NULL == p_public_key) || (public_key_size == 0))
+				uint32_t	certificate_size;
+				const uint8_t *   p_certificate;
+				p_certificate = get_KA_certificate_local(&certificate_size);
+				if((NULL == p_certificate) || (certificate_size == 0))
 				{
 					ret = DLMS_ERROR_CODE_INVALID_PARAMETER;
 				}
 				else
 				{
-					CGXByteBuffer ka_public_key;
-					//set the actual key
-					ka_public_key.Set(p_public_key, public_key_size);
+					CGXByteBuffer ka_certificate;
+					//set the actual certificate
+					ka_certificate.Set(p_certificate, certificate_size);
 
 					// the server sends the exported ka public key
-					e.SetValue(ka_public_key);
+					e.SetValue(ka_certificate);
 					m_eKeyAgreementState = EN_KA_STATE_EXPORT;
 				}
 
