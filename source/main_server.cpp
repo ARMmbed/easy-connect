@@ -56,6 +56,8 @@
 #include "hls_keys.h"
 
 
+#define DEFAUL_SERVER_WINDOW 3
+
 static int get_hex_value(unsigned char c);
 static int hex_string_to_int(char *s);
 static char *hex_string_to_hex_arr(char *s, int *size);
@@ -86,6 +88,9 @@ static char *s_drop_receive = NULL;
 static char *s_drop_send = NULL;
 static int s_drop_receive_size = 0;
 static int s_drop_send_size = 0;
+static int s_window = DEFAUL_SERVER_WINDOW;
+static bool s_drop_only_received_gbt = false;
+static bool s_drop_only_sent_gbt = false;
 
 static unsigned char server_sys_title[] =
 {
@@ -118,10 +123,24 @@ static void getopt(int argc, char* argv[])
 
 	for (int i = 0; i < argc; ++i)
 	{
-		if (strcmp(argv[i], "-dropr") == 0)
+		if (strcmp(argv[i], "-window") == 0)
 		{
 			if (i + 1 < argc)
 			{
+				s_window = atoi(argv[i + 1]);
+				printf("### configuration ###   server_window = %d\n", s_window);
+				++i;
+			}
+		}
+
+		else if ((strcmp(argv[i], "-dropr") == 0) ||
+				(strcmp(argv[i], "-droprgbt") == 0))
+		{
+			if (i + 1 < argc)
+			{
+				if (strcmp(argv[i], "-droprgbt") == 0)
+					s_drop_only_received_gbt = true;
+
 				s_drop_receive = (char*)hex_string_to_hex_arr(argv[i + 1], &s_drop_receive_size);
 				if(s_drop_receive != NULL)
 				{
@@ -132,10 +151,14 @@ static void getopt(int argc, char* argv[])
 			}
 		}
 
-		if (strcmp(argv[i], "-drops") == 0)
+		else if ((strcmp(argv[i], "-drops") == 0) ||
+				(strcmp(argv[i], "-dropsgbt") == 0))
 		{
 			if (i + 1 < argc)
 			{
+				if (strcmp(argv[i], "-dropsgbt") == 0)
+					s_drop_only_sent_gbt = true;
+
 				s_drop_send = (char*)hex_string_to_hex_arr(argv[i + 1], &s_drop_send_size);
 				if(s_drop_send != NULL)
 				{
@@ -146,7 +169,7 @@ static void getopt(int argc, char* argv[])
 			}
 		}
 
-		if (strcmp(argv[i], "-i") == 0)
+		else if (strcmp(argv[i], "-i") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -273,7 +296,7 @@ static void getopt(int argc, char* argv[])
 			}
 		}
 
-		if (strcmp(argv[i], "-set") == 0)
+		else if (strcmp(argv[i], "-set") == 0)
 		{
 			if (i + 1 < argc)
 			{
@@ -568,7 +591,7 @@ int main_server(int argc, char* argv[])
 #endif
 
 	server = CGXDLMSServerFactory::getCGXDLMSServer(true, interfaceType, protocolType);
-	server->SetMaxReceivePDUSize(max_pdu_size);
+	server->SetMaxServerPDUSize(max_pdu_size);
 	server->SetConformance((DLMS_CONFORMANCE)conformance);
 	server->m_print = is_print_packets;
 	server->m_drop_receive = s_drop_receive;
@@ -576,6 +599,9 @@ int main_server(int argc, char* argv[])
 	server->m_drop_receive_size = s_drop_receive_size;
 	server->m_drop_send_size = s_drop_send_size;
 	server->m_error_send_packet = error_send_packet;
+	server->m_window = s_window;
+	server->m_drop_only_received_gbt = s_drop_only_received_gbt;
+	server->m_drop_only_sent_gbt = s_drop_only_sent_gbt;
 
 	///////////////////// ECDSA /////////////////////////////
 	if(s_test_case != BAD_PATH_NO_KEY_IN_SERVER) {

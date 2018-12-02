@@ -42,6 +42,16 @@
 static unsigned char CIPHERING_HEADER_SIZE = 7 + 12 + 3;
 #define GBT_HEADER_SIZE 6
 
+#define GURUX_GBT_ENABLED 0
+
+#if GURUX_GBT_ENABLED
+#define GURUX_GBT p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER
+#define GURUX_MULTIPLE_BLOCKS p.IsMultipleBlocks()
+#else
+#define GURUX_MULTIPLE_BLOCKS 0
+#define GURUX_GBT 0
+#endif
+
 //CRC table.
 static unsigned short FCS16Table[256] =
 {
@@ -208,7 +218,7 @@ int CGXDLMS::ReceiverReady(
         }
     }
 
-	if((settings.GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) != 0)
+	if(GURUX_GBT != 0)
 	{
         CGXDLMSLNParameters p(&settings, 0, DLMS_COMMAND_GENERAL_BLOCK_TRANSFER,
         		0, &bb, NULL, 0xff);
@@ -566,12 +576,12 @@ void MultipleBlocks(
     {
         len += CIPHERING_HEADER_SIZE;
     }
-    if (!p.IsMultipleBlocks())
+    if (!GURUX_MULTIPLE_BLOCKS)
     {
         // Add command type and invoke and priority.
         p.SetMultipleBlocks(2 + reply.GetSize() + len > p.GetSettings()->GetMaxPduSize());
     }
-    if (p.IsMultipleBlocks())
+    if (GURUX_MULTIPLE_BLOCKS)
     {
         // Add command type and invoke and priority.
         p.SetLastBlock(!(8 + reply.GetSize() + len > p.GetSettings()->GetMaxPduSize()));
@@ -670,8 +680,8 @@ int CGXDLMS::GetLNPdu(
             if (p.GetCommand() == DLMS_COMMAND_SET_REQUEST)
             {
 
-                if (p.IsMultipleBlocks() &&
-                		((p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) == 0))
+                if (GURUX_MULTIPLE_BLOCKS &&
+                		(GURUX_GBT == 0))
 
                 {
                     if (p.GetRequestType() == 1)
@@ -688,8 +698,8 @@ int CGXDLMS::GetLNPdu(
             // needed.
             if (p.GetCommand() == DLMS_COMMAND_GET_RESPONSE)
             {
-                if (p.IsMultipleBlocks()&&
-                        ((p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) == 0))
+                if (GURUX_MULTIPLE_BLOCKS &&
+                        (GURUX_GBT == 0))
                 {
                     if (p.GetRequestType() == 1)
                     {
@@ -715,8 +725,8 @@ int CGXDLMS::GetLNPdu(
 
         // Add attribute descriptor.
         reply.Set(p.GetAttributeDescriptor());
-		if (p.IsMultipleBlocks() &&
-            (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER) == 0)
+		if (GURUX_MULTIPLE_BLOCKS &&
+				GURUX_GBT == 0)
         {
 			// Is last block.
 			if (p.IsLastBlock())
@@ -796,7 +806,7 @@ int CGXDLMS::GetLNPdu(
             {
                 len = p.GetData()->GetSize() - p.GetData()->GetPosition();
                 // Get request size can be bigger than PDU size.
-				if (p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER)
+				if (GURUX_GBT)
 				{
 					//calculate the maximal number of bytes that can be written after the GBT header whithout exceeding the client max PDU size
 					unsigned long gbtHeaderLength = GBT_HEADER_SIZE + GXHelpers::GetObjectCountSizeInBytes(p.GetSettings()->GetMaxPduSize()-GBT_HEADER_SIZE);
@@ -881,7 +891,7 @@ int CGXDLMS::GetLNPdu(
     }
 
     if (p.GetCommand() == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER ||
-    		(p.IsMultipleBlocks() &&
+    		(GURUX_MULTIPLE_BLOCKS &&
     		p.GetSettings()->GetNegotiatedConformance() & DLMS_CONFORMANCE_GENERAL_PROTECTION))
     {
         CGXByteBuffer bb;
@@ -1104,11 +1114,11 @@ int CGXDLMS::GetSNPdu(
         }
         reply.Set(p.GetAttributeDescriptor());
 
-        if (!p.IsMultipleBlocks())
+        if (!GURUX_MULTIPLE_BLOCKS)
         {
             p.SetMultipleBlocks(reply.GetSize() + cipherSize + cnt > p.GetSettings()->GetMaxPduSize());
             // If reply data is not fit to one PDU.
-            if (p.IsMultipleBlocks())
+            if (GURUX_MULTIPLE_BLOCKS)
             {
                 reply.SetSize(0);
                 if (!ciphering && p.GetSettings()->GetInterfaceType() == DLMS_INTERFACE_TYPE_HDLC)

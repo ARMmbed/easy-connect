@@ -144,6 +144,12 @@ class CGXDLMSSettings
     // Maximum receivers PDU size.
     unsigned short m_MaxReceivePDUSize;
 
+
+    // Real Maximum PDU size.
+    // this value is for GBT implementation
+    // the original MaxPduSize is set to high value for the Gurux GBT won't work
+    unsigned short m_RealMaxPDUSize;
+
     // Maximum server PDU size.
     unsigned short m_MaxServerPDUSize;
 
@@ -306,6 +312,10 @@ public:
 
     // Maximum PDU size.
     int SetMaxReceivePDUSize(unsigned short value);
+    int GetMaxReceivePDUSize();
+
+    int SetRealMaxPDUSize(unsigned short value);
+    int GetRealMaxPDUSize();
 
     // Maximum server PDU size.
     unsigned short GetMaxServerPDUSize();

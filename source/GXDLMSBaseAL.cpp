@@ -107,13 +107,27 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "GXDLMSAssociationShortName.h"
 #include "GXServerReply.h"
 #include "GXDLMSSecuritySetup.h"
+#include "gbt_server.h"
 
 #define MAX_PACKET_PRINT 170
+#define AARE_TAG 0X61
+
+// wrapper ports positions
+#define SRC_PORT_POS_HIGH 2
+#define SRC_PORT_POS_LOW 3
+#define DEST_PORT_POS_HIGH 4
+#define DEST_PORT_POS_LOW 5
 
 using namespace std;
 static const char* DATAFILE = "data.csv";
 #define DLMS_ACTION_RESULT_OFFSET 11
 
+#define WRAPPER_FRAME_SIZE 8
+#define WRAPPER_FRAME_SIZE_WITHOUT_LEN 6
+
+
+extern packet_t *get_next_packet();
+extern int server_handle_gbt(void *message, int size, gbt_server_info_t *info);
 
 #ifdef __MBED__
 
@@ -142,18 +156,27 @@ static void PrintfBuff(unsigned char *ptr, int size)
 
 static void PrintfBuff(CGXByteBuffer *bb)
 {
-	PrintfBuff(bb->GetData(), bb->GetSize() > MAX_PACKET_PRINT ? MAX_PACKET_PRINT : bb->GetSize());
+	PrintfBuff(bb->GetData(), bb->GetSize() - bb->GetPosition());
 }
 
-static bool DropRec(CGXDLMSBaseAL *server)
+static bool DropRec(CGXDLMSBaseAL *server, unsigned char *message)
 {
 	bool ret = false;
+	++server->m_receive_counter;
+	int counter = server->m_receive_counter;
+
+	if (server->m_drop_only_received_gbt)
+	{
+		bool gbt_packet = (message[WRAPPER_FRAME_SIZE] == 0xe0);
+
+		if (!gbt_packet)
+			return false;
+	}
 
 	if(server->m_drop_receive != NULL)
 	{
 		char *drop_receive = server->m_drop_receive;
 		// 'counter' represents the packet number. first packet is index '0'
-		int counter = server->m_receive_counter;
 		int arr_i = counter / 8;
 
 		if(arr_i < server->m_drop_receive_size)
@@ -162,20 +185,37 @@ static bool DropRec(CGXDLMSBaseAL *server)
 		}
 	}
 
-	++server->m_receive_counter;
-
 	return ret;
 }
 
-static bool DropSend(CGXDLMSBaseAL *server)
+static bool DropSend(CGXDLMSBaseAL *server, unsigned char *message)
 {
 	bool ret = false;
+	++server->m_send_counter;
+	int counter = server->m_send_counter;
+
+	if (server->m_drop_only_sent_gbt)
+	{
+		bool gbt_packet = (message[WRAPPER_FRAME_SIZE] == 0xe0);
+
+		if (!gbt_packet)
+			return false;
+
+		// if the packet BN is 1 then it shouldn't be dropped because
+		// the client still didn't start the GBT session
+		int packet_bn;
+		int bn_low = message[WRAPPER_FRAME_SIZE + 3];
+		int bn_high = message[WRAPPER_FRAME_SIZE + 4];
+		packet_bn = (bn_low & 0xff) | ((bn_high & 0xff) << 8);
+
+		if (packet_bn == 1)
+			return false;
+	}
 
 	if(server->m_drop_send != NULL)
 	{
 		char *drop_send = server->m_drop_send;
 		// 'counter' represents the packet number. first packet is index '0'
-		int counter = server->m_send_counter;
 		int arr_i = counter / 8;
 
 		if(arr_i < server->m_drop_send_size)
@@ -184,10 +224,9 @@ static bool DropSend(CGXDLMSBaseAL *server)
 		}
 	}
 
-	++server->m_send_counter;
-
 	return ret;
 }
+
 
 //add a return error code to a certain reply packet sent from the server
 static bool ErrorSendPacket(CGXDLMSBaseAL *server,CGXByteBuffer& packet)
@@ -205,6 +244,154 @@ static bool ErrorSendPacket(CGXDLMSBaseAL *server,CGXByteBuffer& packet)
 	return false;
 }
 
+// description: return ByteBuffer with the wrapper frame at the begining
+static void get_message_with_wrapper(CGXByteBuffer& bb, void *src, int size, char *wrapper)
+{
+	char *res = (char*)malloc(size + WRAPPER_FRAME_SIZE);
+	memcpy(res, wrapper, WRAPPER_FRAME_SIZE_WITHOUT_LEN);
+	res[6] = size >> 8;
+	res[7] = size;
+	memcpy(res + WRAPPER_FRAME_SIZE, src, size);
+
+	bb.Set(res, size + WRAPPER_FRAME_SIZE);
+	free(res);
+}
+
+static void send_with_wrapper(CGXDLMSBaseAL* server, packet_t *send, SOCKET client_sock, void *wrapper)
+{
+	CGXByteBuffer bb;
+	get_message_with_wrapper(bb, send->data, send->size, (char*)wrapper);
+
+	// here we bind the GBT packet to the wrapper frame and send it back
+	if(DropSend(server, bb.GetData()) == true)
+	{
+		printf("drop sent packet %d\n", server->m_send_counter);
+
+		if(server->m_print)
+		{
+			PrintfBuff((unsigned char*)send->data, send->size);
+		}
+	}
+
+	else
+	{
+
+		if(server->m_print)
+		{
+			printf("server packet sent\n");
+			PrintfBuff(&bb);
+		}
+
+		size_t len;
+		int ret = server->Write(client_sock, bb, &len);
+		if (ret < 0)
+		{
+			//If error has occured
+			server->Reset();
+			server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+		}
+	}
+}
+
+static int handle_gbt_session(CGXDLMSBaseAL* server, void *message, int size, SOCKET client_sock, char *wrapper)
+{
+	int ret;
+	gbt_server_info_t info;
+	bool switch_wrapper_ports = true;
+	info.source = GBT_CLIENT_SOURCE;
+	Request_general_block_transfer_parameters_t params;
+	params.block_transfer_streaming = 1;
+	params.block_transfer_window = server->m_window;
+	info.choice1.params = &params;
+	info.max_pdu_size = server->GetRealMaxPDUSize();
+
+	ret = server_handle_gbt(message, size, &info);
+
+	if (ret == GBT_RESPONSE_COMPLETE)
+	{
+		// in case all message received, the gbt will tranfer the message to
+		// the dlms server and continue the GBT session with the response
+		CGXByteBuffer bb;
+		CGXServerReply sr;
+
+		get_message_with_wrapper(bb, info.choice1.response_ptr, info.response_size, wrapper);
+		sr.SetData(bb);
+
+		if (server->HandleRequest(sr) != 0)
+		{
+			printf("\n\nServer: Error!!!\n\n");
+			PrintfBuff(sr.GetReply().GetData(), sr.GetReply().GetSize() - sr.GetReply().GetPosition());
+			server->SetState(false);
+			server->CloseSocket(client_sock); client_sock = (SOCKET)-1;
+			return -1;
+		}
+
+		info.source = GBT_SERVER_SOURCE;
+
+		memcpy(wrapper, sr.GetReply().GetData(), WRAPPER_FRAME_SIZE_WITHOUT_LEN);
+		switch_wrapper_ports = false;
+
+		int response_size = sr.GetReply().GetSize() - WRAPPER_FRAME_SIZE;
+		char *response = (char*)malloc(response_size);
+
+		memcpy(response, (char*)sr.GetReply().GetData() + WRAPPER_FRAME_SIZE, response_size);
+
+		// here we continue the GBT session after receiving server's response
+		server_handle_gbt(response, response_size, &info);
+	}
+
+	packet_t *send = get_next_packet();
+
+	if (switch_wrapper_ports)
+	{
+	// switch between wrapper ports: dst <-> src
+		char tmp = wrapper[SRC_PORT_POS_HIGH];
+		wrapper[SRC_PORT_POS_HIGH] = wrapper[DEST_PORT_POS_HIGH];
+		wrapper[DEST_PORT_POS_HIGH] = tmp;
+		tmp = wrapper[SRC_PORT_POS_LOW];
+		wrapper[SRC_PORT_POS_LOW] = wrapper[DEST_PORT_POS_LOW];
+		wrapper[DEST_PORT_POS_LOW] = tmp;
+	}
+
+	// the GBT will add all its packet to a linked list which will be send from here
+	while (send != NULL)
+	{
+		send_with_wrapper(server, send, client_sock, wrapper);
+
+		free(send->data);
+		free(send);
+
+		send = get_next_packet();
+	}
+}
+
+static int server_start_gbt_session(CGXDLMSBaseAL* server, void *message, int size, SOCKET client_sock, char *wrapper)
+{
+	// if the server is the one to start the GBT session, it will come here
+	// after receiving server's response
+	gbt_server_info_t info;
+	info.source = GBT_SERVER_SOURCE;
+	info.max_pdu_size = server->GetRealMaxPDUSize();
+	Request_general_block_transfer_parameters_t params;
+	params.block_transfer_streaming = 1;
+	params.block_transfer_window = server->m_window;
+	info.choice1.params = &params;
+
+	server_handle_gbt(message, size, &info);
+
+	packet_t *send = get_next_packet();
+
+	while (send != NULL)
+	{
+		send_with_wrapper(server, send, client_sock, wrapper);
+
+		free(send->data);
+		free(send);
+
+		send = get_next_packet();
+	}
+}
+
 static void ListenerThread(const void* pVoid)
 {
 	STATUS result = SUCCESS;
@@ -217,6 +404,7 @@ static void ListenerThread(const void* pVoid)
 	SOCKLEN client_sock_addr_len;
 	bool first_packet = true;
     CGXServerReply sr;
+    int real_max_pdu = server->GetRealMaxPDUSize();
 
     while (server->IsConnected())
     {
@@ -249,7 +437,7 @@ static void ListenerThread(const void* pVoid)
 				first_packet = false;
 			}
 
-			if(DropRec(server) == true)
+			if(DropRec(server, bb.GetData()) == true)
 			{
 				printf("drop received packet %d\n", server->m_receive_counter);
 
@@ -287,6 +475,44 @@ static void ListenerThread(const void* pVoid)
 
 			bb.SetSize(bb.GetSize() + len);
 
+			unsigned char *data = bb.GetData();
+			if (server->GetNegociatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER != 0 &&
+					data[WRAPPER_FRAME_SIZE] == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
+			{
+				// if the server sent all data of previous GBT session and now it gets
+				// first packet of new GBT session (BN=1) it should destroy previous session
+				// and start a new one
+				if (is_gbt_active())
+				{
+					if (sent_all_data())
+					{
+						int BN;
+						int BN_high = data[WRAPPER_FRAME_SIZE + 2];
+						int BN_low = data[WRAPPER_FRAME_SIZE + 3];
+						BN = ((BN_high & 0xff) << 8) | (BN_low & 0xff);
+
+						if (BN == 1)
+						{
+		            		server_destroy_session();
+		            		set_gbt_unactive();
+						}
+					}
+				}
+
+				// if we received GBT packet, the server will send it to the GBT mechanism and will wait for another packet.
+				// the wrapper frame is copied from here in order for the GBT mechanism to use it when it sends the packet - src and dst ports are switched in the GBT mechanism
+				char wrapper[WRAPPER_FRAME_SIZE_WITHOUT_LEN];
+				memcpy(wrapper, data, WRAPPER_FRAME_SIZE_WITHOUT_LEN);
+				void *message = malloc(bb.GetSize() - WRAPPER_FRAME_SIZE);
+				memcpy(message, data + WRAPPER_FRAME_SIZE, bb.GetSize() - WRAPPER_FRAME_SIZE);
+				ret = handle_gbt_session(server, message, bb.GetSize() + len, client_sock, wrapper);
+
+				if (ret == -1)
+					break;
+
+				bb.SetSize(0);
+				continue;
+			}
    			//in case the last request we handled was GBT and we have transmitted
 			//the last block we need to check if the new command is a request for a re-tranmission of
 			//a block from the last window or a complete new transaction
@@ -306,6 +532,11 @@ static void ListenerThread(const void* pVoid)
    			sr.SetData(bb);
 
             do {
+            	if (is_gbt_active())
+            	{
+            		server_destroy_session();
+            		set_gbt_unactive();
+            	}
 
 				if (server->HandleRequest(sr) != 0)
 				{
@@ -316,14 +547,32 @@ static void ListenerThread(const void* pVoid)
 					break;
 				}
 				printf("\n\nServer: Handling DLMS request\n");
-
+				real_max_pdu = server->GetRealMaxPDUSize();
 				// Reply is null if we do not want to send any data to the
 				// client.
 				// This is done if client try to make connection with wrong
 				// server or client address.
 				if (sr.GetReply().GetData() != NULL) {
 
-					if(DropSend(server) == true)
+					int message_size = sr.GetReply().GetSize() - WRAPPER_FRAME_SIZE;
+					char *data = (char*)sr.GetReply().GetData();
+
+					if (server->GetNegociatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER != 0 &&
+							message_size > real_max_pdu &&
+							// the GBT session shouldn't start before we send the AARE
+							data[WRAPPER_FRAME_SIZE] != AARE_TAG)
+					{
+						// copy to 'wrapper' only the 6 first bytes of the wrapper frame (without the lenght)
+						char wrapper[WRAPPER_FRAME_SIZE_WITHOUT_LEN];
+						memcpy(wrapper, sr.GetReply().GetData(), WRAPPER_FRAME_SIZE_WITHOUT_LEN);
+						// copy to 'message' the full received message without the wrapper
+						void *message = malloc(message_size);
+						memcpy(message, (char*)sr.GetReply().GetData() + WRAPPER_FRAME_SIZE, message_size);
+						server_start_gbt_session(server, message, sr.GetReply().GetSize() - WRAPPER_FRAME_SIZE, client_sock, wrapper);
+
+						break;
+					}
+					if(DropSend(server, (unsigned char*)sr.GetReply().GetData()) == true)
 					{
 						printf("drop sent packet %d\n", server->m_send_counter);
 
@@ -349,7 +598,8 @@ static void ListenerThread(const void* pVoid)
 
 						sr.GetReply().SetPosition(0);
 						ret = server->Write(client_sock, sr.GetReply(), &len);
-						if (ret == -1)
+						real_max_pdu = server->GetRealMaxPDUSize();
+						if (ret < 0)
 						{
 							//If error has occured
 							server->Reset();
@@ -1121,7 +1371,7 @@ int CGXDLMSBaseAL::CreateObjects()
     /* SECURITY_SETUP */
     CGXDLMSSecuritySetup* pSecuritySetup = new CGXDLMSSecuritySetup(SECURITY_SETUP);
     GetItems().push_back(pSecuritySetup);
-
+	
 	/* MANUFACTURER_SPECIFIC - data */
     bool on_off = 1;
     CGXDLMSVariant custom_value(on_off);
@@ -1138,7 +1388,6 @@ int CGXDLMSBaseAL::CreateObjects()
 #endif
 
 #if MAX_MEMORY
-
     //Add default clock. Clock's Logical Name is 0.0.1.0.0.255.
     CGXDLMSClock* pClock = new CGXDLMSClock();
     CGXDateTime begin(-1, 9, 1, -1, -1, -1, -1);

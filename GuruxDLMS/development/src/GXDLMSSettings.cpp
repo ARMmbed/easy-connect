@@ -339,6 +339,17 @@ int CGXDLMSSettings::SetMaxReceivePDUSize(unsigned short value)
     return 0;
 }
 
+int CGXDLMSSettings::SetRealMaxPDUSize(unsigned short value)
+{
+    m_RealMaxPDUSize = value;
+    return 0;
+}
+
+int CGXDLMSSettings::GetRealMaxPDUSize()
+{
+	return m_RealMaxPDUSize;
+}
+
 // Maximum server PDU size.
 unsigned short CGXDLMSSettings::GetMaxServerPDUSize()
 {
@@ -353,6 +364,11 @@ int CGXDLMSSettings::SetMaxServerPDUSize(unsigned short value)
     }
     m_MaxServerPDUSize = value;
     return 0;
+}
+
+int CGXDLMSSettings::GetMaxReceivePDUSize()
+{
+	return m_MaxReceivePDUSize;
 }
 
 

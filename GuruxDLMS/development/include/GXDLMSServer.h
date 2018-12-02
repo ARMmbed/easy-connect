@@ -613,6 +613,21 @@ public:
     void SetMaxReceivePDUSize(
         unsigned short value);
 
+    void SetMaxServerPDUSize(
+        unsigned short value);
+
+    unsigned short GetMaxServerPDUSize();
+
+    int SetRealMaxPDUSize(unsigned short value)
+    {
+    	m_Settings.SetRealMaxPDUSize(value);
+    }
+
+    int GetRealMaxPDUSize()
+    {
+    	m_Settings.GetRealMaxPDUSize();
+    }
+
     /**
      * Determines, whether Logical, or Short name, referencing is used.
      * Referencing depends on the device to communicate with. Normally, a device

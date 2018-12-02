@@ -49,6 +49,7 @@
 #define DLMS_DATA_LENGTH_OFFSET 6
 #define DLMS_GBT_BNA_LSB_BYTE_OFFSET 5
 #define DLMS_GBT_BNA_OFFSET 4
+#define VERY_LARGE_MAX_PDU_SIZE 0X0FFFFFFF
 
 static void PrintfBuff(CGXByteBuffer *bb);
 
@@ -208,10 +209,20 @@ CGXDLMSLimits CGXDLMSServer::GetLimits()
 
 unsigned short CGXDLMSServer::GetMaxReceivePDUSize()
 {
-    return m_Settings.GetMaxServerPDUSize();
+    return m_Settings.GetMaxReceivePDUSize();
 }
 
 void CGXDLMSServer::SetMaxReceivePDUSize(unsigned short value)
+{
+    m_Settings.SetMaxReceivePDUSize(value);
+}
+
+unsigned short CGXDLMSServer::GetMaxServerPDUSize()
+{
+    return m_Settings.GetMaxServerPDUSize();
+}
+
+void CGXDLMSServer::SetMaxServerPDUSize(unsigned short value)
 {
     m_Settings.SetMaxServerPDUSize(value);
 }
@@ -2101,12 +2112,17 @@ int CGXDLMSServer::HandleCommand(
     switch (cmd)
     {
     case DLMS_COMMAND_SET_REQUEST:
+    	// set the max_pdu_size to be very large in order for the disable GBT mechanism
+    	SetMaxReceivePDUSize(VERY_LARGE_MAX_PDU_SIZE);
         ret = HandleSetRequest(data);
+       SetMaxReceivePDUSize(GetRealMaxPDUSize());
         break;
     case DLMS_COMMAND_WRITE_REQUEST:
         ret = HandleWriteRequest(data);
         break;
     case DLMS_COMMAND_GET_REQUEST:
+    	// set the max_pdu_size to be very large in order for the disable GBT mechanism
+    	SetMaxReceivePDUSize(VERY_LARGE_MAX_PDU_SIZE);
         if (data.GetSize() != 0)
         {
             ret = HandleGetRequest(data);
@@ -2133,12 +2149,15 @@ int CGXDLMSServer::HandleCommand(
 				}
 			}
         }
+       SetMaxReceivePDUSize(GetRealMaxPDUSize());
         break;
     case DLMS_COMMAND_READ_REQUEST:
         ret = HandleReadRequest(data);
         break;
     case DLMS_COMMAND_METHOD_REQUEST:
+    	SetMaxReceivePDUSize(VERY_LARGE_MAX_PDU_SIZE);
         ret = HandleMethodRequest(data, sr.GetConnectionInfo());
+        SetMaxReceivePDUSize(GetRealMaxPDUSize());
         break;
     case DLMS_COMMAND_SNRM:
         ret = HandleSnrmRequest(m_Settings, data, m_ReplyData);
@@ -2146,6 +2165,7 @@ int CGXDLMSServer::HandleCommand(
         break;
     case DLMS_COMMAND_AARQ:
         ret = HandleAarqRequest(data, sr.GetConnectionInfo());
+        SetRealMaxPDUSize(GetMaxReceivePDUSize());
         break;
     case DLMS_COMMAND_RELEASE_REQUEST:
         ret = HandleReleaseRequest(data);
@@ -2638,6 +2658,7 @@ int CGXDLMSServer::HandleMethodRequest(
                 // Add parameters error code.
                 error = e->GetError();
                 bb.SetUInt8(0);
+				printf("Server: Send error\n\n");
             }
         }
     }
@@ -2649,7 +2670,7 @@ int CGXDLMSServer::HandleMethodRequest(
 		printf("Server: InvalidConnection\n");
         InvalidConnection(connectionInfo);
     }
-	printf("Server: ret=%d\n\n", ret);
+
     return ret;
 }
 

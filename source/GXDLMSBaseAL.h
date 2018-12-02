@@ -93,7 +93,10 @@ public:
 	int m_receive_counter;
 	int m_send_counter;
 	int m_error_send_packet;
-	
+	int m_window;
+	bool m_drop_only_received_gbt;
+	bool m_drop_only_sent_gbt;
+
  //   GX_TRACE_LEVEL m_Trace;
 
     /////////////////////////////////////////////////////////////////////////
@@ -134,6 +137,11 @@ public:
     	delete[] m_drop_receive;
     	delete[] m_drop_send;
         StopServer();
+    }
+
+    DLMS_CONFORMANCE GetNegociatedConformance()
+    {
+    	return GetSettings().GetNegotiatedConformance();
     }
 
     virtual bool IsConnected()
