@@ -408,6 +408,8 @@ static void ListenerThread(const void* pVoid)
 	SOCKLEN client_sock_addr_len;
 	bool first_packet = true;
     CGXServerReply sr;
+    // gbt should always be enabled
+    int gbt_enable = 1;
     int real_max_pdu = server->GetRealMaxPDUSize();
 
     while (server->IsConnected())
@@ -480,7 +482,7 @@ static void ListenerThread(const void* pVoid)
 			bb.SetSize(bb.GetSize() + len);
 
 			unsigned char *data = bb.GetData();
-			if (server->GetNegociatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER != 0 &&
+			if (gbt_enable &&
 					data[WRAPPER_FRAME_SIZE] == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
 			{
 				// if the server sent all data of previous GBT session and now it gets
@@ -561,7 +563,7 @@ static void ListenerThread(const void* pVoid)
 					int message_size = sr.GetReply().GetSize() - WRAPPER_FRAME_SIZE;
 					char *data = (char*)sr.GetReply().GetData();
 
-					if (server->GetNegociatedConformance() & DLMS_CONFORMANCE_GENERAL_BLOCK_TRANSFER != 0 &&
+					if (gbt_enable &&
 							message_size > real_max_pdu &&
 							// the GBT session shouldn't start before we send the AARE
 							data[WRAPPER_FRAME_SIZE] != AARE_TAG)
