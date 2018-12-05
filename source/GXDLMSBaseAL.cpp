@@ -52,6 +52,9 @@
 #define LISTENER_THREAD_STACK_SIZE 2048
 #define SIMULATION_THREAD_STACK_SIZE 512
 
+// the location of the size of the data in the GBT frame
+#define DATA_SIZE_LOCATION 6
+
 #ifdef __MBED__
 
 DigitalOut led1(LED1);
@@ -202,7 +205,8 @@ static bool DropSend(CGXDLMSBaseAL *server, unsigned char *message)
 			return false;
 
 		// if the packet BN is 1 then it shouldn't be dropped because
-		// the client still didn't start the GBT session
+		// the client still didn't start the GBT session and, for now,
+		// the client isn't capable of handle non-GBT timer issues
 		int packet_bn;
 		int bn_low = message[WRAPPER_FRAME_SIZE + 3];
 		int bn_high = message[WRAPPER_FRAME_SIZE + 4];
@@ -480,8 +484,8 @@ static void ListenerThread(const void* pVoid)
 					data[WRAPPER_FRAME_SIZE] == DLMS_COMMAND_GENERAL_BLOCK_TRANSFER)
 			{
 				// if the server sent all data of previous GBT session and now it gets
-				// first packet of new GBT session (BN=1) it should destroy previous session
-				// and start a new one
+				// first packet (with data) of new GBT session (BN=1) it should destroy previous session
+				// and start a new one. if the packet is not with data then it's not a start of new GBT session
 				if (is_gbt_active())
 				{
 					if (sent_all_data())
@@ -491,7 +495,7 @@ static void ListenerThread(const void* pVoid)
 						int BN_low = data[WRAPPER_FRAME_SIZE + 3];
 						BN = ((BN_high & 0xff) << 8) | (BN_low & 0xff);
 
-						if (BN == 1)
+						if (BN == 1 && (data[WRAPPER_FRAME_SIZE + DATA_SIZE_LOCATION] != 0))
 						{
 		            		server_destroy_session();
 		            		set_gbt_unactive();

@@ -113,5 +113,6 @@ void server_destroy_session();
 bool is_gbt_active();
 void set_gbt_unactive();
 bool sent_all_data();
+int get_last_in_order();
 
 #endif /* SERVER_GBT_H_ */

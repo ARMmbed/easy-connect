@@ -14,7 +14,7 @@
 #define LB_IS_1 0X80
 #define STR_IS_0 0xBF
 #define STR_IS_1 0x40
-#define GBT_BN_VALID_DONT_SAVE_BLOCK 1
+#define GBT_BN_ALREADY_RECEIVED 1
 #define GBT_BN_VALID 0
 #define GBT_BN_NOT_VALID -1
 
@@ -44,6 +44,14 @@ typedef struct General_Block_Transfer {
 
 static packet_t *server_send = NULL;
 static server_gbt_session_t *server_session = NULL;
+
+int get_last_in_order()
+{
+	if (server_session->last_in_order == NULL)
+		return 0;
+
+	return server_session->last_in_order->block_number;
+}
 
 bool sent_all_data()
 {
@@ -205,39 +213,16 @@ static void server_send_packets()
 	server_session->received_last_window_block = 0;
 }
 
-static int server_is_BN_valid(int BN, int LB)
+static int server_is_BN_valid(int BN)
 {
 	int valid = GBT_BN_VALID;
 	gbt_block_t *BN_ptr = server_session->list;
-	gbt_block_t *last_order = server_session->last_in_order;
 	int order_BN = 0;
-
-	if (last_order != NULL)
-	{
-		BN_ptr = last_order;
-		order_BN = last_order->block_number;
-	}
-
-
-	if (server_session->sent_all_data && ((BN > order_BN - server_session->server_max_window) && (BN < order_BN + server_session->server_max_window)))
-		return GBT_BN_VALID_DONT_SAVE_BLOCK;
-
-	if ((BN <= 0) || ((BN_ptr != NULL) &&
-			(BN_ptr->block_number > BN)))
-		return GBT_BN_NOT_VALID;
 
 	while (BN_ptr != NULL) {
 		if (BN_ptr->block_number == BN) {
-			// todo: handle when the 'BN' is already received but valid
-			// the server may have corner case that the BN is too large
-			// and it's not handled here so we just add 'MAX_BN_RANGE'
-			// to put limit
-			if (BN < order_BN + MAX_BN_RANGE) {
-				valid = GBT_BN_VALID_DONT_SAVE_BLOCK;
-			}
-			else
-				valid = GBT_BN_NOT_VALID;
-			break;
+				valid = GBT_BN_ALREADY_RECEIVED;
+				break;
 		}
 
 		BN_ptr = BN_ptr->next;
@@ -427,47 +412,12 @@ void *server_manage_gbt(int is_timeout)
 static int server_check_message_correctness(int block_control, int BN, int BNA)
 {
 	int LB = (block_control >> 7) & 0x1;
-	int ret = server_is_BN_valid(BN, LB);
+	int ret = server_is_BN_valid(BN);
 
-	if(ret == GBT_BN_NOT_VALID)
-	{
-		printf("SERVER ERROR: already received block %d\n", BN);
-		++server_session->counters[SAME_BLOCK_TWICE];
-		++server_session->total_counter;
-		return GBT_DROP_PACKET;
-	}
-
-	if (BNA > server_session->highest_BN ||
-			((((block_control >> 6) & 0x3) == 0x2) && (BN == 0) && (BNA == 0)))
+	if ((((block_control >> 6) & 0x3) == 0x2) && (BN == 0) && (BNA == 0))
 	{
 		printf("GBT ABORT: server receive abort request\n");
 		return GBT_ABORT;
-	}
-
-	int highest_expected = server_session->highest_receive + server_session->server_max_window + 1;
-
-	if(BN > highest_expected)
-	{
-		printf("SERVER ERROR: block number is higher than max expected, BN = %d\n", BN);
-		++server_session->counters[BN_TOO_HIGH];
-		++server_session->total_counter;
-		return GBT_DROP_PACKET;
-	}
-
-	if (((block_control >> 6) & 0x3) == 0x3)
-	{
-		printf("SERVER ERROR: non logical values: LB=1 and STR=1\n");
-		++server_session->counters[NON_LOGICAL];
-		++server_session->total_counter;
-		return GBT_DROP_PACKET;
-	}
-
-	if(BNA < server_session->last_acknowledged)
-	{
-		printf("SERVER ERROR: acknowledgement too low, BNA = %d\n", BNA);
-		++server_session->counters[ACK_TOO_LOW];
-		++server_session->total_counter;
-		return GBT_DROP_PACKET;
 	}
 
 	return ret;
@@ -784,7 +734,7 @@ int server_handle_gbt(void *message, int size, gbt_server_info_t *info)
 		server_session->block_received = 1;
 		server_session->packet_sent = 0;
 
-		if (status != GBT_BN_VALID_DONT_SAVE_BLOCK)
+		if (status != GBT_BN_ALREADY_RECEIVED)
 			server_save_block(gbt_block);
 
 		// in case of no-data-block the size will be 0
@@ -806,8 +756,7 @@ int server_handle_gbt(void *message, int size, gbt_server_info_t *info)
 					server_session->received_last_block
 				&& all_in_order;
 
-			if ((server_session->received_last_window_block &&
-					all_in_order) ||
+			if (server_session->received_last_window_block ||
 				server_session->receive_all_data)
 			{
 				// todo: kill timer

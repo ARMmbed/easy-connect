@@ -2658,7 +2658,6 @@ int CGXDLMSServer::HandleMethodRequest(
                 // Add parameters error code.
                 error = e->GetError();
                 bb.SetUInt8(0);
-				printf("Server: Send error\n\n");
             }
         }
     }
