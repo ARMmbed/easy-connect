@@ -618,15 +618,9 @@ public:
 
     unsigned short GetMaxServerPDUSize();
 
-    int SetRealMaxPDUSize(unsigned short value)
-    {
-    	m_Settings.SetRealMaxPDUSize(value);
-    }
+    int SetRealMaxPDUSize(unsigned short value);
 
-    int GetRealMaxPDUSize()
-    {
-    	m_Settings.GetRealMaxPDUSize();
-    }
+    int GetRealMaxPDUSize();
 
     /**
      * Determines, whether Logical, or Short name, referencing is used.

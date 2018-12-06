@@ -2983,3 +2983,12 @@ bool CGXDLMSServer::IsGbtRecoveryRequest(CGXByteBuffer& request)
 	return isGbtRecoveryRequest;
 }
 
+int CGXDLMSServer::SetRealMaxPDUSize(unsigned short value)
+{
+	m_Settings.SetRealMaxPDUSize(value);
+}
+
+int CGXDLMSServer::GetRealMaxPDUSize()
+{
+	m_Settings.GetRealMaxPDUSize();
+}
