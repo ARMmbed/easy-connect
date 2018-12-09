@@ -194,8 +194,8 @@ static bool DropRec(CGXDLMSBaseAL *server, unsigned char *message)
 static bool DropSend(CGXDLMSBaseAL *server, unsigned char *message)
 {
 	bool ret = false;
-	++server->m_send_counter;
 	int counter = server->m_send_counter;
+	++server->m_send_counter;
 
 	if (server->m_drop_only_sent_gbt)
 	{
