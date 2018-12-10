@@ -92,9 +92,11 @@ static int s_window = DEFAUL_SERVER_WINDOW;
 static bool s_drop_only_received_gbt = false;
 static bool s_drop_only_sent_gbt = false;
 
-static unsigned char server_sys_title[] =
+#define SERVER_SYS_TITLE_SIZE 8
+
+static unsigned char server_sys_title[SERVER_SYS_TITLE_SIZE] =
 {
-	0x4D,0x4D,0x4D,0x00,0x00,0x00,0x00,0x01
+		0x53, 0x72, 0x76, 0x41, 0x72,0x30, 0x30, 0x31 //hexadecimal representation of utf-8 encoding of "SrvA001"
 };
 
 static void print_buf(char *s, int size)
@@ -614,7 +616,7 @@ int main_server(int argc, char* argv[])
 	server->SetTestCase(s_test_case);
 
 	CGXByteBuffer server_system_title;
-	server_system_title.Set(server_sys_title, 8);
+	server_system_title.Set(server_sys_title, sizeof(server_sys_title));
 	(server->GetCiphering())->SetSystemTitle(server_system_title);
 	/////////////////////////////////////////////////////////
 
