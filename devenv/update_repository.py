@@ -48,10 +48,10 @@ if(operating_sys == "linux"):
 	}
 else:
 	qe_lib_files = {
-		'mbed-os.lib'              			: 'mbed-os',
-		'sd-driver.lib'            			: 'sd-driver',
+		'mbed-os.lib'         				: 'mbed-os',
 		'mbed-cloud-client.lib' 			: 'mbed-cloud-client-restricted',
-		'easy-connect.lib'					: 'easy-connect'
+		'easy-connect.lib'					: 'easy-connect',
+		'e2eIoT-test-device.lib'   			: 'e2eIoT-test-device'
 	}
 
 class UpdateRepository(object):

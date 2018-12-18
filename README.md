@@ -3,42 +3,26 @@
 ## steps to run on linux
 `./build_server.sh`
 
-`./bin/dlms-sim-server`
-
 ### clean and compile:
 
 `./build_server.sh -c`
 
-### only clean:
-
-`./build_server.sh -clean`
-
-
-## steps to run on linux-cli
-`python ./devenv/update_repository.py linux`
-
-`. devenv/qe_env_setup.sh PC Linux GNUC`
-
-`make`
-
-`./Debug/Linux_GNUC.elf`
-
-### handle entropy
-The program can get stucked when running in this mode before the server starts to run. That's happen in function "pal_init" because of non-available entropy.
-To solve this you need to do next steps for only one time:
-1. get out of the docker
-2. `sudo apt-get install rng-tools`
-3. `sudo rngd -r /dev/urandom`
-
-## steps to run on mbed-cli
+## steps to run on mbed-cli for K64F
 `python ./devenv/update_repository.py mbed`
 
 `./devenv/qe_env_setup.sh K64F MBEDOS GNUC`
 
 `mbed compile -t GCC_ARM -m K64F -j 16`
 
+## steps to run on mbed-cli for ODIN
+`python ./devenv/update_repository.py mbed`
+
+`./devenv/qe_env_setup.sh UBLOX_EVK_ODIN_W2 MBEDOS GNUC`
+
+`mbed compile -t GCC_ARM -m UBLOX_EVK_ODIN_W2 -j 16`
+
 the binary file will be in path:
-./BUILD/K64F/GCC_ARM/e2e-iot-dlms-server.bin
+./BUILD/UBLOX_EVK_ODIN_W2/GCC_ARM/e2e-iot-dlms-server.bin
 
 ## drop packets from command line:
 * `-dropr           <hexadeciamal number starts with 0x>` - drop received packets.
@@ -47,7 +31,6 @@ the binary file will be in path:
 The hexadecimal number will indiacte the indexes of the packets you want to drop, by its binary representation.
 for example: if you type 0x152 you will drop the 2nd, 5th, 7th and 9th packets, because the binary representation is 000101010010
 
-## command line in cli
 
 ## command line in cli
 ### to start the server:
@@ -74,6 +57,22 @@ for example: if you type 0x152 you will drop the 2nd, 5th, 7th and 9th packets, 
 ### to end the server:
 `end`
 
+
+## steps to run on linux-cli (currently not supported)
+`python ./devenv/update_repository.py linux`
+
+`. devenv/qe_env_setup.sh PC Linux GNUC`
+
+`make`
+
+`./Debug/Linux_GNUC.elf`
+
+### handle entropy
+The program can get stucked when running in this mode before the server starts to run. That's happen in function "pal_init" because of non-available entropy.
+To solve this you need to do next steps for only one time:
+1. get out of the docker
+2. `sudo apt-get install rng-tools`
+3. `sudo rngd -r /dev/urandom`
 
 
 

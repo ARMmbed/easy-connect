@@ -58,10 +58,12 @@
 #ifdef __MBED__
 
 DigitalOut led1(LED1);
+#ifdef UBLOX_EVK_ODIN_W2
 DigitalOut led2(PD_9);
 DigitalOut led3(PD_8);
 DigitalOut led4(PD_11);
 DigitalOut led5(PD_12);
+#endif // UBLOX_EVK_ODIN_W2
 
 static int prev_led;
 using namespace rtos;
@@ -367,6 +369,8 @@ static int handle_gbt_session(CGXDLMSBaseAL* server, void *message, int size, SO
 
 		send = get_next_packet();
 	}
+
+	return 0;
 }
 
 static int server_start_gbt_session(CGXDLMSBaseAL* server, void *message, int size, SOCKET client_sock, char *wrapper)
@@ -783,10 +787,12 @@ static void sensor_thread(void const *pVoid)
 				prev_led = custom.boolVal;
 
 				led1 = (int)custom.boolVal;
+#ifdef UBLOX_EVK_ODIN_W2
 				led2 = (int)custom.boolVal;
 				led3 = (int)custom.boolVal;
 				led4 = (int)custom.boolVal;
 				led5 = (int)custom.boolVal;
+#endif // UBLOX_EVK_ODIN_W2
 //				printf("Custom: value = %d\n", custom.boolVal);
 //				printf("Leds: led1 = %d led2 = %d led3 = %d\n", (int)led1, (int)led2, (int)led3);
 			//}
@@ -1394,8 +1400,10 @@ int CGXDLMSBaseAL::CreateObjects()
 #ifdef __MBED__
     prev_led = on_off;
     led1 = 0;
+#ifdef UBLOX_EVK_ODIN_W2
     led2 = 0;
     led3 = 1;
+#endif // UBLOX_EVK_ODIN_W2
 #endif
 
 #if MAX_MEMORY

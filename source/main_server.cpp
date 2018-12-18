@@ -14,10 +14,11 @@
 
 #ifdef __MBED__
 #include "source/setup.h"
+#include "pal_network.h"
 //#include "mbed-os/features/FEATURE_LWIP/lwip-interface/EthernetInterface.h"
 #endif
 
-#if defined(CLI_MODE) // || defined(__MBED__)
+#if defined(CLI_MODE)  || defined(__MBED__)
 #include "init_plat.h"
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
@@ -469,6 +470,23 @@ static char *hex_string_to_hex_arr(char *s, int *size)
 
 	return ret;
 }
+
+#if defined(CLI_MODE) || defined(__MBED__)
+int get_server_ip(int argc, char* argv[])
+{
+	NETADD_INFO interfaceInfo = { 0 };
+
+	if (pal_getNetInterfaceInfo(0, &interfaceInfo) != PAL_SUCCESS)return -1;
+
+    printf("%u.%u.%u.%u\n",
+    (unsigned char)interfaceInfo.address.addressData[2],
+    (unsigned char)interfaceInfo.address.addressData[3],
+    (unsigned char)interfaceInfo.address.addressData[4],
+    (unsigned char)interfaceInfo.address.addressData[5]);
+
+	return 0;
+}
+#endif //#if defined(CLI_MODE) || defined(__MBED__)
 
 int setObj(int argc, char* argv[])
 {

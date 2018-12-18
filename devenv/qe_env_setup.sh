@@ -208,7 +208,10 @@ if [[ "$PLAT" == "UBLOX_EVK_ODIN_W2" ]]; then
 	mbed config root .
 	# Enable mbed-os local PROTOCOL
 	mbed config PROTOCOL ssh
+	# for ODIN, this script updates the target to use 'SD' repository instead of the former external 'sd-driver' repository
+	python add_line.py mbed-os/targets/targets.json
 fi
+
 
 echo "easy-connect/atmel-rf-driver/*
 easy-connect/mcr20a-rf-driver/*
@@ -216,7 +219,11 @@ easy-connect/stm-spirit1-rf-driver/*
 pal-platform/*
 platform/linux/*
 mbed-cloud-client/mbed-client-pal/Source/Port/Reference-Impl/OS_Specific/mbedOS/FileSystem/pal_plat_fileSystem.cpp
-platform/mbed-os/TARGET_UBLOX_EVK_ODIN_W2/pal_insecure_ROT.cpp" > .mbedignore
+platform/mbed-os/TARGET_UBLOX_EVK_ODIN_W2/pal_insecure_ROT.cpp
+e2eIoT-test-device/qe-device-infra/os-specific-source/mbedOS/FileSystemInit.cpp
+mbed-os/features/frameworks/mbed-client-cli/*
+e2eIoT-test-device/qe-device-infra/source/qe_setup.cpp" > .mbedignore
+
 
 # JAVA 8 is needed for all targets -
 # (Placed here to make sure this is first in the PATH).
