@@ -112,6 +112,7 @@ Thread sensorThread(osPriorityHigh, sizeof(uint32_t) * SIMULATION_THREAD_STACK_S
 #include "GXDLMSAssociationShortName.h"
 #include "GXServerReply.h"
 #include "GXDLMSSecuritySetup.h"
+#include "GXDLMSDisconnectControl.h"
 #include "gbt_server.h"
 
 #define MAX_PACKET_PRINT 170
@@ -986,13 +987,15 @@ int CGXDLMSBaseAL::StartServer(char *ip_address, const char* pPort)
 
 #ifdef __linux__
 	ret = pthread_create(&m_ReceiverThread, NULL, UnixListenerThread, (void *)this);
+	printf("m_ReceiverThread ret=%d\n", ret);
 #ifndef CLI_MODE
-	pthread_join(m_ReceiverThread, NULL);
+//	pthread_join(m_ReceiverThread, NULL);
 #else
 	sem_wait(&m_wait_server_start);
 #endif // __linux__
 
 	ret = pthread_create(&m_TempratureThread, NULL, temperature_thread, (void *)this);
+	printf("m_TempratureThread ret=%d\n", ret);
 
 #else // MBED
 	listener.start(mbed::callback(ListenerThread, (void*)this));
@@ -1397,6 +1400,16 @@ int CGXDLMSBaseAL::CreateObjects()
     GetItems().push_back(pCustomObj);
     count = GetItems().size();
 
+	CGXDLMSClock* pDemoClock = new CGXDLMSClock(DEMO_CLOCK);
+	CGXDateTime demoBegin(2018, 12, 1, 0, 0, 0, 0);
+	pDemoClock->SetBegin(demoBegin);
+	CGXDateTime demoEnd(2019, 1, 31, 0, 0, 0, 0);
+	pDemoClock->SetEnd(demoEnd);
+	GetItems().push_back(pDemoClock);
+
+	CGXDLMSDisconnectControl* pDisconnect = new CGXDLMSDisconnectControl(DISCONNECT_CTRL);
+	GetItems().push_back(pDisconnect);
+
 #ifdef __MBED__
     prev_led = on_off;
     led1 = 0;
@@ -1414,6 +1427,7 @@ int CGXDLMSBaseAL::CreateObjects()
     CGXDateTime end(-1, 3, 1, -1, -1, -1, -1);
     pClock->SetEnd(end);
     GetItems().push_back(pClock);
+
     //Add Tcp/Udp setup. Default Logical Name is 0.0.25.0.0.255.
     GetItems().push_back(new CGXDLMSTcpUdpSetup());
 
