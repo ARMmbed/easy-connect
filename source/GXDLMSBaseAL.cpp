@@ -816,7 +816,7 @@ static void *temperature_thread(void *pVoid)
 
 	printf("start temprature thread \r\n");
 	CGXDLMSBaseAL* pDLMSBase=(CGXDLMSBaseAL*)pVoid;
-	while(1)
+	while(pDLMSBase->IsConnected() > 0)
 	{
 
 		string str_id= TEMPERATURE_OBJECT;
@@ -996,7 +996,7 @@ int CGXDLMSBaseAL::StartServer(char *ip_address, const char* pPort)
 
 	ret = pthread_create(&m_TempratureThread, NULL, temperature_thread, (void *)this);
 	printf("m_TempratureThread ret=%d\n", ret);
-
+	pthread_join(m_ReceiverThread, NULL);
 #else // MBED
 	listener.start(mbed::callback(ListenerThread, (void*)this));
 	pal_osSemaphoreWait(m_wait_server_start, 1000, NULL);
@@ -1020,6 +1020,10 @@ int CGXDLMSBaseAL::KillThread()
 {
 #ifdef __linux__
 	if(pthread_cancel(m_ReceiverThread) != 0)
+	{
+		return -1;
+	}
+	if(pthread_cancel(m_TempratureThread) != 0)
 	{
 		return -1;
 	}
