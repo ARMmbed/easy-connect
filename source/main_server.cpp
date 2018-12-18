@@ -23,6 +23,7 @@
 
 #include <cstring>
 #include <string.h>
+#include <signal.h>
 
 #include "comp_defines.h"
 #include "GXDLMSBaseAL.h"
@@ -410,22 +411,31 @@ static char *hex_string_to_hex_arr(char *s, int *size)
 	int i;
 
 	// the input string must start with '0x' or '0X'
-	while(*ptr != '0')
+	ptr = strstr(s,"0x");
+	if(ptr == NULL)
 	{
-		++ptr;
+		ptr = strstr(s,"0X");
+		if(ptr == NULL)
+		{
+			printf("%s: error - parameter should be hexadecimal number starting with 0x\n",__func__);
+			return NULL;
+		}
 	}
 
-	++ptr;
-
-	if(!(*ptr == 'x' || *ptr == 'X'))
-	{
-		return NULL;
-	}
-
-	++ptr;
+	//skip the 0x sign
+	ptr += 2;
 
 	// caculate the len of the output
 	string_len = strlen(ptr);
+	for(i = 0 ; i < string_len; i++)
+	{
+		if (!isxdigit(ptr[i]))
+		{
+			printf("%s: error - parameter should be hexadecimal number starting with 0x\n",__func__);
+			return NULL;
+		}
+	}
+
 	end = ptr + string_len - 1;
 	int alloc_len = (string_len % 2 == 0) ? string_len / 2 : (string_len / 2) + 1;
 	*size = alloc_len;
@@ -552,7 +562,7 @@ int kill_server(int argc, char* argv[])
 
 	delete server;
 	server = NULL;
-
+	printf("Server terminated successfully\n");
 	return 0;
 }
 
@@ -564,10 +574,21 @@ static const unsigned char *get_private_key(uint32_t *size)
 	return keys.m_private;
 }
 
+static void handle_client_terminate_signal (int sig, siginfo_t *siginfo, void *context)
+{
+	printf ("%s: Got terminate signal from PID: %ld, signo: %d\n",
+			__func__, (long)siginfo->si_pid, siginfo->si_signo);
+
+	//we got kill command from teh client
+	//terminate the server
+	kill_server(0,NULL);
+
+}
 
 int main_server(int argc, char* argv[])
 {
 	char default_port[10];
+	struct sigaction act;
 
 	getopt(argc, argv);
 	handle_test_params();
@@ -631,6 +652,21 @@ int main_server(int argc, char* argv[])
 	if(port == NULL) {
 		strcpy(default_port,LN_SERVER_PORT_STR);
 		port = default_port;
+	}
+
+	//register to get a notification in case a SIGTERM signal was sent by the client
+	//this is done in order to gracefully terminate teh server
+	memset (&act, '\0', sizeof(act));
+
+	//Use the sa_sigaction field because the handles has two additional parameters
+	act.sa_sigaction = &handle_client_terminate_signal;
+
+	//The SA_SIGINFO flag tells sigaction() to use the sa_sigaction field, not sa_handler.
+	act.sa_flags = SA_SIGINFO;
+
+	if (sigaction(SIGTERM, &act, NULL) < 0) {
+		perror ("sigaction");
+		return 1;
 	}
 
 

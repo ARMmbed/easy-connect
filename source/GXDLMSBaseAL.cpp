@@ -622,8 +622,13 @@ static void ListenerThread(const void* pVoid)
 					break;
 				}
 
-            } while (sr.IsStreaming() || sr.GetIsRecoveringLostBlocks());
+            } while ((sr.IsStreaming() || sr.GetIsRecoveringLostBlocks()) && server->IsConnected());
 
+
+            if(server->IsConnected() == false)
+            {
+            	break;
+            }
 
 			bb.SetSize(0);
 			server->SetState(true);
