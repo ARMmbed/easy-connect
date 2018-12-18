@@ -828,7 +828,7 @@ static void *temperature_thread(void *pVoid)
 			if(temp_value.iVal == 40)
 				temp_value=30;
 			temp_value=temp_value.iVal+1;
-			printf("New temp value %d\r\n",temp_value.iVal);
+//			printf("New temp value %d\r\n",temp_value.iVal);
 			((CGXDLMSRegister*)obj)->SetValue(temp_value);
 		}
 		/* ACTIVE_ENERGY  */
@@ -843,7 +843,7 @@ static void *temperature_thread(void *pVoid)
 				new_value = CGXDLMSVariant((int)1);
 
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Active energy: prev value = %ld   new value = %ld\n", active.lVal, new_value.lVal);
+//			printf("Active energy: prev value = %ld   new value = %ld\n", active.lVal, new_value.lVal);
 		}
 
 		/* REACTIVE_ENERGY  */
@@ -857,7 +857,7 @@ static void *temperature_thread(void *pVoid)
 			else
 				new_value = CGXDLMSVariant((unsigned long)2);
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Reactive energy: prev value = %lu   new value = %lu\n", reactive.ulVal, new_value.ulVal);
+//			printf("Reactive energy: prev value = %lu   new value = %lu\n", reactive.ulVal, new_value.ulVal);
 		}
 
 		/* SUM_LI_ACTIVE_POWER  */
@@ -872,7 +872,7 @@ static void *temperature_thread(void *pVoid)
 				new_value = CGXDLMSVariant((unsigned long)1);
 
 			((CGXDLMSData*)obj)->SetValue(new_value);
-			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.ulVal, (long)new_value.ulVal);
+//			printf("Sum Li Active Power: prev value = %ld   new value = %ld\n", (long)sum_li.ulVal, (long)new_value.ulVal);
 		}
 
 
@@ -882,7 +882,7 @@ static void *temperature_thread(void *pVoid)
 		if (obj != NULL)
 		{
 			custom = ((CGXDLMSRegister*)obj)->GetValue();
-			printf("Custom: value = %d\n", custom.boolVal);
+//			printf("Custom: value = %d\n", custom.boolVal);
 		}
 		sleep(1);
 	}
