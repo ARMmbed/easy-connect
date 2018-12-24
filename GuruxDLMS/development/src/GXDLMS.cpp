@@ -823,6 +823,8 @@ int CGXDLMS::GetLNPdu(
                 }
                 reply.Set(p.GetData(), p.GetData()->GetPosition(), len);
             }
+            else
+            	reply.SetUInt8(0);
         }
         if (ciphering)
         {
