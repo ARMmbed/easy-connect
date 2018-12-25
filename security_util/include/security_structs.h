@@ -80,22 +80,36 @@ typedef struct secured_association_params {
 	uint16_t				local_wrapper_port;
 } secured_association_params_t;
 
+/**
+ * Contains certificate significant fields which
+ * are needed for the certificate usage
+ */
+typedef struct security_key_crt {
+	uint8_t	is_initialized;
+	/* Start time of certificate validity */
+	uint8_t	*pValid_from;
+	/* End time of certificate validity */
+	uint8_t	*pValid_to;
+	/* Container for the public key */
+	uint8_t	*Q;
+}
+security_key_crt;
+
 typedef struct session_secure_params {
 	secured_association_params_t	id;
 	e_key_sharing_status_t	ds_key_sharing_status;
 	e_key_sharing_status_t	ka_key_sharing_status;
-	uint8_t			ds_pub_key_remote[PUBLIC_KEY_SIZE];
-	uint32_t		ds_pub_key_remote_size;
-	uint8_t			*ka_crt_remote;
+	security_key_crt		ka_crt_remote;
+	security_key_crt		ds_crt_remote;
 	uint8_t			shared_secret[PRIVATE_KEY_SIZE];
 	uint32_t		shared_secret_size;
 } session_secure_params_t;
 
-/* internal parameters for Digital Signature sign/verify */
+/* internal parameters for Digital Signature sign/verify
+ * and key operations
+ */
 typedef struct security_int_params {
 	e_security_group_id_t	security_grp_id;
-	const uint8_t *remote_public_key;
-	uint32_t remote_public_key_size;
 	void *remote_ecp_public_key;
 	const uint8_t *local_private_key;
 	uint32_t local_private_key_size;
@@ -109,8 +123,6 @@ typedef struct hls_auth_params {
 	security_octet_string_t	originator_challenge;
 	security_octet_string_t	recipient_sys_title;
 	security_octet_string_t	recipient_challenge;
-	const uint8_t	*public_key;
-	uint32_t		public_key_size;
 } hls_auth_params_t;
 
 /* Encrypt/Decrypt Parameters */

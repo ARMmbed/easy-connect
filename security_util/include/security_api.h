@@ -9,13 +9,19 @@
  * NULL can be passed if one of the key pairs shouldn't be changed
  */
 int init_security_util(security_key_pair_t *ds_key_pair,
+	const uint8_t *ds_certificate, uint32_t ds_certificate_size,
 	security_key_pair_t *ka_key_pair,
-	uint8_t *ka_certificate, uint32_t ka_certificate_size);
+	const uint8_t *ka_certificate, uint32_t ka_certificate_size);
 /*
  * This function should be called once at the exit
  */
 void exit_security_util(void);
 
+/*
+ * This function will return 1 if init_security_util function was called
+ * it will return 0 if exit_security_util function was called
+ */
+uint8_t IsSecurityUtilInitialized(void);
 /*
  * Set status of local DS crt sharing for given association
  * return SECURITY_UTIL_STATUS_FAILURE if session not found
@@ -51,18 +57,7 @@ int32_t get_KA_local_crt_sharing_status(
 		e_key_sharing_status_t *status);
 
 /*
- * Validate and Save remote ds crt
- * If validation ok -
- *	save it, return SECURITY_UTIL_STATUS_SUCCESS
- * If validation failed -
- *	don't save, return SECURITY_UTIL_STATUS_FAILURE
- */
-int32_t validate_and_save_remote_ds_crt(
-		const secured_association_params_t *session_id,
-		const uint8_t *public_key, uint32_t public_key_size);
-
-/*
- * Validate and Save remote ka crt
+ * Validate and Save remote ka certificate
  * If validation ok -
  *	save it, return SECURITY_UTIL_STATUS_SUCCESS
  * If validation failed -
@@ -70,7 +65,20 @@ int32_t validate_and_save_remote_ds_crt(
  */
 int32_t validate_and_save_remote_ka_crt(
 		const secured_association_params_t *session_id,
+		const uint8_t *remote_sys_title, uint32_t remote_sys_title_size,
 		const uint8_t *remote_ka_crt, uint32_t remote_ka_crt_size);
+
+/*
+ * Validate and Save remote ds certificate
+ * If validation ok -
+ *	save it, return SECURITY_UTIL_STATUS_SUCCESS
+ * If validation failed -
+ *	don't save, return SECURITY_UTIL_STATUS_FAILURE
+ */
+int32_t validate_and_save_remote_ds_crt(
+		const secured_association_params_t *session_id,
+		const uint8_t *remote_sys_title, uint32_t remote_sys_title_size,
+		const uint8_t *remote_ds_crt, uint32_t remote_ds_crt_size);
 
 /*
  * free remote ka crt
@@ -86,13 +94,19 @@ int32_t free_remote_ka_crt(
  */
 const uint8_t *get_DS_public_key_local(
 		uint32_t	*public_key_size);
+/*
+ * Get pointer to pre-saved local DS certificate
+ */
+const uint8_t *get_DS_certificate_local(
+		uint32_t	*certificate_size);
 
 /*
- * Get pointer to pre-saved remote DS public key
+ * Get pointer to pre-saved remote DS certificate
  */
-const uint8_t *get_DS_public_key_remote(
+const security_key_crt *get_DS_certificate_remote(
 		const secured_association_params_t *session_id,
-		uint32_t	*public_key_size);
+		uint32_t	*certificate_size);
+
 /*
  * Get pointer to pre-saved local KA public key
  */
@@ -108,26 +122,30 @@ const uint8_t *get_KA_certificate_local(
 /*
  * Get pointer to pre-saved remote KA certificate
  */
-const uint8_t *get_KA_certificate_remote(
+const security_key_crt *get_KA_certificate_remote(
 		const secured_association_params_t *session_id,
 		uint32_t	*certificate_size);
 /*
  * Create digital signature from auth_params fields and add to the buffer
  * currently supported only Security Suite 1 && MechanismId 7
  */
-int32_t create_HLS_authentication(hls_auth_params_t *auth_params,
-							uint8_t *buffer,
-							uint32_t *buffer_size,
-							uint8_t is_originator);
+int32_t create_HLS_authentication(
+			const secured_association_params_t *session_id,
+			hls_auth_params_t *auth_params,
+			uint8_t *buffer,
+			uint32_t *buffer_size,
+			uint8_t is_originator);
 
 /*
  * Verify digital signature using auth_params fields
  * currently supported only Security Suite 1 && MechanismId 7
  */
-int32_t verify_HLS_authentication(hls_auth_params_t *auth_params,
-							uint8_t *buffer,
-							uint32_t buffer_size,
-							uint8_t is_originator);
+int32_t verify_HLS_authentication(
+			const secured_association_params_t *session_id,
+			hls_auth_params_t *auth_params,
+			uint8_t *buffer,
+			uint32_t buffer_size,
+			uint8_t is_originator);
 
 /*
  * Calculate shared secret Z using shared_secret_params fields

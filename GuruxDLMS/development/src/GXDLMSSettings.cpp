@@ -62,12 +62,18 @@ CGXDLMSSettings::CGXDLMSSettings(bool isServer)
     m_ClientWindowSize = 1;
     m_ClientBlockNumberAck = 0;
     m_CipheringCommand = DLMS_COMMAND_NONE;
+    memset(&m_keys,0,sizeof(m_keys));
 }
 
 //Destructor.
 CGXDLMSSettings::~CGXDLMSSettings()
 {
     m_Objects.Free();
+    if(m_keys.m_recipient_certificate != NULL)
+    {
+    	free(m_keys.m_recipient_certificate);
+    	m_keys.m_recipient_certificate = NULL;
+    }
 }
 
 CGXByteBuffer& CGXDLMSSettings::GetCtoSChallenge()
@@ -558,11 +564,6 @@ void CGXDLMSSettings::SetProposedConformance(DLMS_CONFORMANCE value)
 void CGXDLMSSettings::SetPrivateKey(unsigned char *d)
 {
 	memcpy(m_keys.m_private, d, PRIVATE_KEY_SIZE);
-}
-
-void CGXDLMSSettings::SetOriginatorPublicKey(unsigned char *q)
-{
-	memcpy(m_keys.m_originator_public, q, PUBLIC_KEY_SIZE);
 }
 
 void CGXDLMSSettings::SetRecipientPublicKey(unsigned char *q)

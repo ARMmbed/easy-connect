@@ -68,7 +68,16 @@ typedef struct keys
 {
 	unsigned char m_private[PRIVATE_KEY_SIZE];
 	unsigned char m_recipient_public[PUBLIC_KEY_SIZE];
-	unsigned char m_originator_public[PUBLIC_KEY_SIZE];
+	unsigned char *m_recipient_certificate;
+	unsigned long m_recipient_certificate_size;
+	unsigned char *m_originator_certificate;
+	unsigned long m_originator_certificate_size;
+	unsigned char m_ka_recipient_private[PRIVATE_KEY_SIZE];
+	unsigned char m_ka_recipient_public[PUBLIC_KEY_SIZE];
+	unsigned char *m_ka_recipient_certificate;
+	unsigned long m_ka_recipient_certificate_size;
+
+
 }keys_t;
 
 typedef const unsigned char *(*get_private_key_from_settings)(uint32_t *size);
@@ -456,11 +465,15 @@ public:
     void SetProposedConformance(DLMS_CONFORMANCE value);
 
 	void SetPrivateKey(unsigned char *d);
-	void SetOriginatorPublicKey(unsigned char *q);
 	void SetRecipientPublicKey(unsigned char *q);
 	void SetCB(get_private_key_from_settings cb)
 	{
 		get_key_cb = cb;
+	}
+
+	void SetKaCB(get_private_key_from_settings cb)
+	{
+		get_ka_key_cb = cb;
 	}
 
 	keys_t& GetKey() {return m_keys;}
@@ -515,6 +528,7 @@ public:
 
 	public:
 	get_private_key_from_settings get_key_cb;
+	get_private_key_from_settings get_ka_key_cb;
 };
 
 #endif //GXDLMSSETTINGS_H

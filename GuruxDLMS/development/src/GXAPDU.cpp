@@ -34,7 +34,7 @@
 
 #include "../include/GXAPDU.h"
 #include "../include/GXDLMSSettings.h"
-
+#include "../../../security_util/include/security_api.h"
 /**
  * Retrieves the string that indicates the level of authentication, if any.
  */
@@ -1012,7 +1012,8 @@ int CGXAPDU::ParsePDU(
             //[#ecdsa#]
             // 0xA7
         case BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED |  PDU_TYPE_CALLING_AE_QUALIFIER:
-			if ((ret = buff.GetUInt8(&len)) != 0)
+			unsigned long length;
+			if((ret = GXHelpers::GetObjectCount(buff,length)) != DLMS_ERROR_CODE_OK)
 			{
 				return ret;
 			}
@@ -1020,19 +1021,31 @@ int CGXAPDU::ParsePDU(
 			{
 				return ret;
 			}
-			if ((ret = buff.GetUInt8(&len)) != 0)
+
+			if((ret = GXHelpers::GetObjectCount(buff,length)) != DLMS_ERROR_CODE_OK)
 			{
 				return ret;
 			}
-			if(len != PUBLIC_KEY_SIZE)
+
+			//if there is a DS certificate of the client (originator)
+			//then parse save it and save it
+			secured_association_params_t session_id;
+			session_id.local_wrapper_port = settings.GetClientWport();
+			session_id.remote_wrapper_port = settings.GetServerWport();
+			session_id.remote_port = settings.GetServerPort();
+			session_id.remote_ip_address.type = security_IP_address_ipV4;
+			session_id.remote_ip_address.choice.ipV4 = settings.GetServerIpAddr();
+
+			if ((ret = validate_and_save_remote_ds_crt(&session_id,
+														settings.GetSourceSystemTitle().GetData(),
+														settings.GetSourceSystemTitle().GetSize(),
+														buff.GetData() + buff.GetPosition(), length)) != SECURITY_UTIL_STATUS_SUCCESS)
 			{
-				// public key length should be 64
-				return DLMS_ERROR_CODE_FALSE;
+				return ret;
 			}
 
-			memcpy(settings.GetKey().m_originator_public, buff.GetData() + buff.GetPosition(), PUBLIC_KEY_SIZE);
 
-			buff.SetPosition(buff.GetPosition() + PUBLIC_KEY_SIZE);
+			buff.SetPosition(buff.GetPosition() + length);
 			break;
 
         case BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | PDU_TYPE_SENDER_ACSE_REQUIREMENTS:
@@ -1189,14 +1202,19 @@ int CGXAPDU::GenerateAARE(
     	{
     		if(test_case != 2) // if ( tast_case != BAD_PATH_NO_KEY_IN_SERVER)
     		{
+    			unsigned long certificate_size = settings.GetKey().m_recipient_certificate_size;
+    			int num_bytes_for_certificate_len = GXHelpers::GetObjectCountSizeInBytes(certificate_size);
+
 				// 0xA5 - responding-AE-qualifier (server public key)
 				tmp_data.SetUInt8(BER_TYPE_CONTEXT | BER_TYPE_CONSTRUCTED | 0x5);
-				tmp_data.SetUInt8(0x42);
+				//size is octet sign one byte  the number of bytes needed to encode the
+				//certificate length and the certificate lenght
+				GXHelpers::SetObjectCount(num_bytes_for_certificate_len + certificate_size + 1, tmp_data);
 				// octet string
 				tmp_data.SetUInt8(0x04);
-				// public key length = 64
-				tmp_data.SetUInt8(PUBLIC_KEY_SIZE);
-				tmp_data.Set(settings.GetKey().m_recipient_public, PUBLIC_KEY_SIZE);
+				// certificate length
+				GXHelpers::SetObjectCount(certificate_size, tmp_data);
+				tmp_data.Set(settings.GetKey().m_recipient_certificate, certificate_size);
     		}
     	}
         // Add server ACSE-requirenents field component.

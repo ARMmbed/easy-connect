@@ -2915,15 +2915,98 @@ void CGXDLMSServer::SetServerPublicKey(unsigned char *q)
 	memcpy(m_Settings.GetKey().m_recipient_public, q, PUBLIC_KEY_SIZE);
 }
 
+bool CGXDLMSServer::SetServerKeyCertificate(unsigned char *pCertificate, unsigned long certificateSize)
+{
+	unsigned char *pRecipientCertificate = m_Settings.GetKey().m_recipient_certificate;
+
+	if(pCertificate == NULL || certificateSize == 0)
+	{
+		return false;
+	}
+
+	//if certificate was already allocated free it first
+	if(pRecipientCertificate != NULL)
+	{
+		free(pRecipientCertificate);
+		m_Settings.GetKey().m_recipient_certificate_size = 0;
+		m_Settings.GetKey().m_recipient_certificate = NULL;
+	}
+
+	pRecipientCertificate = (unsigned char*)malloc(certificateSize);
+	if(pCertificate == NULL)
+	{
+		return false;
+	}
+
+	memcpy(pRecipientCertificate,pCertificate,certificateSize);
+	m_Settings.GetKey().m_recipient_certificate = pRecipientCertificate;
+	m_Settings.GetKey().m_recipient_certificate_size = certificateSize;
+
+	return true;
+}
+
+void CGXDLMSServer::SetKaPrivateKey(unsigned char *d)
+{
+	memcpy(m_Settings.GetKey().m_ka_recipient_private, d, PRIVATE_KEY_SIZE);
+}
+
+void CGXDLMSServer::SetServerKaPublicKey(unsigned char *q)
+{
+	memcpy(m_Settings.GetKey().m_ka_recipient_public, q, PUBLIC_KEY_SIZE);
+}
+
+bool CGXDLMSServer::SetServerKaKeyCertificate(unsigned char *pCertificate, unsigned long certificateSize)
+{
+	unsigned char *pRecipientCertificate = m_Settings.GetKey().m_ka_recipient_certificate;
+
+	if(pCertificate == NULL || certificateSize == 0)
+	{
+		return false;
+	}
+
+	//if certificate was already allocated free it first
+	if(pRecipientCertificate != NULL)
+	{
+		free(pRecipientCertificate);
+		m_Settings.GetKey().m_ka_recipient_certificate_size = 0;
+		m_Settings.GetKey().m_ka_recipient_certificate = NULL;
+	}
+
+	pRecipientCertificate = (unsigned char*)malloc(certificateSize);
+	if(pCertificate == NULL)
+	{
+		return false;
+	}
+
+	memcpy(pRecipientCertificate,pCertificate,certificateSize);
+	m_Settings.GetKey().m_ka_recipient_certificate = pRecipientCertificate;
+	m_Settings.GetKey().m_ka_recipient_certificate_size = certificateSize;
+
+	return true;
+}
+
+
 void CGXDLMSServer::InitSecurityUtils(void)
 {
 	security_key_pair_t ds_key_pair;
+	security_key_pair_t ka_key_pair;
 
-	ds_key_pair.public_key = m_Settings.GetKey().m_originator_public;
-	ds_key_pair.public_key_size = PRIVATE_KEY_SIZE;
+	ds_key_pair.public_key = m_Settings.GetKey().m_recipient_public;
+	ds_key_pair.public_key_size = PUBLIC_KEY_SIZE;
 	ds_key_pair.private_key = m_Settings.get_key_cb(&ds_key_pair.private_key_size);
 
-	init_security_util(&ds_key_pair, NULL, NULL, 0);
+	ka_key_pair.public_key = m_Settings.GetKey().m_ka_recipient_public;
+	ka_key_pair.public_key_size = PUBLIC_KEY_SIZE;
+	ka_key_pair.private_key = m_Settings.get_ka_key_cb(&ka_key_pair.private_key_size);
+	if(init_security_util(&ds_key_pair,
+					m_Settings.GetKey().m_recipient_certificate,
+					m_Settings.GetKey().m_recipient_certificate_size,
+					&ka_key_pair,
+					m_Settings.GetKey().m_ka_recipient_certificate,
+					m_Settings.GetKey().m_ka_recipient_certificate_size) != SECURITY_UTIL_STATUS_SUCCESS) {
+		printf("%s: error init_security_util failed\n",__func__);
+		assert(0);
+	}
 }
 
 unsigned long CGXDLMSServer::GetServerAddress()

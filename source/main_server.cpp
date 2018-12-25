@@ -350,10 +350,15 @@ static void handle_test_params()
 		keys.m_num_pair = key_number - 1;
 		keys.m_private = private_keys[keys.m_num_pair];
 		keys.m_public = public_keys[keys.m_num_pair];
-		
+		keys.m_certificate = &keys_certificates[keys.m_num_pair];
+		keys.m_ka_private = ka_private_keys[keys.m_num_pair];
+		keys.m_ka_public = public_keys[keys.m_num_pair];
+		keys.m_ka_certificate = &ka_keys_certificates[keys.m_num_pair];
+
 		if(s_test_case == BAD_PATH_KEY_MISMATCH) {
 			int wrong_ind = (keys.m_num_pair + 1) % NUM_OF_KEYS;
 			keys.m_public = public_keys[wrong_ind];
+			keys.m_certificate = &keys_certificates[wrong_ind];
 		}
 	}
 }
@@ -592,6 +597,12 @@ static const unsigned char *get_private_key(uint32_t *size)
 	return keys.m_private;
 }
 
+/* stub for secure storage functions */
+static const unsigned char *get_ka_private_key(uint32_t *size)
+{
+	*size = PRIVATE_KEY_SIZE;
+	return keys.m_ka_private;
+}
 static void handle_client_terminate_signal (int sig, siginfo_t *siginfo, void *context)
 {
 	printf ("%s: Got terminate signal from PID: %ld, signo: %d\n",
@@ -600,13 +611,14 @@ static void handle_client_terminate_signal (int sig, siginfo_t *siginfo, void *c
 	//we got kill command from teh client
 	//terminate the server
 	kill_server(0,NULL);
-
 }
 
 int main_server(int argc, char* argv[])
 {
 	char default_port[10];
 	struct sigaction act;
+
+	memset(	&keys,0, sizeof(keys));
 
 	getopt(argc, argv);
 	handle_test_params();
@@ -649,6 +661,12 @@ int main_server(int argc, char* argv[])
 		server->SetPrivateKey(keys.m_private);
 		server->SetServerPublicKey(keys.m_public);
 		server->SetCB(get_private_key);
+		server->SetServerKeyCertificate(keys.m_certificate->m_certificate,keys.m_certificate->m_ceritficate_size);
+
+		server->SetKaPrivateKey(keys.m_ka_private);
+		server->SetServerKaPublicKey(keys.m_ka_public);
+		server->SetKaCB(get_ka_private_key);
+		server->SetServerKaKeyCertificate(keys.m_ka_certificate->m_certificate,keys.m_ka_certificate->m_ceritficate_size);
 		server->InitSecurityUtils();
 	}
 

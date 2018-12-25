@@ -280,8 +280,10 @@ int CGXDLMSSecuritySetup::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg
 		session_id.remote_ip_address.type = security_IP_address_ipV4;
 		session_id.remote_ip_address.choice.ipV4 = settings.GetServerIpAddr();
 
-
-		if ((ret = validate_and_save_remote_ka_crt(&session_id, e.GetParameters().byteArr, e.GetParameters().GetSize()) != SECURITY_UTIL_STATUS_SUCCESS))
+		if ((ret = validate_and_save_remote_ka_crt(&session_id,
+													settings.GetSourceSystemTitle().GetData(),
+													settings.GetSourceSystemTitle().GetSize(),
+													e.GetParameters().byteArr, e.GetParameters().GetSize()) != SECURITY_UTIL_STATUS_SUCCESS))
 		{
 			ret = DLMS_ERROR_CODE_INVALID_PARAMETER;
 		}

@@ -22,6 +22,10 @@ static security_key_pair_t ds_keys_local;
 static security_key_pair_t ka_keys_local;
 static uint8_t *ka_certificate_local;
 static uint32_t ka_certificate_size_local;
+static uint8_t *ds_certificate_local;
+static uint32_t ds_certificate_size_local;
+
+static uint8_t security_util_initialized;
 
 static void init_key_pair(security_key_pair_t *src_key_pair,
 	security_key_pair_t *dst_key_pair)
@@ -32,26 +36,26 @@ static void init_key_pair(security_key_pair_t *src_key_pair,
 	}
 }
 
-static int init_certificate(unsigned char *src_certificate,
+static int init_certificate(const unsigned char *src_certificate,
 		uint32_t src_certificate_size, uint8_t **dst_certificate,
-		uint32_t *dst_certificat_size)
+		uint32_t *dst_certificate_size)
 {
 	int res = SECURITY_UTIL_STATUS_FAILURE;
 	uint32_t size = src_certificate_size;
 
 	if ((src_certificate != NULL) &&
 		(dst_certificate != NULL) &&
-		(dst_certificat_size != NULL)) {
+		(dst_certificate_size != NULL)) {
 		if (*dst_certificate != NULL) {
 			free(*dst_certificate);
-			ka_certificate_size_local = 0;
+			*dst_certificate_size = 0;
 		}
 
 		*dst_certificate = (unsigned char *)malloc(size);
 		if (*dst_certificate != NULL) {
 			memcpy(*dst_certificate, src_certificate,
 					src_certificate_size);
-			*dst_certificat_size = src_certificate_size;
+			*dst_certificate_size = src_certificate_size;
 			res = SECURITY_UTIL_STATUS_SUCCESS;
 		}
 
@@ -59,24 +63,44 @@ static int init_certificate(unsigned char *src_certificate,
 
 	return res;
 }
+
 /*
  * This function should be called each time after key generation
  * NULL can be passed if one of the key pairs shouldn't be changed
  */
 int init_security_util(security_key_pair_t *ds_key_pair,
+	const uint8_t *ds_certificate, uint32_t ds_certificate_size,
 	security_key_pair_t *ka_key_pair,
-	uint8_t *ka_certificate, uint32_t ka_certificate_size)
+	const uint8_t *ka_certificate, uint32_t ka_certificate_size)
 {
 	int res = SECURITY_UTIL_STATUS_SUCCESS;
+
+	//make sure everything is freed before we
+	//re-initiate the security util module
+	exit_security_util();
 
 	init_key_pair(ds_key_pair, &ds_keys_local);
 	init_key_pair(ka_key_pair, &ka_keys_local);
 
 	res = init_certificate(ka_certificate, ka_certificate_size,
 			&ka_certificate_local, &ka_certificate_size_local);
-	memset(sessions, 0,
-	MAX_NUM_SECURE_SESSIONS *
-	sizeof(session_secure_params_t));
+	if (res == SECURITY_UTIL_STATUS_SUCCESS) {
+		res = init_certificate(ds_certificate,
+			ds_certificate_size,
+			&ds_certificate_local, &ds_certificate_size_local);
+	}
+
+	if (res == SECURITY_UTIL_STATUS_SUCCESS) {
+		memset(sessions, 0,
+		MAX_NUM_SECURE_SESSIONS *
+		sizeof(session_secure_params_t));
+
+		security_util_initialized = 1;
+	} else {
+		//free all allocated resources
+		exit_security_util();
+	}
+
 	return res;
 }
 
@@ -85,25 +109,39 @@ int init_security_util(security_key_pair_t *ds_key_pair,
  */
 void exit_security_util(void)
 {
-	mbedtls_x509_crt *pCrt;
 
 	if (ka_certificate_local != NULL) {
 		free(ka_certificate_local);
 		ka_certificate_local = NULL;
 	}
 
-	//free all saved remote certificates
-	for (int ind = 0; ind < MAX_NUM_SECURE_SESSIONS; ind++) {
-		pCrt = (mbedtls_x509_crt *)(sessions[ind].ka_crt_remote);
-		if (pCrt != NULL) {
-			mbedtls_x509_crt_free(pCrt);
-			free(pCrt);
-			sessions[ind].ka_crt_remote = NULL;
-		}
+	if (ds_certificate_local != NULL) {
+		free(ds_certificate_local);
+		ds_certificate_local = NULL;
 	}
 
+	//free all saved remote certificates
+	for (int ind = 0; ind < MAX_NUM_SECURE_SESSIONS; ind++) {
+		//free the ka certificate
+		if (sessions[ind].ka_crt_remote.is_initialized)
+			free_security_key_crt(&sessions[ind].ka_crt_remote);
+
+		//free the ds ceritificate
+		if (sessions[ind].ds_crt_remote.is_initialized)
+			free_security_key_crt(&sessions[ind].ds_crt_remote);
+	}
+
+	security_util_initialized = 0;
 }
 
+/*
+ * This function will return 1 if init_security_util function was called
+ * it will return 0 if exit_security_util function was called
+ */
+uint8_t IsSecurityUtilInitialized(void)
+{
+	return security_util_initialized;
+}
 /*
  * compare src and dst association params
  * return 1 if identical, 0 otherwise
@@ -239,28 +277,6 @@ int32_t get_KA_local_crt_sharing_status(
 }
 
 /*
- * Validate and Save remote ds crt
- * If validation ok -
- *	save it, return SECURITY_UTIL_STATUS_SUCCESS
- * If validation failed -
- *	don't save, return SECURITY_UTIL_STATUS_FAILURE
- */
-int32_t validate_and_save_remote_ds_crt(
-		const secured_association_params_t *session_id,
-		const uint8_t *public_key, uint32_t public_key_size)
-{
-	assert(public_key_size == PUBLIC_KEY_SIZE);
-	assert(public_key != NULL);
-	int ind = find_or_add_session(session_id);
-
-	if (ind < 0)
-		return SECURITY_UTIL_STATUS_FAILURE;
-	memcpy(sessions[ind].ds_pub_key_remote, public_key, public_key_size);
-	sessions[ind].ds_pub_key_remote_size = public_key_size;
-	return SECURITY_UTIL_STATUS_SUCCESS;
-}
-
-/*
  * Save remote KA crt
  * If validation ok -
  *	save it, return SECURITY_UTIL_STATUS_SUCCESS
@@ -269,11 +285,12 @@ int32_t validate_and_save_remote_ds_crt(
  */
 int32_t validate_and_save_remote_ka_crt(
 		const secured_association_params_t *session_id,
+		const uint8_t *remote_sys_title, uint32_t remote_sys_title_size,
 		const uint8_t *remote_ka_crt, uint32_t remote_ka_crt_size)
 {
 
 	int ret = SECURITY_UTIL_STATUS_SUCCESS;
-	mbedtls_x509_crt *pCrt;
+	mbedtls_x509_crt crt;
 	int size = sizeof(mbedtls_x509_crt);
 
 	assert(remote_ka_crt != NULL);
@@ -284,31 +301,99 @@ int32_t validate_and_save_remote_ka_crt(
 	if (ind < 0)
 		return SECURITY_UTIL_STATUS_FAILURE;
 
+	if (sessions[ind].ka_crt_remote.is_initialized)
+		free_security_key_crt(&sessions[ind].ka_crt_remote);
 
-	if (sessions[ind].ka_crt_remote != NULL) {
-		pCrt = (mbedtls_x509_crt *)sessions[ind].ka_crt_remote;
-		mbedtls_x509_crt_free(pCrt);
-		free(sessions[ind].ka_crt_remote);
-	}
 
-	sessions[ind].ka_crt_remote = (uint8_t *)malloc(size);
-	assert(sessions[ind].ka_crt_remote != NULL);
-
-	pCrt = (mbedtls_x509_crt *)sessions[ind].ka_crt_remote;
 	//in case there is already a certificate then delete it
-	mbedtls_x509_crt_init(pCrt);
+	mbedtls_x509_crt_init(&crt);
 	size = remote_ka_crt_size;
-	ret = mbedtls_x509_crt_parse_der(pCrt, remote_ka_crt, size);
-	if (ret != 0) {
-		free(sessions[ind].ka_crt_remote);
-		sessions[ind].ka_crt_remote = NULL;
+	ret = mbedtls_x509_crt_parse_der(&crt, remote_ka_crt, size);
+	if (ret != 0)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	//verify that the certificate subject common name is the
+	//same as the remote system title
+	//in case they are different do not accept the certificate
+	//as a valid certificate
+	ret = FindCommonName(&crt.subject,
+						remote_sys_title,
+						remote_sys_title_size);
+	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+		mbedtls_x509_crt_free(&crt);
 		return SECURITY_UTIL_STATUS_FAILURE;
 	}
+
+	ret = init_security_key_crt(&sessions[ind].ka_crt_remote, &crt);
+	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+		mbedtls_x509_crt_free(&crt);
+		return SECURITY_UTIL_STATUS_FAILURE;
+	}
+
+	//we are done parsing the certificate then free the allocated memeory
+	mbedtls_x509_crt_free(&crt);
 
 	return SECURITY_UTIL_STATUS_SUCCESS;
 }
 
 
+/*
+ * Save remote DS crt
+ * If validation ok -
+ *	save it, return SECURITY_UTIL_STATUS_SUCCESS
+ * If validation failed -
+ *	don't save, return SECURITY_UTIL_STATUS_FAILURE
+ */
+int32_t validate_and_save_remote_ds_crt(
+		const secured_association_params_t *session_id,
+		const uint8_t *remote_sys_title, uint32_t remote_sys_title_size,
+		const uint8_t *remote_ds_crt, uint32_t remote_ds_crt_size)
+{
+
+	int ret = SECURITY_UTIL_STATUS_SUCCESS;
+	mbedtls_x509_crt crt;
+	int size = sizeof(mbedtls_x509_crt);
+
+	assert(remote_ds_crt != NULL);
+	assert(session_id != NULL);
+
+	int ind = find_or_add_session(session_id);
+
+	if (ind < 0)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	if (sessions[ind].ds_crt_remote.is_initialized)
+		free_security_key_crt(&sessions[ind].ds_crt_remote);
+
+	//in case there is already a certificate then delete it
+	mbedtls_x509_crt_init(&crt);
+	size = remote_ds_crt_size;
+	ret = mbedtls_x509_crt_parse_der(&crt, remote_ds_crt, size);
+	if (ret != 0)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	//verify that the certificate subject common name is the
+	//same as the remote system title
+	//in case they are different do not accept the certificate
+	//as a valid certificate
+	ret = FindCommonName(&crt.subject,
+						remote_sys_title,
+						remote_sys_title_size);
+	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+		mbedtls_x509_crt_free(&crt);
+		return SECURITY_UTIL_STATUS_FAILURE;
+	}
+
+	ret = init_security_key_crt(&sessions[ind].ds_crt_remote, &crt);
+	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+
+		mbedtls_x509_crt_free(&crt);
+		return SECURITY_UTIL_STATUS_FAILURE;
+	}
+
+	mbedtls_x509_crt_free(&crt);
+	return SECURITY_UTIL_STATUS_SUCCESS;
+}
 /*
  * free remote ka crt
  * If found -
@@ -326,14 +411,31 @@ int32_t free_remote_ka_crt(
 	if (ind < 0)
 		return SECURITY_UTIL_STATUS_FAILURE;
 
-	if (sessions[ind].ka_crt_remote != NULL) {
-		mbedtls_x509_crt *pCrt;
+	if (sessions[ind].ka_crt_remote.is_initialized)
+		free_security_key_crt(&sessions[ind].ka_crt_remote);
 
-		pCrt = (mbedtls_x509_crt *) (sessions[ind].ka_crt_remote);
-		mbedtls_x509_crt_free(pCrt);
-		free(sessions[ind].ka_crt_remote);
-		sessions[ind].ka_crt_remote = NULL;
-	}
+	return SECURITY_UTIL_STATUS_SUCCESS;
+}
+
+/*
+ * free remote ds crt
+ * If found -
+ *	free it, return SECURITY_UTIL_STATUS_SUCCESS
+ * If not found  -
+ *	return SECURITY_UTIL_STATUS_FAILURE
+ */
+int32_t free_remote_ds_crt(
+		const secured_association_params_t *session_id)
+{
+	assert(session_id != NULL);
+
+	int ind = find_session(session_id);
+
+	if (ind < 0)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	if (sessions[ind].ds_crt_remote.is_initialized)
+		free_security_key_crt(&sessions[ind].ds_crt_remote);
 
 	return SECURITY_UTIL_STATUS_SUCCESS;
 }
@@ -349,20 +451,31 @@ const uint8_t *get_DS_public_key_local(
 }
 
 /*
- * Get pointer to pre-saved remote DS public key
+ * Get pointer to pre-saved local KA certificate
  */
-const uint8_t *get_DS_public_key_remote(
+const uint8_t *get_DS_certificate_local(
+		uint32_t	*certificate_size)
+{
+	*certificate_size = ds_certificate_size_local;
+	return ds_certificate_local;
+}
+
+/*
+ * Get pointer to pre-saved remote KA certificate
+ */
+const security_key_crt *get_DS_certificate_remote(
 		const secured_association_params_t *session_id,
-		uint32_t	*public_key_size)
+		uint32_t	*certificate_size)
 {
 	int ind = find_session(session_id);
 
-	if (ind < 0 || sessions[ind].ds_pub_key_remote_size == 0)
+	if (ind < 0 || !(sessions[ind].ds_crt_remote.is_initialized))
 		return NULL;
 
-	*public_key_size = sessions[ind].ds_pub_key_remote_size;
-	return sessions[ind].ds_pub_key_remote;
+	*certificate_size = sizeof(security_key_crt);
+	return &sessions[ind].ds_crt_remote;
 }
+
 
 /*
  * Get pointer to pre-saved local KA public key
@@ -387,17 +500,17 @@ const uint8_t *get_KA_certificate_local(
 /*
  * Get pointer to pre-saved remote KA certificate
  */
-const uint8_t *get_KA_certificate_remote(
+const security_key_crt *get_KA_certificate_remote(
 		const secured_association_params_t *session_id,
 		uint32_t	*certificate_size)
 {
 	int ind = find_session(session_id);
 
-	if (ind < 0 || sessions[ind].ka_crt_remote == NULL)
+	if (ind < 0 || (!sessions[ind].ka_crt_remote.is_initialized))
 		return NULL;
 
-	*certificate_size = sizeof(mbedtls_x509_crt);
-	return sessions[ind].ka_crt_remote;
+	*certificate_size = sizeof(security_key_crt);
+	return &sessions[ind].ka_crt_remote;
 }
 
 static inline void copy_and_validate(uint8_t *to, uint32_t *to_size,
@@ -688,10 +801,12 @@ static int32_t kdf(int32_t session_ind, crypto_params_t *params,
  * Create digital signature from auth_params fields and add to the buffer
  * currently supported only Security Suite 1 && MechanismId 7
  */
-int32_t	create_HLS_authentication(hls_auth_params_t *auth_params,
-							uint8_t *buffer,
-							uint32_t *buffer_size,
-							uint8_t is_originator)
+int32_t	create_HLS_authentication(
+			const secured_association_params_t *session_id,
+			hls_auth_params_t *auth_params,
+			uint8_t *buffer,
+			uint32_t *buffer_size,
+			uint8_t is_originator)
 {
 	assert(auth_params != NULL);
 	assert(auth_params->security_suite == 1);
@@ -706,6 +821,14 @@ int32_t	create_HLS_authentication(hls_auth_params_t *auth_params,
 	uint8_t message[MAX_SIZE];
 	uint8_t *hash = NULL;
 	uint32_t hash_size;
+
+	int ind = find_session(session_id);
+
+	if (ind < 0)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	if (!sessions[ind].ds_crt_remote.is_initialized)
+		return SECURITY_UTIL_STATUS_FAILURE;
 
 	ret =
 		get_security_suite_params(auth_params->security_suite,
@@ -731,10 +854,11 @@ int32_t	create_HLS_authentication(hls_auth_params_t *auth_params,
 
 	if (ret == SECURITY_UTIL_STATUS_SUCCESS) {
 		int_params.security_grp_id = security_group_id_ecp_dp_256r1;
-		int_params.remote_public_key_size =
-				auth_params->public_key_size;
-		int_params.remote_public_key =
-				auth_params->public_key;
+		int_params.remote_ecp_public_key =
+				sessions[ind].ds_crt_remote.Q;
+		if (int_params.remote_ecp_public_key == NULL)
+			return SECURITY_UTIL_STATUS_FAILURE;
+
 		int_params.local_private_key =
 				ds_keys_local.private_key;
 		int_params.local_private_key_size =
@@ -751,10 +875,12 @@ int32_t	create_HLS_authentication(hls_auth_params_t *auth_params,
  * Verify digital signature using auth_params fields
  * currently supported only Security Suite 1 && MechanismId 7
  */
-int32_t verify_HLS_authentication(hls_auth_params_t *auth_params,
-							uint8_t *buffer,
-							uint32_t buffer_size,
-							uint8_t is_originator)
+int32_t verify_HLS_authentication(
+			const secured_association_params_t *session_id,
+			hls_auth_params_t *auth_params,
+			uint8_t *buffer,
+			uint32_t buffer_size,
+			uint8_t is_originator)
 {
 	assert(auth_params != NULL);
 	assert(auth_params->security_suite == 1);
@@ -769,6 +895,14 @@ int32_t verify_HLS_authentication(hls_auth_params_t *auth_params,
 	uint8_t message[MAX_SIZE];
 	uint8_t *hash = NULL;
 	uint32_t hash_size;
+
+	int ind = find_session(session_id);
+
+	if (ind < 0)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	if (!sessions[ind].ds_crt_remote.is_initialized)
+		return SECURITY_UTIL_STATUS_FAILURE;
 
 	ret =
 		get_security_suite_params(auth_params->security_suite,
@@ -795,10 +929,11 @@ int32_t verify_HLS_authentication(hls_auth_params_t *auth_params,
 
 	if (ret == SECURITY_UTIL_STATUS_SUCCESS) {
 		int_params.security_grp_id = security_group_id_ecp_dp_256r1;
-		int_params.remote_public_key_size =
-				auth_params->public_key_size;
-		int_params.remote_public_key =
-				auth_params->public_key;
+		int_params.remote_ecp_public_key =
+				sessions[ind].ds_crt_remote.Q;
+		if (int_params.remote_ecp_public_key == NULL)
+			return SECURITY_UTIL_STATUS_FAILURE;
+
 		int_params.local_private_key =
 				ds_keys_local.private_key;
 		int_params.local_private_key_size =
@@ -820,18 +955,27 @@ int32_t calculate_shared_secret(
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 	security_int_params_t int_params;
 	int ind = find_session(session_id);
-	mbedtls_x509_crt *pCrt;
 
 	if (ind < 0)
 		return SECURITY_UTIL_STATUS_FAILURE;
 
+	if (!sessions[ind].ka_crt_remote.is_initialized)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
 	int_params.security_grp_id = security_group_id_ecp_dp_256r1;
-	pCrt = (mbedtls_x509_crt *)(sessions[ind].ka_crt_remote);
-	int_params.remote_ecp_public_key = mbedtls_pk_ec(pCrt->pk);
+
+	int_params.remote_ecp_public_key = sessions[ind].ka_crt_remote.Q;
+	if (int_params.remote_ecp_public_key == NULL)
+		return SECURITY_UTIL_STATUS_FAILURE;
+
 	int_params.local_private_key =
 			ka_keys_local.private_key;
 	int_params.local_private_key_size =
 			ka_keys_local.private_key_size;
+
+	if ((int_params.local_private_key == NULL) ||
+		(int_params.local_private_key_size == 0))
+		return SECURITY_UTIL_STATUS_FAILURE;
 
 	sessions[ind].shared_secret_size = PRIVATE_KEY_SIZE;
 	ret = ECDH_compute_Z(&int_params,

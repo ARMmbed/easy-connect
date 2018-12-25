@@ -15,7 +15,7 @@
 
 #define OCTET_STRING_TAG	9
 #define HALF_SIG_SIZE		33
-
+#define MBEDTLS_OID_AT_CN_SIZE		3
 /*
  * This function was taken from mbedTLS tests.
  * Replace by real rng function - TBD
@@ -48,31 +48,14 @@ static int32_t init_mbedtls_context(mbedtls_ecdsa_context *ctx,
 	security_int_params_t	*params)
 {
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
-/*
- * Pay attention:
- * according to mbedTLS rules, public key MUST start from this byte:
- * BER_OCTET_STRING tag 0x4
- */
-	uint32_t public_size =
-		params->remote_public_key_size + 1;
-	uint8_t *buff = (uint8_t *)calloc(public_size, sizeof(uint8_t));
-
-	assert(buff != NULL);
-	buff[0] = 0x04; // adding BER_OCTET_STRING tag
-	memcpy(buff + 1,
-		params->remote_public_key,
-		params->remote_public_key_size);
 
 	mbedtls_ecdsa_init(ctx);
 	if (params->security_grp_id == security_group_id_ecp_dp_256r1)
 		ctx->grp.id = MBEDTLS_ECP_DP_SECP256R1;
 	assert(mbedtls_ecp_group_load(&ctx->grp, ctx->grp.id) == 0);
 
-
-	ret = mbedtls_ecp_point_read_binary(&ctx->grp, &ctx->Q,
-						buff, public_size);
-	free(buff);
-
+	ret = mbedtls_ecp_copy(&ctx->Q,
+			(mbedtls_ecp_point *)params->remote_ecp_public_key);
 	if (ret == 0) {
 		ret = mbedtls_mpi_read_binary(&ctx->d,
 			params->local_private_key,
@@ -225,7 +208,6 @@ int32_t ECDH_compute_Z(security_int_params_t *params,
 	uint8_t *z, uint32_t *z_len)
 {
 	mbedtls_ecdh_context ecdh;
-	mbedtls_ecp_keypair *pKeyPair;
 	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
 
 	printf("%s\n", __func__);
@@ -235,8 +217,8 @@ int32_t ECDH_compute_Z(security_int_params_t *params,
 		ecdh.grp.id = MBEDTLS_ECP_DP_SECP256R1;
 	assert(mbedtls_ecp_group_load(&ecdh.grp, ecdh.grp.id) == 0);
 
-	pKeyPair = (mbedtls_ecp_keypair *)(params->remote_ecp_public_key);
-	ret = mbedtls_ecp_copy(&ecdh.Qp, &(pKeyPair->Q));
+	ret = mbedtls_ecp_copy(&ecdh.Qp,
+			(mbedtls_ecp_point *)params->remote_ecp_public_key);
 
 	if (ret == 0) {
 		ret = mbedtls_mpi_read_binary(&ecdh.d,
@@ -353,7 +335,8 @@ int32_t cipher_auth_decrypt(crypto_int_params_t *params,
 		return SECURITY_UTIL_STATUS_FAILURE;
 	}
 
-	ret = mbedtls_cipher_auth_decrypt(&ctx, params->iv, params->iv_size,
+	ret = mbedtls_cipher_auth_decrypt(&ctx, params->iv,
+		params->iv_size,
 		params->add_data, params->add_size,
 		cipher_buffer, cipher_buffer_size - AUTH_TAG_SIZE,
 		plain_buffer, &output_size,
@@ -371,4 +354,132 @@ int32_t cipher_auth_decrypt(crypto_int_params_t *params,
 
 	mbedtls_cipher_free(&ctx);
 	return ret;
+}
+
+int FindCommonName(mbedtls_x509_name *issuer,
+							const uint8_t *pcn,
+							uint32_t cn_len)
+{
+
+	if ((issuer == NULL) || (pcn == NULL) || (cn_len == 0))
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	while (issuer != NULL) {
+
+		//search for the subject common name filed
+		if ((issuer->oid.tag == MBEDTLS_ASN1_OID) &&
+			issuer->oid.len == MBEDTLS_OID_AT_CN_SIZE &&
+			(memcmp(MBEDTLS_OID_AT_CN, issuer->oid.p,
+					MBEDTLS_OID_AT_CN_SIZE) == 0)) {
+			if (cn_len == issuer->val.len) {
+				if (memcmp(pcn, issuer->val.p, cn_len) == 0)
+					return SECURITY_UTIL_STATUS_SUCCESS;
+			}
+
+		}
+
+		issuer = issuer->next;
+
+	}
+
+	return SECURITY_UTIL_STATUS_FAILURE;
+}
+
+
+int32_t init_security_key_crt(
+		security_key_crt * p_security_key_crt,
+		mbedtls_x509_crt *p_mbed_tls_crt)
+{
+	mbedtls_ecp_keypair *pKeyPair;
+	int32_t ret = SECURITY_UTIL_STATUS_SUCCESS;
+
+	if ((p_security_key_crt == NULL) || (p_mbed_tls_crt == NULL))
+		return SECURITY_UTIL_STATUS_FAILURE;
+
+	//copy needed fields of the certificate and discard the other fields
+
+	//copy the public key
+	pKeyPair = mbedtls_pk_ec(p_mbed_tls_crt->pk);
+	if (pKeyPair == NULL)
+		ret = SECURITY_UTIL_STATUS_FAILURE;
+
+
+	if (ret == SECURITY_UTIL_STATUS_SUCCESS) {
+		p_security_key_crt->Q =
+			(uint8_t *)malloc(sizeof(mbedtls_ecp_point));
+		if (p_security_key_crt->Q == NULL)
+			ret = SECURITY_UTIL_STATUS_FAILURE;
+	}
+
+	if (ret == SECURITY_UTIL_STATUS_SUCCESS) {
+		mbedtls_ecp_point *p_ecp_point =
+				(mbedtls_ecp_point *)p_security_key_crt->Q;
+
+		mbedtls_ecp_point_init(p_ecp_point);
+		mbedtls_ecp_copy(p_ecp_point, &(pKeyPair->Q));
+
+		//copy the valid from field
+		p_security_key_crt->pValid_from =
+				(uint8_t *)malloc(sizeof(mbedtls_x509_time));
+		if (p_security_key_crt->pValid_from == NULL)
+			ret = SECURITY_UTIL_STATUS_FAILURE;
+	}
+
+	if (ret == SECURITY_UTIL_STATUS_SUCCESS) {
+		*((mbedtls_x509_time *)p_security_key_crt->pValid_from)
+				= p_mbed_tls_crt->valid_from;
+
+		//copy the valid from field
+		p_security_key_crt->pValid_to =
+				(uint8_t *)malloc(sizeof(mbedtls_x509_time));
+		if (p_security_key_crt->pValid_to == NULL)
+			return SECURITY_UTIL_STATUS_FAILURE;
+	}
+
+	if (ret == SECURITY_UTIL_STATUS_SUCCESS)
+		*((mbedtls_x509_time *)p_security_key_crt->pValid_to) =
+				p_mbed_tls_crt->valid_to;
+
+	if (ret != SECURITY_UTIL_STATUS_SUCCESS) {
+
+		if (p_security_key_crt->Q != NULL) {
+			mbedtls_ecp_point_free(
+				(mbedtls_ecp_point *)p_security_key_crt->Q);
+			free(p_security_key_crt->Q);
+		}
+
+		if (p_security_key_crt->pValid_from != NULL)
+			free(p_security_key_crt->pValid_from);
+
+		if (p_security_key_crt->pValid_to != NULL)
+			free(p_security_key_crt->pValid_to);
+
+	} else {
+		p_security_key_crt->is_initialized = 1;
+	}
+
+	return ret;
+}
+
+
+void free_security_key_crt(security_key_crt *p_security_key_crt)
+{
+	if (p_security_key_crt != NULL) {
+
+		if (p_security_key_crt->Q != NULL) {
+			mbedtls_ecp_point_free(
+				(mbedtls_ecp_point *)p_security_key_crt->Q);
+			free(p_security_key_crt->Q);
+		}
+
+		if (p_security_key_crt->pValid_from != NULL)
+			free(p_security_key_crt->pValid_from);
+
+		if (p_security_key_crt->pValid_to != NULL)
+			free(p_security_key_crt->pValid_to);
+
+		p_security_key_crt->is_initialized = 0;
+
+	}
+
 }

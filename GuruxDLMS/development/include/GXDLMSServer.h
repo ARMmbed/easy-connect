@@ -455,6 +455,15 @@ public:
 		m_Settings.SetCB(cb);
 	}
 	void SetServerPublicKey(unsigned char *q);
+	bool SetServerKeyCertificate(unsigned char *pCertificate, unsigned long certificateSize);
+	void SetKaCB(get_private_key_from_settings cb)
+	{
+		m_Settings.SetKaCB(cb);
+	}
+	void SetKaPrivateKey(unsigned char *d);
+	void SetServerKaPublicKey(unsigned char *q);
+	bool SetServerKaKeyCertificate(unsigned char *pCertificate, unsigned long certificateSize);
+
 	void SetTestCase(TEST_CASE _t) {m_test_case = _t;};
 	TEST_CASE GetTestCase() {return m_test_case;};
 	void InitSecurityUtils(void);
