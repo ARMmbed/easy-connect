@@ -253,7 +253,7 @@ int32_t cipher_auth_encrypt(crypto_int_params_t *params,
 	assert(cipher_buffer != NULL);
 	assert(plain_buffer != NULL && plain_buffer_size > 0);
 
-	printf("%s\n", __func__);
+//	printf("%s\n", __func__);
 
 	key_bit_size = params->key_size << 3;
 	// Setup AES-GCM contex
@@ -308,7 +308,7 @@ int32_t cipher_auth_decrypt(crypto_int_params_t *params,
 	assert(cipher_buffer != NULL && cipher_buffer_size > 0);
 	assert(plain_buffer != NULL);
 
-	printf("%s\n", __func__);
+//	printf("%s\n", __func__);
 
 	cipher_size = cipher_buffer_size - AUTH_TAG_SIZE;
 	key_bit_size = params->key_size << 3;

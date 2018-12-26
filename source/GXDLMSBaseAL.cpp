@@ -47,7 +47,7 @@
 #include <arpa/inet.h>
 #endif
 
-
+#define Q4_DEMO
 #define MAX_MEMORY 1
 #define LISTENER_THREAD_STACK_SIZE 2048
 #define SIMULATION_THREAD_STACK_SIZE 512
@@ -57,12 +57,12 @@
 
 #ifdef __MBED__
 
-DigitalOut led1(LED1);
+static DigitalOut led1(LED1);
 #ifdef UBLOX_EVK_ODIN_W2
-DigitalOut led2(PD_9);
-DigitalOut led3(PD_8);
-DigitalOut led4(PD_11);
-DigitalOut led5(PD_12);
+static DigitalOut led2(PD_9);
+static DigitalOut led3(PD_8);
+static DigitalOut led4(PD_11);
+static DigitalOut led5(PD_12);
 #endif // UBLOX_EVK_ODIN_W2
 
 static int prev_led;
@@ -374,7 +374,7 @@ static int handle_gbt_session(CGXDLMSBaseAL* server, void *message, int size, SO
 	return 0;
 }
 
-static int server_start_gbt_session(CGXDLMSBaseAL* server, void *message, int size, SOCKET client_sock, char *wrapper)
+static void server_start_gbt_session(CGXDLMSBaseAL* server, void *message, int size, SOCKET client_sock, char *wrapper)
 {
 	// if the server is the one to start the GBT session, it will come here
 	// after receiving server's response
@@ -668,12 +668,6 @@ static void * UnixListenerThread(void * pVoid)
 	return NULL;
 }
 #endif
-
-static float random_between_two_int(float min, float max)
-{
-	return (min + 1) + (((float)rand()) / (float)RAND_MAX) * (max - (min + 1));
-}
-
 
 #ifdef __MBED__
 static void sensor_thread(void const *pVoid)
@@ -1914,7 +1908,7 @@ DLMS_SOURCE_DIAGNOSTIC CGXDLMSBaseAL::ValidateAuthentication(
 DLMS_ACCESS_MODE CGXDLMSBaseAL::GetAttributeAccess(CGXDLMSValueEventArg* arg)
 {
 // TODO - This logic will need to be re-enabled after we add the support for APDU encryption in M6
-#ifdef M6_FUNCTIONALITY
+#ifndef Q4_DEMO
     // Only read is allowed
     if (arg->GetSettings()->GetAuthentication() == DLMS_AUTHENTICATION_NONE)
     {
@@ -1945,6 +1939,8 @@ DLMS_ACCESS_MODE CGXDLMSBaseAL::GetAttributeAccess(CGXDLMSValueEventArg* arg)
 */
 DLMS_METHOD_ACCESS_MODE CGXDLMSBaseAL::GetMethodAccess(CGXDLMSValueEventArg* arg)
 {
+// TODO - This logic will need to be re-enabled after we add the support for APDU encryption in M6
+#ifndef Q4_DEMO
     // Methods are not allowed.
     if (arg->GetSettings()->GetAuthentication() == DLMS_AUTHENTICATION_NONE)
     {
@@ -1959,6 +1955,7 @@ DLMS_METHOD_ACCESS_MODE CGXDLMSBaseAL::GetMethodAccess(CGXDLMSValueEventArg* arg
         }
         return DLMS_METHOD_ACCESS_MODE_NONE;
     }
+#endif
     return DLMS_METHOD_ACCESS_MODE_ACCESS;
 }
 

@@ -37,6 +37,8 @@
 #include "../include/GXDLMSDisconnectControl.h"
 #include "../include/GXDLMSConverter.h"
 
+#define UBLOX_EVK_ODIN_W2
+
 //Constructor.
 CGXDLMSDisconnectControl::CGXDLMSDisconnectControl() :
     CGXDLMSDisconnectControl("", 0)
@@ -163,6 +165,43 @@ int CGXDLMSDisconnectControl::GetDataType(int index, DLMS_DATA_TYPE& type)
         return DLMS_ERROR_CODE_INVALID_PARAMETER;
     }
     return DLMS_ERROR_CODE_OK;
+}
+
+
+#ifdef __MBED__
+
+#include <AnalogIn.h>
+#include "mbed.h"
+
+static DigitalOut led1(LED1);
+#ifdef UBLOX_EVK_ODIN_W2
+static DigitalOut led2(PD_9);
+static DigitalOut led3(PD_8);
+static DigitalOut led4(PD_11);
+static DigitalOut led5(PD_12);
+#endif // UBLOX_EVK_ODIN_W2
+#endif // __MBED__
+
+int CGXDLMSDisconnectControl::Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e)
+{
+    // Disconnect
+	printf(" %s%d\n", __func__, (int)e.GetIndex());
+    if (e.GetIndex() == 1)
+    {
+#ifdef __MBED__
+		led1 = !led1;
+#ifdef UBLOX_EVK_ODIN_W2
+		led2 = !led2;
+		led3 = !led3;
+		led4 = !led4;
+		led5 = !led5;
+		printf("Leds: led1 = %d led2 = %d led3 = %d\n", (int)led1, (int)led2, (int)led3);
+#endif // UBLOX_EVK_ODIN_W2
+#endif // __MBED__
+	}
+    else
+    	return CGXDLMSObject::Invoke(settings, e);
+    return 0;
 }
 
 // Returns value of given attribute.

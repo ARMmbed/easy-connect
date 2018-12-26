@@ -605,8 +605,10 @@ static const unsigned char *get_ka_private_key(uint32_t *size)
 }
 static void handle_client_terminate_signal (int sig, siginfo_t *siginfo, void *context)
 {
+#ifndef __MBED__
 	printf ("%s: Got terminate signal from PID: %ld, signo: %d\n",
 			__func__, (long)siginfo->si_pid, siginfo->si_signo);
+#endif
 
 	//we got kill command from teh client
 	//terminate the server
@@ -616,7 +618,9 @@ static void handle_client_terminate_signal (int sig, siginfo_t *siginfo, void *c
 int main_server(int argc, char* argv[])
 {
 	char default_port[10];
+#ifndef __MBED__
 	struct sigaction act;
+#endif
 
 	memset(	&keys,0, sizeof(keys));
 
@@ -690,6 +694,7 @@ int main_server(int argc, char* argv[])
 		port = default_port;
 	}
 
+#ifndef __MBED__
 	//register to get a notification in case a SIGTERM signal was sent by the client
 	//this is done in order to gracefully terminate teh server
 	memset (&act, '\0', sizeof(act));
@@ -704,6 +709,7 @@ int main_server(int argc, char* argv[])
 		perror ("sigaction");
 		return 1;
 	}
+#endif
 
 
 	if(strlen(server_ip) != 0) {

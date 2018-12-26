@@ -810,6 +810,7 @@ int CGXDLMSServer::HandleSetRequest(
     {
         std::string name;
         GXHelpers::GetLogicalName(ln, name);
+        printf("Set Request for %s\n", name.c_str());
         obj = FindObject(ci, 0, name);
     }
     // If target is unknown.
@@ -1086,6 +1087,7 @@ int CGXDLMSServer::GetRequestNormal(CGXByteBuffer& data, unsigned char invokeID)
     {
         std::string name;
         GXHelpers::GetLogicalName(ln, name);
+        printf("Get Request for %s\n", name.c_str());
         obj = FindObject(ci, 0, name);
     }
     // Access selection
@@ -1349,6 +1351,7 @@ int CGXDLMSServer::GetRequestWithList(CGXByteBuffer& data, unsigned char invokeI
         {
             std::string name;
             GXHelpers::GetLogicalName(ln, name);
+            printf("Get Request for %s\n", name.c_str());
             obj = FindObject(ci, 0, name);
         }
         if (obj == NULL)
@@ -2614,6 +2617,7 @@ int CGXDLMSServer::HandleMethodRequest(
     {
         std::string name;
         GXHelpers::GetLogicalName(ln, name);
+        printf("Action Request for %s\n", name.c_str());
         obj = FindObject(ci, 0, name);
     }
     if (obj == NULL)

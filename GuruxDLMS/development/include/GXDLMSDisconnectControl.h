@@ -88,6 +88,8 @@ public:
 
     int GetDataType(int index, DLMS_DATA_TYPE& type);
 
+    int Invoke(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e);
+
     // Returns value of given attribute.
     int GetValue(CGXDLMSSettings& settings, CGXDLMSValueEventArg& e);
 
