@@ -50,7 +50,7 @@
 #define Q4_DEMO
 #define MAX_MEMORY 1
 #define LISTENER_THREAD_STACK_SIZE 2048
-#define SIMULATION_THREAD_STACK_SIZE 512
+#define SIMULATION_THREAD_STACK_SIZE 1024
 
 // the location of the size of the data in the GBT frame
 #define DATA_SIZE_LOCATION 6
@@ -1389,7 +1389,7 @@ int CGXDLMSBaseAL::CreateObjects()
     /* SECURITY_SETUP */
     CGXDLMSSecuritySetup* pSecuritySetup = new CGXDLMSSecuritySetup(SECURITY_SETUP);
     GetItems().push_back(pSecuritySetup);
-	
+
 	/* MANUFACTURER_SPECIFIC - data */
     bool on_off = 1;
     CGXDLMSVariant custom_value(on_off);
