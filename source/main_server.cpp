@@ -18,7 +18,7 @@
 //#include "mbed-os/features/FEATURE_LWIP/lwip-interface/EthernetInterface.h"
 #endif
 
-#if defined(CLI_MODE)  || defined(__MBED__)
+#if defined(CLI_MODE)
 #include "init_plat.h"
 #endif // defined(CLI_MODE) || defined(__MBED__)
 
@@ -476,7 +476,7 @@ static char *hex_string_to_hex_arr(char *s, int *size)
 	return ret;
 }
 
-#if defined(CLI_MODE) || defined(__MBED__)
+#if defined(CLI_MODE)
 int get_server_ip(int argc, char* argv[])
 {
 	NETADD_INFO interfaceInfo = { 0 };
